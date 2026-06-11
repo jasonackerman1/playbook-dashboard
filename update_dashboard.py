@@ -34,6 +34,7 @@ PLAYBOOK_MAP = {
     "accelerate_sales_playbook":          "Accelerate",
     "iq501":                              "IQ501",
     "gc_ip_sales_playbook":               "GC/IP Sales Playbook",
+    "road_to_dx":                         "Road to DX",
 }
 
 def get_playbook(url):
@@ -242,6 +243,7 @@ const PLAYBOOK_COLORS = {{
   "Legal Playbook":         "#f7944f",
   "IQ501":                  "#5cf0f7",
   "GC/IP Sales Playbook":   "#cf5cf7",
+  "Road to DX":             "#2dd4bf",
 }};
 function pbColor(pb){{ return PLAYBOOK_COLORS[pb] || "#7b82a0"; }}
 
