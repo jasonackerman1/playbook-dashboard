@@ -154,7 +154,6 @@ html = f"""<!DOCTYPE html>
   .table-section{{padding:0 28px 32px;}}
   .table-header{{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}}
   .table-title{{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
-  .search-wrap input{{width:220px;}}
   .table-outer{{border-radius:10px;border:1px solid var(--border);overflow:hidden;}}
   table{{width:100%;border-collapse:collapse;font-size:13px;}}
   thead tr{{background:var(--surface2);}}
@@ -164,20 +163,17 @@ html = f"""<!DOCTYPE html>
   tbody tr:hover{{background:var(--surface2);}}
   tbody td{{padding:9px 14px;vertical-align:middle;}}
   .pill{{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;}}
-  .pagination{{display:flex;justify-content:center;gap:6px;margin-top:16px;flex-wrap:wrap;}}
-  .page-btn{{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;}}
-  .page-btn:hover,.page-btn.active{{border-color:var(--accent);color:var(--accent);}}
-  .no-data{{text-align:center;color:var(--muted);padding:40px;font-size:13px;}}
+.no-data{{text-align:center;color:var(--muted);padding:40px;font-size:13px;}}
   .section-hint{{font-size:11px;color:var(--muted);margin-bottom:14px;margin-top:-8px;opacity:0.7;}}
   .drilldown-wrap{{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;}}
-  .drilldown-left{{width:260px;flex-shrink:0;overflow-y:auto;max-height:420px;border-right:1px solid var(--border);}}
+  .drilldown-left{{width:260px;flex-shrink:0;overflow-y:auto;max-height:820px;border-right:1px solid var(--border);}}
   .drilldown-person{{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}}
   .drilldown-person:last-child{{border-bottom:none;}}
   .drilldown-person:hover{{background:var(--surface2);}}
   .drilldown-person.active{{background:#4f8ef711;border-left:3px solid var(--accent);padding-left:11px;}}
   .drilldown-name{{flex:1;font-size:13px;}}
   .drilldown-count{{font-size:11px;font-weight:700;color:#2dd4bf;background:#2dd4bf18;border-radius:10px;padding:2px 8px;}}
-  .drilldown-right{{flex:1;overflow-y:auto;max-height:420px;padding:16px 18px;}}
+  .drilldown-right{{flex:1;overflow-y:auto;max-height:820px;padding:16px 18px;}}
   .drilldown-right-header{{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);font-size:13px;}}
   .drilldown-right table thead th{{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}}
   .drilldown-right table tbody tr{{border-top:1px solid var(--border);}}
@@ -237,32 +233,6 @@ html = f"""<!DOCTYPE html>
   </div>
 </div>
 
-<div class="table-section" id="table-section">
-  <div class="table-header">
-    <span class="table-title">Activity Log</span>
-    <span class="section-hint" style="margin:0">Click column headers to sort · Search by name or page using the box</span>
-    <div class="search-wrap">
-      <input type="text" id="search" placeholder="Search name, page..." oninput="applyFilters()">
-    </div>
-  </div>
-  <div class="table-outer">
-    <table>
-      <thead>
-        <tr>
-          <th onclick="sortBy('name')">Name</th>
-          <th onclick="sortBy('Region')">Region</th>
-          <th onclick="sortBy('Type')">Type</th>
-          <th onclick="sortBy('Date')">Date</th>
-          <th onclick="sortBy('Playbook')">Playbook</th>
-          <th onclick="sortBy('Page')">Page</th>
-          <th onclick="sortBy('totalVisits')">Total Visits</th>
-        </tr>
-      </thead>
-      <tbody id="table-body"></tbody>
-    </table>
-  </div>
-  <div class="pagination" id="pagination"></div>
-</div>
 
 <div class="table-section" id="drilldown-section">
   <div class="table-header">
@@ -312,16 +282,12 @@ sel('badge-views').textContent  = `${{RAW.length.toLocaleString()}} total views`
 sel('badge-months').textContent = `${{allMonths.length}} month${{allMonths.length>1?'s':''}}`;
 
 let filtered = [...RAW];
-let sortCol = 'totalVisits', sortDir = -1, page = 1;
-const PAGE_SIZE = 30;
-
 function getFilters(){{
   return {{
     month:    sel('f-month').value,
     playbook: sel('f-playbook').value,
     region:   sel('f-region').value,
     type:     sel('f-type').value,
-    search:   sel('search').value.toLowerCase().trim(),
   }};
 }}
 
@@ -343,13 +309,8 @@ function applyFilters(){{
     if (f.playbook && r.Playbook !== f.playbook) return false;
     if (f.region   && r.Region   !== f.region)   return false;
     if (f.type     && r.Type     !== f.type)      return false;
-    if (f.search){{
-      const hay = `${{r.FirstName}} ${{r.LastName}} ${{r.Page}} ${{r.Playbook}} ${{r.Region||''}} ${{r.Month}}`.toLowerCase();
-      if (!hay.includes(f.search)) return false;
-    }}
     return true;
   }});
-  page = 1;
   render();
 }}
 
@@ -357,17 +318,10 @@ function applyFilters(){{
 
 function resetFilters(){{
   ['f-month','f-playbook','f-region','f-type'].forEach(id => sel(id).value = '');
-  sel('search').value = '';
   hideTLG = false;
   sel('btn-tlg').classList.remove('active');
   sel('btn-tlg').textContent = 'Hide TLG';
   applyFilters();
-}}
-
-function sortBy(col){{
-  if (sortCol === col) sortDir *= -1;
-  else {{ sortCol = col; sortDir = 1; }}
-  render();
 }}
 
 function countBy(arr, key){{
@@ -382,15 +336,6 @@ function render(){{
   filtered.forEach(r => {{
     const key = `${{r.FirstName}} ${{r.LastName}}`;
     visitorMap[key] = (visitorMap[key] || 0) + 1;
-  }});
-
-  const sorted = [...filtered].sort((a,b) => {{
-    const ak = `${{a.FirstName}} ${{a.LastName}}`;
-    const bk = `${{b.FirstName}} ${{b.LastName}}`;
-    if (sortCol==='totalVisits') return (visitorMap[bk]-visitorMap[ak]) * sortDir * -1;
-    let av = sortCol==='name' ? ak : a[sortCol]||'';
-    let bv = sortCol==='name' ? bk : b[sortCol]||'';
-    return av < bv ? -sortDir : av > bv ? sortDir : 0;
   }});
 
   // Stats
@@ -507,44 +452,6 @@ function render(){{
     }}
   }});
 
-  // Table
-  const pageData   = sorted.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
-  const totalPages = Math.max(1, Math.ceil(sorted.length/PAGE_SIZE));
-  const tbody = sel('table-body');
-  if (!pageData.length) {{
-    tbody.innerHTML = `<tr><td colspan="7" class="no-data">No records match your filters.</td></tr>`;
-  }} else {{
-    tbody.innerHTML = pageData.map(r => {{
-      const color = pbColor(r.Playbook);
-      const totalVisits = visitorMap[`${{r.FirstName}} ${{r.LastName}}`] || 0;
-      return `<tr>
-        <td>${{r.FirstName}} ${{r.LastName}}</td>
-        <td>${{r.Region||'<span style="color:var(--muted)">—</span>'}}</td>
-        <td><span class="pill" style="background:${{r.Type==='Employee'?'#1a2a4a':'#2a1a3a'}};color:${{r.Type==='Employee'?'#4f8ef7':'#cf5cf7'}}">${{r.Type}}</span></td>
-        <td style="color:var(--muted)">${{r.Date}}</td>
-        <td><span class="pill" style="background:${{color}}22;color:${{color}}">${{r.Playbook}}</span></td>
-        <td style="color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${{r.Page}}</td>
-        <td style="color:#2dd4bf;font-weight:600">${{totalVisits}}</td>
-      </tr>`;
-    }}).join('');
-  }}
-
-  // Pagination
-  const pg = sel('pagination');
-  pg.innerHTML = '';
-  if (totalPages <= 1) return;
-  const makeBtn = (label, p, active=false) => {{
-    const b = document.createElement('button');
-    b.className = 'page-btn' + (active?' active':'');
-    b.textContent = label;
-    b.onclick = () => {{ page = p; render(); sel('table-section').scrollIntoView({{behavior:'smooth'}}); }};
-    pg.appendChild(b);
-  }};
-  if (page > 1) makeBtn('← Prev', page-1);
-  const start=Math.max(1,page-2), end=Math.min(totalPages,page+2);
-  for (let i=start; i<=end; i++) makeBtn(i, i, i===page);
-  if (page < totalPages) makeBtn('Next →', page+1);
-
   // Who's Active — left panel
   const personList = Object.entries(visitorMap).sort((a,b)=>b[1]-a[1]);
   sel('drilldown-left').innerHTML = personList.map(([name, count]) =>
@@ -564,14 +471,22 @@ function render(){{
 function drillSelect(el, name) {{
   document.querySelectorAll('.drilldown-person').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
-  const visits = filtered
-    .filter(r => `${{r.FirstName}} ${{r.LastName}}` === name)
-    .sort((a,b) => b.Date.localeCompare(a.Date));
+  const visits = filtered.filter(r => `${{r.FirstName}} ${{r.LastName}}` === name);
   const first = visits[0];
   const region = first?.Region || '—';
   const type = first?.Type || '—';
   const typeColor = type==='Employee'?'#4f8ef7':'#cf5cf7';
   const typeBg = type==='Employee'?'#1a2a4a':'#2a1a3a';
+
+  // Group by Date + Playbook + Page, count each combo
+  const grouped = {{}};
+  visits.forEach(v => {{
+    const key = `${{v.Date}}|${{v.Playbook}}|${{v.Page}}`;
+    if (!grouped[key]) grouped[key] = {{date:v.Date, playbook:v.Playbook, page:v.Page, count:0}};
+    grouped[key].count++;
+  }});
+  const rows = Object.values(grouped).sort((a,b) => b.date.localeCompare(a.date));
+
   sel('drilldown-right').innerHTML = `
     <div class="drilldown-right-header">
       <strong style="font-size:14px">${{name}}</strong>
@@ -580,15 +495,16 @@ function drillSelect(el, name) {{
     </div>
     <table style="width:100%;border-collapse:collapse;">
       <thead><tr>
-        <th>Date</th><th>Playbook</th><th>Page</th>
+        <th>Date</th><th>Playbook</th><th>Page</th><th style="text-align:right">Visits</th>
       </tr></thead>
       <tbody>
-        ${{visits.map(v => {{
-          const c = pbColor(v.Playbook);
+        ${{rows.map(v => {{
+          const c = pbColor(v.playbook);
           return `<tr>
-            <td style="color:var(--muted)">${{v.Date}}</td>
-            <td><span class="pill" style="background:${{c}}22;color:${{c}}">${{v.Playbook}}</span></td>
-            <td style="color:var(--muted)">${{v.Page}}</td>
+            <td style="color:var(--muted)">${{v.date}}</td>
+            <td><span class="pill" style="background:${{c}}22;color:${{c}}">${{v.playbook}}</span></td>
+            <td style="color:var(--muted)">${{v.page}}</td>
+            <td style="text-align:right;color:#2dd4bf;font-weight:600">${{v.count}}</td>
           </tr>`;
         }}).join('')}}
       </tbody>
