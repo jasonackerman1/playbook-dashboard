@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'data/playbook-monthly-*.xlsx'
+  workflow_dispatch:
 
 permissions:
   contents: write
