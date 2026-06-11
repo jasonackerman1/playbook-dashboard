@@ -128,6 +128,9 @@ html = f"""<!DOCTYPE html>
   select:focus,input:focus{{border-color:var(--accent);}}
   .btn-reset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}}
   .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
+  .btn-tlg{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}}
+  .btn-tlg:hover{{border-color:var(--red);color:var(--red);}}
+  .btn-tlg.active{{background:#f76f6f22;border-color:var(--red);color:var(--red);}}
   .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
 
   .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}}
@@ -185,6 +188,7 @@ html = f"""<!DOCTYPE html>
   <select id="f-region"><option value="">All Regions</option></select>
   <select id="f-type"><option value="">Employee &amp; Dealer</option><option value="Employee">Employee</option><option value="Dealer">Dealer</option></select>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
+  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -296,9 +300,19 @@ function getFilters(){{
   }};
 }}
 
+const TLG = new Set(["Jason Ackerman","Bianca Davis","James Parker","Resmie Biba","Chris Curtis","Sara Thompson","Jeremy MacBean","Bradley Pierce","Laura Sefcik","Samantha Maresca","Staci Musco","CJ Homer","Rich Moore","Dale Kinsey"]);
+let hideTLG = false;
+
+function toggleTLG(){{
+  hideTLG = !hideTLG;
+  sel('btn-tlg').classList.toggle('active', hideTLG);
+  applyFilters();
+}}
+
 function applyFilters(){{
   const f = getFilters();
   filtered = RAW.filter(r => {{
+    if (hideTLG && TLG.has(`${{r.FirstName}} ${{r.LastName}}`)) return false;
     if (f.month    && r.Month    !== f.month)    return false;
     if (f.playbook && r.Playbook !== f.playbook) return false;
     if (f.region   && r.Region   !== f.region)   return false;
@@ -318,6 +332,8 @@ function applyFilters(){{
 function resetFilters(){{
   ['f-month','f-playbook','f-region','f-type'].forEach(id => sel(id).value = '');
   sel('search').value = '';
+  hideTLG = false;
+  sel('btn-tlg').classList.remove('active');
   applyFilters();
 }}
 
