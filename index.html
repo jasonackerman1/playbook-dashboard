@@ -106,14 +106,10 @@
   </div>
 </div>
 
-<div class="charts-pages">
+<div class="charts-bottom">
   <div class="chart-card">
-    <div class="chart-title" id="pages-chart-title">Top Pages — Total Views</div>
+    <div class="chart-title" id="pages-chart-title">Top Pages</div>
     <div class="chart-wrap-pages"><canvas id="pagesChart"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-title" id="avg-pages-chart-title">Top Pages — Avg Visits / Person</div>
-    <div class="chart-wrap-pages"><canvas id="avgPagesChart"></canvas></div>
   </div>
 </div>
 
@@ -131,11 +127,10 @@
           <th onclick="sortBy('name')">Name</th>
           <th onclick="sortBy('Region')">Region</th>
           <th onclick="sortBy('Type')">Type</th>
-          <th onclick="sortBy('Month')">Month</th>
           <th onclick="sortBy('Date')">Date</th>
           <th onclick="sortBy('Playbook')">Playbook</th>
           <th onclick="sortBy('Page')">Page</th>
-          <th>Total Visits</th>
+          <th onclick="sortBy('totalVisits')">Total Visits</th>
         </tr>
       </thead>
       <tbody id="table-body"></tbody>
@@ -181,7 +176,7 @@ sel('badge-views').textContent  = `${RAW.length.toLocaleString()} total views`;
 sel('badge-months').textContent = `${allMonths.length} month${allMonths.length>1?'s':''}`;
 
 let filtered = [...RAW];
-let sortCol = 'Date', sortDir = -1, page = 1;
+let sortCol = 'totalVisits', sortDir = -1, page = 1;
 const PAGE_SIZE = 30;
 
 function getFilters(){
@@ -229,12 +224,22 @@ function countBy(arr, key){
   return arr.reduce((acc,r) => { const v=r[key]||'(none)'; acc[v]=(acc[v]||0)+1; return acc; }, {});
 }
 
-let barChart, pieChart, trendChart, pagesChart, avgPagesChart;
+let barChart, pieChart, trendChart, pagesChart;
 
 function render(){
+  // Build per-person visit counts first (needed for sort)
+  const visitorMap = {};
+  filtered.forEach(r => {
+    const key = `${r.FirstName} ${r.LastName}`;
+    visitorMap[key] = (visitorMap[key] || 0) + 1;
+  });
+
   const sorted = [...filtered].sort((a,b) => {
-    let av = sortCol==='name' ? `${a.FirstName} ${a.LastName}` : a[sortCol]||'';
-    let bv = sortCol==='name' ? `${b.FirstName} ${b.LastName}` : b[sortCol]||'';
+    const ak = `${a.FirstName} ${a.LastName}`;
+    const bk = `${b.FirstName} ${b.LastName}`;
+    if (sortCol==='totalVisits') return (visitorMap[bk]-visitorMap[ak]) * sortDir * -1;
+    let av = sortCol==='name' ? ak : a[sortCol]||'';
+    let bv = sortCol==='name' ? bk : b[sortCol]||'';
     return av < bv ? -sortDir : av > bv ? sortDir : 0;
   });
 
@@ -256,13 +261,6 @@ function render(){
     <div class="stat"><div class="stat-label">Playbooks Active</div><div class="stat-value green">${Object.keys(pbCounts).length}</div><div class="stat-sub">out of 9 total</div></div>
   `;
 
-  // Build per-person visit counts for activity log
-  const visitorMap = {};
-  filtered.forEach(r => {
-    const key = `${r.FirstName} ${r.LastName}`;
-    if (!visitorMap[key]) visitorMap[key] = 0;
-    visitorMap[key]++;
-  });
 
   // Bar chart — always include all known playbooks (zero if no data)
   const pbAll = {...pbCounts};
@@ -304,10 +302,12 @@ function render(){
   const pageMap = {};
   filtered.forEach(r => {
     const label = pbFilter ? r.Page : `${r.Page} · ${r.Playbook}`;
-    if (!pageMap[label]) pageMap[label] = {count:0, color:pbColor(r.Playbook)};
+    if (!pageMap[label]) pageMap[label] = {count:0, visitors:new Set(), color:pbColor(r.Playbook)};
     pageMap[label].count++;
+    pageMap[label].visitors.add(`${r.FirstName} ${r.LastName}`);
   });
   const pagesSorted = Object.entries(pageMap).sort((a,b)=>b[1].count-a[1].count).slice(0,10);
+  const pageAvgs = pagesSorted.map(([,v]) => (v.count/v.visitors.size).toFixed(1));
   sel('pages-chart-title').textContent = pbFilter ? `Top Pages — ${pbFilter}` : 'Top Pages — All Playbooks';
   if (pagesChart) pagesChart.destroy();
   pagesChart = new Chart(sel('pagesChart'), {
@@ -315,33 +315,7 @@ function render(){
     data: { labels: pagesSorted.map(([k])=>k), datasets: [{ data: pagesSorted.map(([,v])=>v.count), backgroundColor: pagesSorted.map(([,v])=>v.color), borderRadius:5, borderSkipped:false }] },
     options: {
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw.toLocaleString()} views`}} },
-      scales:{
-        x:{grid:{color:'#2e3350'},ticks:{color:'#7b82a0',font:{size:11}}},
-        y:{grid:{display:false},ticks:{color:'#e8ecf4',font:{size:11}}}
-      }
-    }
-  });
-
-  // Avg visits per page chart
-  const avgPageMap = {};
-  filtered.forEach(r => {
-    const label = pbFilter ? r.Page : `${r.Page} · ${r.Playbook}`;
-    if (!avgPageMap[label]) avgPageMap[label] = {views:0, visitors:new Set(), color:pbColor(r.Playbook)};
-    avgPageMap[label].views++;
-    avgPageMap[label].visitors.add(`${r.FirstName} ${r.LastName}`);
-  });
-  const avgPagesSorted = Object.entries(avgPageMap)
-    .map(([k,v]) => [k, {avg:parseFloat((v.views/v.visitors.size).toFixed(2)), color:v.color}])
-    .sort((a,b)=>b[1].avg-a[1].avg).slice(0,10);
-  sel('avg-pages-chart-title').textContent = pbFilter ? `Avg Visits / Person — ${pbFilter}` : 'Avg Visits / Person — By Page';
-  if (avgPagesChart) avgPagesChart.destroy();
-  avgPagesChart = new Chart(sel('avgPagesChart'), {
-    type: 'bar',
-    data: { labels: avgPagesSorted.map(([k])=>k), datasets: [{ data: avgPagesSorted.map(([,v])=>v.avg), backgroundColor: avgPagesSorted.map(([,v])=>v.color), borderRadius:5, borderSkipped:false }] },
-    options: {
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw} avg visits/person`}} },
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw.toLocaleString()} views · ${pageAvgs[c.dataIndex]} avg visits/person`}} },
       scales:{
         x:{grid:{color:'#2e3350'},ticks:{color:'#7b82a0',font:{size:11}}},
         y:{grid:{display:false},ticks:{color:'#e8ecf4',font:{size:11}}}
@@ -387,7 +361,7 @@ function render(){
   const totalPages = Math.max(1, Math.ceil(sorted.length/PAGE_SIZE));
   const tbody = sel('table-body');
   if (!pageData.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="no-data">No records match your filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="no-data">No records match your filters.</td></tr>`;
   } else {
     tbody.innerHTML = pageData.map(r => {
       const color = pbColor(r.Playbook);
@@ -396,7 +370,6 @@ function render(){
         <td>${r.FirstName} ${r.LastName}</td>
         <td>${r.Region||'<span style="color:var(--muted)">—</span>'}</td>
         <td><span class="pill" style="background:${r.Type==='Employee'?'#1a2a4a':'#2a1a3a'};color:${r.Type==='Employee'?'#4f8ef7':'#cf5cf7'}">${r.Type}</span></td>
-        <td style="color:var(--muted)">${r.Month}</td>
         <td style="color:var(--muted)">${r.Date}</td>
         <td><span class="pill" style="background:${color}22;color:${color}">${r.Playbook}</span></td>
         <td style="color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.Page}</td>
