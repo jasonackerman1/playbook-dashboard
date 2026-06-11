@@ -68,6 +68,20 @@
   .page-btn:hover,.page-btn.active{border-color:var(--accent);color:var(--accent);}
   .no-data{text-align:center;color:var(--muted);padding:40px;font-size:13px;}
   .section-hint{font-size:11px;color:var(--muted);margin-bottom:14px;margin-top:-8px;opacity:0.7;}
+  .drilldown-wrap{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .drilldown-left{width:260px;flex-shrink:0;overflow-y:auto;max-height:420px;border-right:1px solid var(--border);}
+  .drilldown-person{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+  .drilldown-person:last-child{border-bottom:none;}
+  .drilldown-person:hover{background:var(--surface2);}
+  .drilldown-person.active{background:#4f8ef711;border-left:3px solid var(--accent);padding-left:11px;}
+  .drilldown-name{flex:1;font-size:13px;}
+  .drilldown-count{font-size:11px;font-weight:700;color:#2dd4bf;background:#2dd4bf18;border-radius:10px;padding:2px 8px;}
+  .drilldown-right{flex:1;overflow-y:auto;max-height:420px;padding:16px 18px;}
+  .drilldown-right-header{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);font-size:13px;}
+  .drilldown-right table thead th{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
+  .drilldown-right table tbody tr{border-top:1px solid var(--border);}
+  .drilldown-right table tbody td{padding:8px 12px;font-size:13px;}
+  @media(max-width:680px){.drilldown-wrap{flex-direction:column;}.drilldown-left{width:100%;max-height:200px;border-right:none;border-bottom:1px solid var(--border);}}
 </style>
 </head>
 <body>
@@ -147,6 +161,17 @@
     </table>
   </div>
   <div class="pagination" id="pagination"></div>
+</div>
+
+<div class="table-section" id="drilldown-section">
+  <div class="table-header">
+    <span class="table-title">Who's Active</span>
+    <span class="section-hint" style="margin:0">Click a name to see their full page history</span>
+  </div>
+  <div class="drilldown-wrap">
+    <div class="drilldown-left" id="drilldown-left"></div>
+    <div class="drilldown-right" id="drilldown-right"><div class="no-data">Select a person to see their activity</div></div>
+  </div>
 </div>
 
 <script>
@@ -418,6 +443,56 @@ function render(){
   const start=Math.max(1,page-2), end=Math.min(totalPages,page+2);
   for (let i=start; i<=end; i++) makeBtn(i, i, i===page);
   if (page < totalPages) makeBtn('Next →', page+1);
+
+  // Who's Active — left panel
+  const personList = Object.entries(visitorMap).sort((a,b)=>b[1]-a[1]);
+  sel('drilldown-left').innerHTML = personList.map(([name, count]) =>
+    `<div class="drilldown-person" onclick="drillSelect(this,'${name.replace(/'/g,"\'")}')" data-name="${name}">
+       <span class="drilldown-name">${name}</span>
+       <span class="drilldown-count">${count}</span>
+     </div>`
+  ).join('') || `<div class="no-data">No data</div>`;
+  if (personList.length) {
+    const first = sel('drilldown-left').querySelector('.drilldown-person');
+    drillSelect(first, personList[0][0]);
+  } else {
+    sel('drilldown-right').innerHTML = `<div class="no-data">No records match your filters.</div>`;
+  }
+}
+
+function drillSelect(el, name) {
+  document.querySelectorAll('.drilldown-person').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const visits = filtered
+    .filter(r => `${r.FirstName} ${r.LastName}` === name)
+    .sort((a,b) => b.Date.localeCompare(a.Date));
+  const first = visits[0];
+  const region = first?.Region || '—';
+  const type = first?.Type || '—';
+  const typeColor = type==='Employee'?'#4f8ef7':'#cf5cf7';
+  const typeBg = type==='Employee'?'#1a2a4a':'#2a1a3a';
+  sel('drilldown-right').innerHTML = `
+    <div class="drilldown-right-header">
+      <strong style="font-size:14px">${name}</strong>
+      <span style="color:var(--muted)"> · ${visits.length} visit${visits.length!==1?'s':''} · ${region} · </span>
+      <span class="pill" style="background:${typeBg};color:${typeColor}">${type}</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th>Date</th><th>Playbook</th><th>Page</th>
+      </tr></thead>
+      <tbody>
+        ${visits.map(v => {
+          const c = pbColor(v.Playbook);
+          return `<tr>
+            <td style="color:var(--muted)">${v.Date}</td>
+            <td><span class="pill" style="background:${c}22;color:${c}">${v.Playbook}</span></td>
+            <td style="color:var(--muted)">${v.Page}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 applyFilters();
