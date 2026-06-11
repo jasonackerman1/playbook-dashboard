@@ -165,6 +165,7 @@ html = f"""<!DOCTYPE html>
   .page-btn{{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;}}
   .page-btn:hover,.page-btn.active{{border-color:var(--accent);color:var(--accent);}}
   .no-data{{text-align:center;color:var(--muted);padding:40px;font-size:13px;}}
+  .section-hint{{font-size:11px;color:var(--muted);margin-bottom:14px;margin-top:-8px;opacity:0.7;}}
 </style>
 </head>
 <body>
@@ -192,10 +193,12 @@ html = f"""<!DOCTYPE html>
 <div class="charts-top">
   <div class="chart-card">
     <div class="chart-title">Page Views by Playbook</div>
+    <div class="section-hint">Hover over a bar to see the view count</div>
     <div class="chart-wrap"><canvas id="barChart"></canvas></div>
   </div>
   <div class="chart-card">
     <div class="chart-title">Views by Region</div>
+    <div class="section-hint">Hover over a segment to see the region breakdown</div>
     <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
   </div>
 </div>
@@ -203,6 +206,7 @@ html = f"""<!DOCTYPE html>
 <div class="charts-bottom">
   <div class="chart-card">
     <div class="chart-title">Monthly Trend — Views Over Time</div>
+    <div class="section-hint">Hover to see monthly totals by playbook — shows top 5 playbooks by volume</div>
     <div class="chart-wrap-tall"><canvas id="trendChart"></canvas></div>
   </div>
 </div>
@@ -210,6 +214,7 @@ html = f"""<!DOCTYPE html>
 <div class="charts-bottom">
   <div class="chart-card">
     <div class="chart-title" id="pages-chart-title">Top Pages</div>
+    <div class="section-hint">Hover over a bar to see views, unique visitors, and avg visits per person</div>
     <div class="chart-wrap-pages"><canvas id="pagesChart"></canvas></div>
   </div>
 </div>
@@ -217,6 +222,7 @@ html = f"""<!DOCTYPE html>
 <div class="table-section" id="table-section">
   <div class="table-header">
     <span class="table-title">Activity Log</span>
+    <span class="section-hint" style="margin:0">Click column headers to sort · Search by name or page using the box</span>
     <div class="search-wrap">
       <input type="text" id="search" placeholder="Search name, page..." oninput="applyFilters()">
     </div>
@@ -257,7 +263,7 @@ const PLAYBOOK_COLORS = {{
 function pbColor(pb){{ return PLAYBOOK_COLORS[pb] || "#7b82a0"; }}
 
 const allMonths   = [...new Set(RAW.map(r=>r.Month))].sort();
-const allPlaybooks= [...new Set(RAW.map(r=>r.Playbook))].sort();
+const allPlaybooks= [...new Set([...Object.keys(PLAYBOOK_COLORS), ...RAW.map(r=>r.Playbook)])].sort();
 const allRegions  = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
 
 function sel(id){{ return document.getElementById(id); }}
@@ -408,7 +414,8 @@ function render(){{
     pageMap[label].visitors.add(`${{r.FirstName}} ${{r.LastName}}`);
   }});
   const pagesSorted = Object.entries(pageMap).sort((a,b)=>b[1].count-a[1].count).slice(0,10);
-  const pageAvgs = pagesSorted.map(([,v]) => (v.count/v.visitors.size).toFixed(1));
+  const pageAvgs     = pagesSorted.map(([,v]) => (v.count/v.visitors.size).toFixed(1));
+  const pageVisitors = pagesSorted.map(([,v]) => v.visitors.size);
   sel('pages-chart-title').textContent = pbFilter ? `Top Pages — ${{pbFilter}}` : 'Top Pages — All Playbooks';
   if (pagesChart) pagesChart.destroy();
   pagesChart = new Chart(sel('pagesChart'), {{
@@ -416,7 +423,7 @@ function render(){{
     data: {{ labels: pagesSorted.map(([k])=>k), datasets: [{{ data: pagesSorted.map(([,v])=>v.count), backgroundColor: pagesSorted.map(([,v])=>v.color), borderRadius:5, borderSkipped:false }}] }},
     options: {{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{{ legend:{{display:false}}, tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views · ${{pageAvgs[c.dataIndex]}} avg visits/person`}}}} }},
+      plugins:{{ legend:{{display:false}}, tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views · ${{pageVisitors[c.dataIndex]}} visitors · ${{pageAvgs[c.dataIndex]}} avg visits/person`}}}} }},
       scales:{{
         x:{{grid:{{color:'#2e3350'}},ticks:{{color:'#7b82a0',font:{{size:11}}}}}},
         y:{{grid:{{display:false}},ticks:{{color:'#e8ecf4',font:{{size:11}}}}}}
