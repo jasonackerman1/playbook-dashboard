@@ -117,24 +117,6 @@
   </div>
 </div>
 
-<div class="table-section" id="visitor-section">
-  <div class="table-header">
-    <span class="table-title">Visitor Summary</span>
-    <span style="font-size:12px;color:var(--muted)" id="visitor-count"></span>
-  </div>
-  <div class="table-outer">
-    <table>
-      <thead><tr>
-        <th>Name</th>
-        <th>Region</th>
-        <th>Type</th>
-        <th>Total Visits</th>
-      </tr></thead>
-      <tbody id="visitor-body"></tbody>
-    </table>
-  </div>
-</div>
-
 <div class="table-section" id="table-section">
   <div class="table-header">
     <span class="table-title">Activity Log</span>
@@ -153,6 +135,7 @@
           <th onclick="sortBy('Date')">Date</th>
           <th onclick="sortBy('Playbook')">Playbook</th>
           <th onclick="sortBy('Page')">Page</th>
+          <th>Total Visits</th>
         </tr>
       </thead>
       <tbody id="table-body"></tbody>
@@ -273,27 +256,13 @@ function render(){
     <div class="stat"><div class="stat-label">Playbooks Active</div><div class="stat-value green">${Object.keys(pbCounts).length}</div><div class="stat-sub">out of 9 total</div></div>
   `;
 
-  // Visitor summary table
+  // Build per-person visit counts for activity log
   const visitorMap = {};
   filtered.forEach(r => {
     const key = `${r.FirstName} ${r.LastName}`;
-    if (!visitorMap[key]) visitorMap[key] = {name:key, region:r.Region, type:r.Type, visits:0};
-    visitorMap[key].visits++;
+    if (!visitorMap[key]) visitorMap[key] = 0;
+    visitorMap[key]++;
   });
-  const visitorsSorted = Object.values(visitorMap).sort((a,b)=>b.visits-a.visits);
-  sel('visitor-count').textContent = `${visitorsSorted.length} ${visitorsSorted.length===1?'person':'people'}`;
-  sel('visitor-body').innerHTML = visitorsSorted.length
-    ? visitorsSorted.map(v => {
-        const tc = v.type==='Employee'?'#4f8ef7':'#cf5cf7';
-        const tb = v.type==='Employee'?'#1a2a4a':'#2a1a3a';
-        return `<tr>
-          <td>${v.name}</td>
-          <td>${v.region||'<span style="color:var(--muted)">—</span>'}</td>
-          <td><span class="pill" style="background:${tb};color:${tc}">${v.type}</span></td>
-          <td style="color:#2dd4bf;font-weight:600">${v.visits}</td>
-        </tr>`;
-      }).join('')
-    : `<tr><td colspan="4" class="no-data">No records match your filters.</td></tr>`;
 
   // Bar chart — always include all known playbooks (zero if no data)
   const pbAll = {...pbCounts};
@@ -418,10 +387,11 @@ function render(){
   const totalPages = Math.max(1, Math.ceil(sorted.length/PAGE_SIZE));
   const tbody = sel('table-body');
   if (!pageData.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="no-data">No records match your filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="no-data">No records match your filters.</td></tr>`;
   } else {
     tbody.innerHTML = pageData.map(r => {
       const color = pbColor(r.Playbook);
+      const totalVisits = visitorMap[`${r.FirstName} ${r.LastName}`] || 0;
       return `<tr>
         <td>${r.FirstName} ${r.LastName}</td>
         <td>${r.Region||'<span style="color:var(--muted)">—</span>'}</td>
@@ -430,6 +400,7 @@ function render(){
         <td style="color:var(--muted)">${r.Date}</td>
         <td><span class="pill" style="background:${color}22;color:${color}">${r.Playbook}</span></td>
         <td style="color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.Page}</td>
+        <td style="color:#2dd4bf;font-weight:600">${totalVisits}</td>
       </tr>`;
     }).join('');
   }
