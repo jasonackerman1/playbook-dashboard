@@ -306,6 +306,7 @@ let hideTLG = false;
 function toggleTLG(){{
   hideTLG = !hideTLG;
   sel('btn-tlg').classList.toggle('active', hideTLG);
+  sel('btn-tlg').textContent = hideTLG ? 'Show TLG' : 'Hide TLG';
   applyFilters();
 }}
 
@@ -334,6 +335,7 @@ function resetFilters(){{
   sel('search').value = '';
   hideTLG = false;
   sel('btn-tlg').classList.remove('active');
+  sel('btn-tlg').textContent = 'Hide TLG';
   applyFilters();
 }}
 
