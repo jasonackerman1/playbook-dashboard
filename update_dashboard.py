@@ -140,11 +140,13 @@ html = f"""<!DOCTYPE html>
 
   .charts-top{{display:grid;grid-template-columns:2fr 1fr;gap:16px;padding:0 28px 16px;}}
   .charts-bottom{{padding:0 28px 20px;}}
-  @media(max-width:860px){{.charts-top{{grid-template-columns:1fr;}}}}
+  .charts-pages{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
+  @media(max-width:860px){{.charts-top,.charts-pages{{grid-template-columns:1fr;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
   .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
   .chart-wrap{{position:relative;height:240px;}}
   .chart-wrap-tall{{position:relative;height:180px;}}
+  .chart-wrap-pages{{position:relative;height:320px;}}
 
   .table-section{{padding:0 28px 32px;}}
   .table-header{{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}}
@@ -205,6 +207,35 @@ html = f"""<!DOCTYPE html>
   </div>
 </div>
 
+<div class="charts-pages">
+  <div class="chart-card">
+    <div class="chart-title" id="pages-chart-title">Top Pages — Total Views</div>
+    <div class="chart-wrap-pages"><canvas id="pagesChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title" id="avg-pages-chart-title">Top Pages — Avg Visits / Person</div>
+    <div class="chart-wrap-pages"><canvas id="avgPagesChart"></canvas></div>
+  </div>
+</div>
+
+<div class="table-section" id="visitor-section">
+  <div class="table-header">
+    <span class="table-title">Visitor Summary</span>
+    <span style="font-size:12px;color:var(--muted)" id="visitor-count"></span>
+  </div>
+  <div class="table-outer">
+    <table>
+      <thead><tr>
+        <th>Name</th>
+        <th>Region</th>
+        <th>Type</th>
+        <th>Total Visits</th>
+      </tr></thead>
+      <tbody id="visitor-body"></tbody>
+    </table>
+  </div>
+</div>
+
 <div class="table-section" id="table-section">
   <div class="table-header">
     <span class="table-title">Activity Log</span>
@@ -257,9 +288,13 @@ allPlaybooks.forEach(p => sel('f-playbook').innerHTML += `<option value="${{p}}"
 allRegions.forEach(r => sel('f-region').innerHTML  += `<option value="${{r}}">${{r}}</option>`);
 
 // Header badges
+function fmtMonth(m) {{
+  const [y,mo] = m.split('-');
+  return new Date(y, mo-1).toLocaleString('en-US', {{month:'long',year:'numeric'}});
+}}
 sel('header-range').textContent = allMonths.length > 1
-  ? `— ${{allMonths[0]}} to ${{allMonths[allMonths.length-1]}}`
-  : `— ${{allMonths[0]}}`;
+  ? `— ${{fmtMonth(allMonths[0])}} to ${{fmtMonth(allMonths[allMonths.length-1])}}`
+  : `— ${{fmtMonth(allMonths[0])}}`;
 sel('badge-views').textContent  = `${{RAW.length.toLocaleString()}} total views`;
 sel('badge-months').textContent = `${{allMonths.length}} month${{allMonths.length>1?'s':''}}`;
 
@@ -312,7 +347,7 @@ function countBy(arr, key){{
   return arr.reduce((acc,r) => {{ const v=r[key]||'(none)'; acc[v]=(acc[v]||0)+1; return acc; }}, {{}});
 }}
 
-let barChart, pieChart, trendChart;
+let barChart, pieChart, trendChart, pagesChart, avgPagesChart;
 
 function render(){{
   const sorted = [...filtered].sort((a,b) => {{
@@ -329,15 +364,42 @@ function render(){{
   const monthsShown = new Set(filtered.map(r=>r.Month)).size;
   sel('result-count').textContent = `${{totalViews.toLocaleString()}} views`;
 
+  const avgVisits = uniqueUsers > 0 ? (totalViews / uniqueUsers).toFixed(1) : '0';
+
   sel('stats-row').innerHTML = `
     <div class="stat"><div class="stat-label">Total Page Views</div><div class="stat-value blue">${{totalViews.toLocaleString()}}</div><div class="stat-sub">${{monthsShown}} month${{monthsShown!==1?'s':''}} shown</div></div>
     <div class="stat"><div class="stat-label">Unique Users</div><div class="stat-value purple">${{uniqueUsers}}</div><div class="stat-sub">employees &amp; dealers</div></div>
+    <div class="stat"><div class="stat-label">Avg Visits / Person</div><div class="stat-value" style="color:#2dd4bf">${{avgVisits}}</div><div class="stat-sub">this period</div></div>
     <div class="stat"><div class="stat-label">Top Playbook</div><div class="stat-value yellow" style="font-size:16px;padding-top:4px">${{topPB[0]}}</div><div class="stat-sub">${{topPB[1].toLocaleString()}} views</div></div>
-    <div class="stat"><div class="stat-label">Playbooks Active</div><div class="stat-value green">${{Object.keys(pbCounts).length}}</div><div class="stat-sub">out of 8 total</div></div>
+    <div class="stat"><div class="stat-label">Playbooks Active</div><div class="stat-value green">${{Object.keys(pbCounts).length}}</div><div class="stat-sub">out of 9 total</div></div>
   `;
 
-  // Bar chart
-  const pbSorted = Object.entries(pbCounts).sort((a,b)=>b[1]-a[1]);
+  // Visitor summary table
+  const visitorMap = {{}};
+  filtered.forEach(r => {{
+    const key = `${{r.FirstName}} ${{r.LastName}}`;
+    if (!visitorMap[key]) visitorMap[key] = {{name:key, region:r.Region, type:r.Type, visits:0}};
+    visitorMap[key].visits++;
+  }});
+  const visitorsSorted = Object.values(visitorMap).sort((a,b)=>b.visits-a.visits);
+  sel('visitor-count').textContent = `${{visitorsSorted.length}} ${{visitorsSorted.length===1?'person':'people'}}`;
+  sel('visitor-body').innerHTML = visitorsSorted.length
+    ? visitorsSorted.map(v => {{
+        const tc = v.type==='Employee'?'#4f8ef7':'#cf5cf7';
+        const tb = v.type==='Employee'?'#1a2a4a':'#2a1a3a';
+        return `<tr>
+          <td>${{v.name}}</td>
+          <td>${{v.region||'<span style="color:var(--muted)">—</span>'}}</td>
+          <td><span class="pill" style="background:${{tb}};color:${{tc}}">${{v.type}}</span></td>
+          <td style="color:#2dd4bf;font-weight:600">${{v.visits}}</td>
+        </tr>`;
+      }}).join('')
+    : `<tr><td colspan="4" class="no-data">No records match your filters.</td></tr>`;
+
+  // Bar chart — always include all known playbooks (zero if no data)
+  const pbAll = {{...pbCounts}};
+  Object.keys(PLAYBOOK_COLORS).forEach(pb => {{ if (!(pb in pbAll)) pbAll[pb] = 0; }});
+  const pbSorted = Object.entries(pbAll).sort((a,b)=>b[1]-a[1]);
   if (barChart) barChart.destroy();
   barChart = new Chart(sel('barChart'), {{
     type: 'bar',
@@ -365,6 +427,56 @@ function render(){{
       plugins:{{
         legend:{{position:'bottom',labels:{{color:'#7b82a0',font:{{size:11}},boxWidth:10,padding:8}}}},
         tooltip:{{callbacks:{{label:c=>` ${{c.label}}: ${{c.raw.toLocaleString()}} views`}}}}
+      }}
+    }}
+  }});
+
+  // Top pages chart
+  const pbFilter = sel('f-playbook').value;
+  const pageMap = {{}};
+  filtered.forEach(r => {{
+    const label = pbFilter ? r.Page : `${{r.Page}} · ${{r.Playbook}}`;
+    if (!pageMap[label]) pageMap[label] = {{count:0, color:pbColor(r.Playbook)}};
+    pageMap[label].count++;
+  }});
+  const pagesSorted = Object.entries(pageMap).sort((a,b)=>b[1].count-a[1].count).slice(0,10);
+  sel('pages-chart-title').textContent = pbFilter ? `Top Pages — ${{pbFilter}}` : 'Top Pages — All Playbooks';
+  if (pagesChart) pagesChart.destroy();
+  pagesChart = new Chart(sel('pagesChart'), {{
+    type: 'bar',
+    data: {{ labels: pagesSorted.map(([k])=>k), datasets: [{{ data: pagesSorted.map(([,v])=>v.count), backgroundColor: pagesSorted.map(([,v])=>v.color), borderRadius:5, borderSkipped:false }}] }},
+    options: {{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{{ legend:{{display:false}}, tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views`}}}} }},
+      scales:{{
+        x:{{grid:{{color:'#2e3350'}},ticks:{{color:'#7b82a0',font:{{size:11}}}}}},
+        y:{{grid:{{display:false}},ticks:{{color:'#e8ecf4',font:{{size:11}}}}}}
+      }}
+    }}
+  }});
+
+  // Avg visits per page chart
+  const avgPageMap = {{}};
+  filtered.forEach(r => {{
+    const label = pbFilter ? r.Page : `${{r.Page}} · ${{r.Playbook}}`;
+    if (!avgPageMap[label]) avgPageMap[label] = {{views:0, visitors:new Set(), color:pbColor(r.Playbook)}};
+    avgPageMap[label].views++;
+    avgPageMap[label].visitors.add(`${{r.FirstName}} ${{r.LastName}}`);
+  }});
+  const avgPagesSorted = Object.entries(avgPageMap)
+    .map(([k,v]) => [k, {{avg:parseFloat((v.views/v.visitors.size).toFixed(2)), color:v.color}}])
+    .sort((a,b)=>b[1].avg-a[1].avg).slice(0,10);
+  sel('avg-pages-chart-title').textContent = pbFilter ? `Avg Visits / Person — ${{pbFilter}}` : 'Avg Visits / Person — By Page';
+  if (avgPagesChart) avgPagesChart.destroy();
+  avgPagesChart = new Chart(sel('avgPagesChart'), {{
+    type: 'bar',
+    data: {{ labels: avgPagesSorted.map(([k])=>k), datasets: [{{ data: avgPagesSorted.map(([,v])=>v.avg), backgroundColor: avgPagesSorted.map(([,v])=>v.color), borderRadius:5, borderSkipped:false }}] }},
+    options: {{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{{ legend:{{display:false}}, tooltip:{{callbacks:{{label:c=>` ${{c.raw}} avg visits/person`}}}} }},
+      scales:{{
+        x:{{grid:{{color:'#2e3350'}},ticks:{{color:'#7b82a0',font:{{size:11}}}}}},
+        y:{{grid:{{display:false}},ticks:{{color:'#e8ecf4',font:{{size:11}}}}}}
       }}
     }}
   }});
