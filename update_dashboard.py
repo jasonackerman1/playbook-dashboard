@@ -251,7 +251,7 @@ html = f"""<!DOCTYPE html>
 </div>
 
 <script>
-Chart.register(ChartDataLabels);
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 const RAW = {json.dumps(records)};
 
 const PLAYBOOK_COLORS = {{
@@ -376,11 +376,11 @@ function render(){{
       plugins:{{
         legend:{{display:false}},
         tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views`}}}},
-        datalabels:{{
+        datalabels: typeof ChartDataLabels !== 'undefined' ? {{
           anchor:'center', align:'center',
           color:'#fff', font:{{size:11, weight:'700'}},
           formatter: v => v > 0 ? v.toLocaleString() : '',
-        }}
+        }} : {{display:false}}
       }},
       scales:{{
         x:{{grid:{{color:'#2e3350'}},ticks:{{color:'#7b82a0',font:{{size:11}}}}}},
