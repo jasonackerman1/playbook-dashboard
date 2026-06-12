@@ -106,6 +106,7 @@ html = f"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Playbook Traffic Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
   :root {{
     --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
@@ -165,6 +166,10 @@ html = f"""<!DOCTYPE html>
   .pill{{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;}}
 .no-data{{text-align:center;color:var(--muted);padding:40px;font-size:13px;}}
   .section-hint{{font-size:11px;color:var(--muted);margin-bottom:14px;margin-top:-8px;opacity:0.7;}}
+  .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
+  .info-btn:hover{{border-color:var(--accent);color:var(--accent);}}
+  .info-popover{{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}}
+  .info-popover.visible{{display:block;}}
   .drilldown-wrap{{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;}}
   .drilldown-left{{width:260px;flex-shrink:0;overflow-y:auto;max-height:820px;border-right:1px solid var(--border);}}
   .drilldown-person{{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}}
@@ -198,7 +203,7 @@ html = f"""<!DOCTYPE html>
   <select id="f-region"><option value="">All Regions</option></select>
   <select id="f-type"><option value="">Employee &amp; Dealer</option><option value="Employee">Employee</option><option value="Dealer">Dealer</option></select>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button><span class="info-btn" onclick="showInfo(event,'hide-tlg')">?</span>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -206,12 +211,12 @@ html = f"""<!DOCTYPE html>
 
 <div class="charts-top">
   <div class="chart-card">
-    <div class="chart-title">Page Views by Playbook</div>
+    <div class="chart-title">Page Views by Playbook<span class="info-btn" onclick="showInfo(event,'chart-playbook')">?</span></div>
     <div class="section-hint">Hover over a bar to see the view count</div>
     <div class="chart-wrap"><canvas id="barChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Views by Region</div>
+    <div class="chart-title">Views by Region<span class="info-btn" onclick="showInfo(event,'chart-region')">?</span></div>
     <div class="section-hint">Hover over a segment to see the region breakdown</div>
     <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
   </div>
@@ -219,7 +224,7 @@ html = f"""<!DOCTYPE html>
 
 <div class="charts-bottom">
   <div class="chart-card">
-    <div class="chart-title">Monthly Trend — Views Over Time</div>
+    <div class="chart-title">Monthly Trend — Views Over Time<span class="info-btn" onclick="showInfo(event,'chart-trend')">?</span></div>
     <div class="section-hint">Hover to see monthly totals by playbook — shows top 5 playbooks by volume</div>
     <div class="chart-wrap-tall"><canvas id="trendChart"></canvas></div>
   </div>
@@ -236,7 +241,7 @@ html = f"""<!DOCTYPE html>
 
 <div class="table-section" id="drilldown-section">
   <div class="table-header">
-    <span class="table-title">Who's Active</span>
+    <span class="table-title">Who's Active<span class="info-btn" onclick="showInfo(event,'whos-active')">?</span></span>
     <span class="section-hint" style="margin:0">Click a name to see their full page history</span>
   </div>
   <div class="drilldown-wrap">
@@ -246,6 +251,7 @@ html = f"""<!DOCTYPE html>
 </div>
 
 <script>
+Chart.register(ChartDataLabels);
 const RAW = {json.dumps(records)};
 
 const PLAYBOOK_COLORS = {{
@@ -349,11 +355,11 @@ function render(){{
   const avgVisits = uniqueUsers > 0 ? (totalViews / uniqueUsers).toFixed(1) : '0';
 
   sel('stats-row').innerHTML = `
-    <div class="stat"><div class="stat-label">Total Page Views</div><div class="stat-value blue">${{totalViews.toLocaleString()}}</div><div class="stat-sub">${{monthsShown}} month${{monthsShown!==1?'s':''}} shown</div></div>
-    <div class="stat"><div class="stat-label">Unique Users</div><div class="stat-value purple">${{uniqueUsers}}</div><div class="stat-sub">employees &amp; dealers</div></div>
-    <div class="stat"><div class="stat-label">Avg Visits / Person</div><div class="stat-value" style="color:#2dd4bf">${{avgVisits}}</div><div class="stat-sub">this period</div></div>
-    <div class="stat"><div class="stat-label">Top Playbook</div><div class="stat-value yellow" style="font-size:16px;padding-top:4px">${{topPB[0]}}</div><div class="stat-sub">${{topPB[1].toLocaleString()}} views</div></div>
-    <div class="stat"><div class="stat-label">Playbooks Active</div><div class="stat-value green">${{Object.keys(pbCounts).length}}</div><div class="stat-sub">out of 9 total</div></div>
+    <div class="stat"><div class="stat-label">Total Page Views<span class="info-btn" onclick="showInfo(event,'total-views')">?</span></div><div class="stat-value blue">${{totalViews.toLocaleString()}}</div><div class="stat-sub">${{monthsShown}} month${{monthsShown!==1?'s':''}} shown</div></div>
+    <div class="stat"><div class="stat-label">Unique Users<span class="info-btn" onclick="showInfo(event,'unique-users')">?</span></div><div class="stat-value purple">${{uniqueUsers}}</div><div class="stat-sub">employees &amp; dealers</div></div>
+    <div class="stat"><div class="stat-label">Avg Visits / Person<span class="info-btn" onclick="showInfo(event,'avg-visits')">?</span></div><div class="stat-value" style="color:#2dd4bf">${{avgVisits}}</div><div class="stat-sub">this period</div></div>
+    <div class="stat"><div class="stat-label">Top Playbook<span class="info-btn" onclick="showInfo(event,'top-playbook')">?</span></div><div class="stat-value yellow" style="font-size:16px;padding-top:4px">${{topPB[0]}}</div><div class="stat-sub">${{topPB[1].toLocaleString()}} views</div></div>
+    <div class="stat"><div class="stat-label">Playbooks Active<span class="info-btn" onclick="showInfo(event,'playbooks-active')">?</span></div><div class="stat-value green">${{Object.keys(pbCounts).length}}</div><div class="stat-sub">out of 9 total</div></div>
   `;
 
 
@@ -367,7 +373,15 @@ function render(){{
     data: {{ labels: pbSorted.map(([k])=>k), datasets: [{{ data: pbSorted.map(([,v])=>v), backgroundColor: pbSorted.map(([k])=>pbColor(k)), borderRadius: 5, borderSkipped: false }}] }},
     options: {{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{{ legend:{{display:false}}, tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views`}}}} }},
+      plugins:{{
+        legend:{{display:false}},
+        tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views`}}}},
+        datalabels:{{
+          anchor:'center', align:'center',
+          color:'#fff', font:{{size:11, weight:'700'}},
+          formatter: v => v > 0 ? v.toLocaleString() : '',
+        }}
+      }},
       scales:{{
         x:{{grid:{{color:'#2e3350'}},ticks:{{color:'#7b82a0',font:{{size:11}}}}}},
         y:{{grid:{{display:false}},ticks:{{color:'#e8ecf4',font:{{size:11}}}}}}
@@ -387,7 +401,8 @@ function render(){{
       responsive:true, maintainAspectRatio:false,
       plugins:{{
         legend:{{position:'bottom',labels:{{color:'#7b82a0',font:{{size:11}},boxWidth:10,padding:8}}}},
-        tooltip:{{callbacks:{{label:c=>` ${{c.label}}: ${{c.raw.toLocaleString()}} views`}}}}
+        tooltip:{{callbacks:{{label:c=>` ${{c.label}}: ${{c.raw.toLocaleString()}} views`}}}},
+        datalabels:{{display:false}}
       }}
     }}
   }});
@@ -411,7 +426,7 @@ function render(){{
     data: {{ labels: pagesSorted.map(([k])=>k), datasets: [{{ data: pagesSorted.map(([,v])=>v.count), backgroundColor: pagesSorted.map(([,v])=>v.color), borderRadius:5, borderSkipped:false }}] }},
     options: {{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{{ legend:{{display:false}}, tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views · ${{pageVisitors[c.dataIndex]}} visitors · ${{pageAvgs[c.dataIndex]}} avg visits/person`}}}} }},
+      plugins:{{ legend:{{display:false}}, tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views · ${{pageVisitors[c.dataIndex]}} visitors · ${{pageAvgs[c.dataIndex]}} avg visits/person`}}}}, datalabels:{{display:false}} }},
       scales:{{
         x:{{grid:{{color:'#2e3350'}},ticks:{{color:'#7b82a0',font:{{size:11}}}}}},
         y:{{grid:{{display:false}},ticks:{{color:'#e8ecf4',font:{{size:11}}}}}}
@@ -443,7 +458,8 @@ function render(){{
       responsive:true, maintainAspectRatio:false,
       plugins:{{
         legend:{{position:'bottom',labels:{{color:'#7b82a0',font:{{size:11}},boxWidth:10,padding:8}}}},
-        tooltip:{{mode:'index',intersect:false}}
+        tooltip:{{mode:'index',intersect:false}},
+        datalabels:{{display:false}}
       }},
       scales:{{
         x:{{grid:{{color:'#2e3350'}},ticks:{{color:'#7b82a0',font:{{size:11}}}}}},
@@ -513,7 +529,40 @@ function drillSelect(el, name) {{
 }}
 
 applyFilters();
+
+const INFO = {{
+  'total-views':    'Each time someone loads a page in a playbook, that counts as one page view. A single person visiting 3 different pages = 3 views.',
+  'unique-users':   'The number of distinct people who accessed a playbook in the selected period. Each person is counted once regardless of how many pages they viewed.',
+  'avg-visits':     'Total page views divided by unique users. A score of 3.0 means each person viewed an average of 3 pages during this period. Higher scores indicate people are exploring more content or returning to pages repeatedly.',
+  'top-playbook':   'The playbook with the highest total page views in the selected period.',
+  'playbooks-active': 'The number of playbooks that received at least one view in the selected period, out of 9 total playbooks tracked.',
+  'chart-playbook': 'Total page views per playbook for the selected period. The number shown inside each bar is the exact view count. Hover a bar for more detail.',
+  'chart-region':   'Breakdown of total page views by sales region. Hover over a segment to see the exact count for that region.',
+  'chart-trend':    'Page view trends over time. Only the top 5 playbooks by total volume are shown — lower-traffic playbooks are not included on this chart.',
+  'chart-pages':    'The 10 most visited pages in the selected period. Hover over any bar to see total views, unique visitors, and average visits per person.',
+  'hide-tlg':       'Removes the internal Learning & Development team (TLG) from all data — charts, stats, and the Who\'s Active list. Use this when sharing results with managers or stakeholders outside the team.',
+  'whos-active':    'Lists every person who accessed a playbook in the selected period, sorted by total page views. The number next to each name is their total page views — not unique pages visited. Clicking a page 5 times counts as 5.',
+}};
+
+function showInfo(e, key) {{
+  e.stopPropagation();
+  const pop = document.getElementById('info-popover');
+  if (pop.dataset.key === key && pop.classList.contains('visible')) {{
+    pop.classList.remove('visible');
+    return;
+  }}
+  pop.dataset.key = key;
+  pop.textContent = INFO[key] || '';
+  pop.classList.add('visible');
+  const r = e.target.getBoundingClientRect();
+  const left = Math.min(r.left, window.innerWidth - 280);
+  pop.style.left = left + 'px';
+  pop.style.top = (r.bottom + 8 + window.scrollY) + 'px';
+  pop.style.position = 'absolute';
+}}
+document.addEventListener('click', () => document.getElementById('info-popover')?.classList.remove('visible'));
 </script>
+<div id="info-popover" class="info-popover"></div>
 </body>
 </html>"""
 
