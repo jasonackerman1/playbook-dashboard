@@ -204,6 +204,7 @@ html = f"""<!DOCTYPE html>
   <select id="f-type"><option value="">Employee &amp; Dealer</option><option value="Employee">Employee</option><option value="Dealer">Dealer</option></select>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button><span class="info-btn" onclick="showInfo(event,'hide-tlg')">?</span>
+  <button class="btn-tlg" id="btn-vertical" onclick="toggleVertical()">Vertical Markets</button><span class="info-btn" onclick="showInfo(event,'vertical-filter')">?</span>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -307,10 +308,21 @@ function toggleTLG(){{
   applyFilters();
 }}
 
+const VERTICAL_PLAYBOOKS = new Set(["Healthcare Playbook","Legal Playbook","Public Sector Playbook"]);
+let hideVertical = false;
+
+function toggleVertical(){{
+  hideVertical = !hideVertical;
+  sel('btn-vertical').classList.toggle('active', hideVertical);
+  sel('btn-vertical').textContent = hideVertical ? 'All Playbooks' : 'Vertical Markets';
+  applyFilters();
+}}
+
 function applyFilters(){{
   const f = getFilters();
   filtered = RAW.filter(r => {{
     if (hideTLG && TLG.has(`${{r.FirstName}} ${{r.LastName}}`)) return false;
+    if (hideVertical && !VERTICAL_PLAYBOOKS.has(r.Playbook)) return false;
     if (f.month    && r.Month    !== f.month)    return false;
     if (f.playbook && r.Playbook !== f.playbook) return false;
     if (f.region   && r.Region   !== f.region)   return false;
@@ -327,6 +339,9 @@ function resetFilters(){{
   hideTLG = false;
   sel('btn-tlg').classList.remove('active');
   sel('btn-tlg').textContent = 'Hide TLG';
+  hideVertical = false;
+  sel('btn-vertical').classList.remove('active');
+  sel('btn-vertical').textContent = 'Vertical Markets';
   applyFilters();
 }}
 
@@ -541,6 +556,7 @@ const INFO = {{
   'chart-trend':    'Page view trends over time. Only the top 5 playbooks by total volume are shown — lower-traffic playbooks are not included on this chart.',
   'chart-pages':    'The 10 most visited pages in the selected period. Hover over any bar to see total views, unique visitors, and average visits per person.',
   'hide-tlg':       'Removes the internal L&D team (TLG) from all data — charts, stats, and the Active Users panel. Use this when sharing results with managers or stakeholders outside the team.',
+  'vertical-filter': 'Filters to only the three vertical market playbooks — Healthcare, Legal, and Public Sector. All other playbooks are hidden while active. Can be combined with Hide TLG.',
   'whos-active':    'Lists every person who accessed a playbook in the selected period, sorted by total page views. The number next to each name is their total page views — not unique pages visited. Clicking a page 5 times counts as 5.',
 }};
 
