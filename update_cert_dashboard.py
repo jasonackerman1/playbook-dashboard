@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""update_cert_dashboard.py — generates cert-{vertical}.html from LMS Excel exports in cert-data/"""
+"""update_cert_dashboard.py — generates cert-{vertical}.html from LMS Excel exports in cert-data/.
+Accumulates all monthly files per vertical; deduplicates by Email so each person appears once."""
 
 import openpyxl
 import os
