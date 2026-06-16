@@ -137,8 +137,18 @@ def generate_html(slug, name, rows):
 
   .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
   .header-left{{display:flex;align-items:center;gap:16px;}}
-  .back-link{{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;transition:all .15s;white-space:nowrap;}}
-  .back-link:hover{{color:var(--text);border-color:var(--accent);}}
+  .hamburger{{position:relative;}}
+  .hamburger-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}}
+  .hamburger-btn:hover,.hamburger-btn.open{{border-color:var(--accent);color:var(--text);}}
+  .hamburger-menu{{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:220px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}}
+  .hamburger-menu.open{{display:block;}}
+  .hamburger-section-label{{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}}
+  .hamburger-item{{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}}
+  .hamburger-item:hover{{background:var(--surface2);}}
+  .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
+  .info-btn:hover{{border-color:var(--accent);color:var(--accent);}}
+  .info-popover{{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}}
+  .info-popover.visible{{display:block;}}
   .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
   .header h1 span{{color:var(--muted);font-weight:400;}}
   .btn-theme{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
@@ -209,13 +219,27 @@ def generate_html(slug, name, rows):
 
 <div class="header">
   <div class="header-left">
-    <a href="index.html" class="back-link">&#8592; Playbook Dashboard</a>
+    <div class="hamburger" id="hamburger">
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
+      <div class="hamburger-menu" id="hamburger-menu">
+        <div class="hamburger-section-label">Dashboards</div>
+        <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
+      </div>
+    </div>
     <h1>{name} <span>Certification Dashboard</span></h1>
   </div>
   <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
 </div>
 
 <div class="filters">
+  <span class="filter-label">Certification</span>
+  <select id="f-cert">
+    <option value="">All Certifications</option>
+    <option value="LayeredSec">Layered Security</option>
+    <option value="Healthcare">Healthcare</option>
+    <option value="Ambulatory">Ambulatory</option>
+    <option value="Extended">Extended Care</option>
+  </select>
   <span class="filter-label">Status</span>
   <select id="f-status">
     <option value="">All</option>
@@ -235,19 +259,19 @@ def generate_html(slug, name, rows):
 
 <div class="stats">
   <div class="stat">
-    <div class="stat-label">Total Assigned</div>
+    <div class="stat-label">Total Assigned <span class="info-btn" onclick="showInfo(event,'total-assigned')">?</span></div>
     <div class="stat-value" id="s-total">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Certified</div>
+    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
     <div class="stat-value green" id="s-certified">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Not Yet Certified</div>
+    <div class="stat-label">Not Yet Certified <span class="info-btn" onclick="showInfo(event,'not-certified')">?</span></div>
     <div class="stat-value red" id="s-not">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Completion Rate</div>
+    <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
     <div class="stat-value teal" id="s-rate">&#8212;</div>
     <div class="stat-sub" id="s-rate-sub"></div>
   </div>
@@ -255,15 +279,15 @@ def generate_html(slug, name, rows):
 
 <div class="charts">
   <div class="chart-card">
-    <div class="chart-title">Certified vs Not Certified by Region</div>
+    <div class="chart-title">Certified vs Not Certified by Region <span class="info-btn" onclick="showInfo(event,'by-region')">?</span></div>
     <div class="chart-wrap"><canvas id="regionChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Certifications Over Time</div>
+    <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'over-time')">?</span></div>
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Sub-Certification Breakdown</div>
+    <div class="chart-title">Sub-Certification Breakdown <span class="info-btn" onclick="showInfo(event,'subcert')">?</span></div>
     <div class="chart-wrap"><canvas id="subcertChart"></canvas></div>
   </div>
 </div>
@@ -271,7 +295,7 @@ def generate_html(slug, name, rows):
 <div class="section">
   <div class="section-header">
     <div>
-      <div class="section-title">Certification Roster</div>
+      <div class="section-title">Certification Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
       <div class="section-hint">Click a person to see their details &mdash; sorted by status then name</div>
     </div>
     <input type="text" class="roster-search" id="roster-search" placeholder="Search by name&hellip;" oninput="filterRoster()">
@@ -311,9 +335,46 @@ function toggleTheme(){{
 const allRegions = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
 allRegions.forEach(r => sel('f-region').innerHTML += `<option value="${{r}}">${{r}}</option>`);
 
-['f-status','f-region','f-date-from','f-date-to'].forEach(id => {{
+['f-cert','f-status','f-region','f-date-from','f-date-to'].forEach(id => {{
   sel(id).addEventListener('change', applyFilters);
 }});
+
+function toggleHamburger(){{
+  const menu = sel('hamburger-menu');
+  const btn  = sel('hamburger-btn');
+  const open = menu.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}}
+document.addEventListener('click', function(e){{
+  const h = sel('hamburger');
+  if(h && !h.contains(e.target)){{
+    sel('hamburger-menu').classList.remove('open');
+    sel('hamburger-btn').classList.remove('open');
+  }}
+  if(!e.target.classList.contains('info-btn')){{
+    sel('info-popover').classList.remove('visible');
+  }}
+}});
+
+const INFO_MSGS = {{
+  'total-assigned':  'Total number of people assigned this certification curriculum.',
+  'certified':       'People who have completed and passed the curriculum certification.',
+  'not-certified':   'People assigned the curriculum who have not yet completed it.',
+  'completion-rate': 'Percentage of assigned people who have earned the certification. Updates when a specific Certification is selected.',
+  'by-region':       'Certified vs. not certified broken down by sales region. Responds to the Certification and Status filters.',
+  'over-time':       'Number of overall curriculum certifications earned per fiscal quarter (Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar).',
+  'subcert':         'How many people have earned each of the four sub-certifications within this curriculum.',
+  'roster':          'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
+}};
+function showInfo(e, key){{
+  const pop = sel('info-popover');
+  pop.textContent = INFO_MSGS[key] || '';
+  pop.classList.add('visible');
+  const r = e.target.getBoundingClientRect();
+  pop.style.top  = (r.bottom + 6) + 'px';
+  pop.style.left = Math.min(r.left, window.innerWidth - 280) + 'px';
+  e.stopPropagation();
+}}
 
 function toggleTLG(){{
   hideTLG = !hideTLG;
@@ -323,19 +384,21 @@ function toggleTLG(){{
 }}
 
 function resetFilters(){{
-  ['f-status','f-region','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
+  ['f-cert','f-status','f-region','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
   if(hideTLG){{ hideTLG=false; sel('btn-tlg').classList.remove('active'); sel('btn-tlg').textContent='Hide TLG'; }}
   applyFilters();
 }}
 
 function applyFilters(){{
+  const cert   = sel('f-cert').value;
+  const certField = cert || 'Complete';
   const status = sel('f-status').value;
   const region = sel('f-region').value;
   const from   = sel('f-date-from').value;
   const to     = sel('f-date-to').value;
   filtered = RAW.filter(r => {{
     if(hideTLG && TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
-    if(status && r.Complete !== status) return false;
+    if(status && r[certField] !== status) return false;
     if(region && r.Region   !== region) return false;
     if(from && r.Date && r.Date < from) return false;
     if(to   && r.Date && r.Date > to)   return false;
@@ -346,12 +409,13 @@ function applyFilters(){{
 }}
 
 function render(){{
-  const isLight   = document.body.classList.contains('light-mode');
+  const isLight    = document.body.classList.contains('light-mode');
   const chartLabel = isLight ? cv('--text') : cv('--muted');
+  const certField  = sel('f-cert').value || 'Complete';
 
   // Stat cards
   const total    = filtered.length;
-  const certified = filtered.filter(r=>r.Complete==='Yes').length;
+  const certified = filtered.filter(r=>r[certField]==='Yes').length;
   const notCert  = total - certified;
   const rate     = total > 0 ? Math.round(certified/total*100) : 0;
 
@@ -363,8 +427,8 @@ function render(){{
 
   // Region chart — grouped bars
   const regions         = [...new Set(filtered.map(r=>r.Region).filter(Boolean))].sort();
-  const certByRegion    = regions.map(rg => filtered.filter(r=>r.Region===rg&&r.Complete==='Yes').length);
-  const notCertByRegion = regions.map(rg => filtered.filter(r=>r.Region===rg&&r.Complete==='No').length);
+  const certByRegion    = regions.map(rg => filtered.filter(r=>r.Region===rg&&r[certField]==='Yes').length);
+  const notCertByRegion = regions.map(rg => filtered.filter(r=>r.Region===rg&&r[certField]==='No').length);
 
   if(regionChart) regionChart.destroy();
   regionChart = new Chart(sel('regionChart'), {{
@@ -456,12 +520,12 @@ function render(){{
 
   // Roster — certified first, then alphabetical by last name
   const sorted = [...filtered].sort((a,b)=>{{
-    if(a.Complete!==b.Complete) return a.Complete==='Yes'?-1:1;
+    if(a[certField]!==b[certField]) return a[certField]==='Yes'?-1:1;
     return (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
   }});
   sel('roster-left').innerHTML = sorted.map(p=>{{
     const fullName = `${{p.FirstName}} ${{p.LastName}}`;
-    const isCert   = p.Complete==='Yes';
+    const isCert   = p[certField]==='Yes';
     return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}">
       <div class="cert-dot ${{isCert?'yes':'no'}}"></div>
       <span class="roster-name">${{fullName}}</span>
@@ -524,6 +588,7 @@ function filterRoster(){{
 
 applyFilters();
 </script>
+<div class="info-popover" id="info-popover"></div>
 </body>
 </html>"""
 
