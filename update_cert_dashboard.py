@@ -396,9 +396,10 @@ function applyFilters(){{
   const region = sel('f-region').value;
   const from   = sel('f-date-from').value;
   const to     = sel('f-date-to').value;
+  const effectiveStatus = (cert && !status) ? 'Yes' : status;
   filtered = RAW.filter(r => {{
     if(hideTLG && TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
-    if(status && r[certField] !== status) return false;
+    if(effectiveStatus && r[certField] !== effectiveStatus) return false;
     if(region && r.Region   !== region) return false;
     if(from && r.Date && r.Date < from) return false;
     if(to   && r.Date && r.Date > to)   return false;
