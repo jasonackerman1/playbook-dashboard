@@ -63,6 +63,17 @@ def km_fiscal_quarter(date):
     return f'Q{q} FY{fy}'
 
 
+def extract_file_date(fname):
+    """Extract YYYY-MM from filename for chronological ordering of monthly files."""
+    m = re.search(r'(\d{4}-\d{2})', os.path.basename(fname))
+    return m.group(1) if m else '0000-00'
+
+
+def person_key(r):
+    """Unique identifier for deduplication — Email preferred, name as fallback."""
+    return r['Email'].lower() if r['Email'] else f"{r['FirstName']} {r['LastName']}".lower()
+
+
 def detect_vertical(fname):
     """Extract vertical slug from filename — supports both naming conventions."""
     fn = os.path.basename(fname).lower()
@@ -605,22 +616,51 @@ def main():
         print('No .xlsx files found in cert-data/')
         return
 
-    generated = []
+    # Group files by vertical slug
+    vert_files = {}
     for fname in files:
         slug = detect_vertical(fname)
         if not slug:
             print(f'  Skipping {fname} — could not detect vertical from filename')
             continue
+        vert_files.setdefault(slug, []).append(fname)
+
+    generated = []
+    for slug in sorted(vert_files):
+        # Sort files chronologically by YYYY-MM in filename
+        fnames    = sorted(vert_files[slug], key=extract_file_date)
         vert_name = VERTICAL_MAP.get(slug, slug.title())
-        filepath  = os.path.join(cert_dir, fname)
-        print(f'  {fname}  →  {slug} ({vert_name})')
-        rows = load_rows(filepath)
-        print(f'    {len(rows)} rows loaded  ({sum(1 for r in rows if r["Complete"]=="Yes")} certified)')
-        html = generate_html(slug, vert_name, rows)
+        print(f'\n{slug} ({vert_name}) — {len(fnames)} file(s):')
+
+        # Load all files in order, tag each row with its file date
+        all_rows = []
+        for fname in fnames:
+            file_date = extract_file_date(fname)
+            filepath  = os.path.join(cert_dir, fname)
+            print(f'  {fname}  [{file_date}]')
+            rows = load_rows(filepath)
+            for r in rows:
+                r['_file_date'] = file_date
+            all_rows.extend(rows)
+            print(f'    {len(rows)} rows  ({sum(1 for r in rows if r["Complete"]=="Yes")} certified)')
+
+        # Deduplicate: later files overwrite earlier ones for the same person
+        all_rows.sort(key=lambda r: r['_file_date'])
+        seen = {}
+        for r in all_rows:
+            seen[person_key(r)] = r
+        deduped = list(seen.values())
+        for r in deduped:
+            del r['_file_date']
+
+        certified = sum(1 for r in deduped if r['Complete'] == 'Yes')
+        print(f'  → {len(deduped)} unique people  ({certified} certified, {len(deduped)-certified} not yet)')
+
+        html = generate_html(slug, vert_name, deduped)
         out  = f'cert-{slug}.html'
         with open(out, 'w', encoding='utf-8') as fh:
             fh.write(html)
-        print(f'    Written → {out}')
+        print(f'  Written → {out}')
         generated.append(out)
 
     print(f'\nDone. {len(generated)} dashboard(s) generated.')
