@@ -36,8 +36,19 @@ COL_MGR_LAST     = 10
 COL_MGR_EMAIL    = 11
 COL_MGR_TITLE    = 12
 COL_COMPLETE     = 19   # "Yes" / "No"
-COL_DATE     = 20   # Curriculum Assignment Date (completion date)
-COL_QTR      = 21   # Qtr Certified
+COL_DATE         = 20   # Curriculum Assignment Date (completion date)
+COL_QTR          = 21   # Qtr Certified
+COL_LAYERED_SEC  = 22   # Layered Security Certified Status
+COL_HEALTHCARE   = 23   # Healthcare Certified Status
+COL_AMBULATORY   = 24   # Ambulatory Certified
+COL_EXTENDED     = 25   # Extended Care Certified
+
+SUB_CERTS = [
+    ('LayeredSec', 'Layered Security'),
+    ('Healthcare', 'Healthcare'),
+    ('Ambulatory', 'Ambulatory'),
+    ('Extended',   'Extended Care'),
+]
 
 
 def km_fiscal_quarter(date):
@@ -83,9 +94,13 @@ def load_rows(filepath):
             'Manager':   ((str(raw[COL_MGR_FIRST]).strip() + ' ' + str(raw[COL_MGR_LAST]).strip()).strip()) if raw[COL_MGR_FIRST] else '',
             'MgrEmail':  str(raw[COL_MGR_EMAIL]).strip() if raw[COL_MGR_EMAIL] else '',
             'MgrTitle':  str(raw[COL_MGR_TITLE]).strip() if raw[COL_MGR_TITLE] else '',
-            'Complete':  str(raw[COL_COMPLETE]).strip() if raw[COL_COMPLETE] else 'No',
-            'Date':      raw[COL_DATE].strftime('%Y-%m-%d') if raw[COL_DATE] else '',
-            'Qtr':       str(raw[COL_QTR]).strip() if raw[COL_QTR] else km_fiscal_quarter(raw[COL_DATE]),
+            'Complete':   str(raw[COL_COMPLETE]).strip() if raw[COL_COMPLETE] else 'No',
+            'Date':       raw[COL_DATE].strftime('%Y-%m-%d') if raw[COL_DATE] else '',
+            'Qtr':        str(raw[COL_QTR]).strip() if raw[COL_QTR] else km_fiscal_quarter(raw[COL_DATE]),
+            'LayeredSec': str(raw[COL_LAYERED_SEC]).strip() if raw[COL_LAYERED_SEC] else 'No',
+            'Healthcare': str(raw[COL_HEALTHCARE]).strip() if raw[COL_HEALTHCARE] else 'No',
+            'Ambulatory': str(raw[COL_AMBULATORY]).strip() if raw[COL_AMBULATORY] else 'No',
+            'Extended':   str(raw[COL_EXTENDED]).strip() if raw[COL_EXTENDED] else 'No',
         })
     wb.close()
     return rows
@@ -149,8 +164,9 @@ def generate_html(slug, name, rows):
   .stat-value.teal{{color:var(--teal);}}
   .stat-sub{{font-size:11px;color:var(--muted);margin-top:4px;}}
 
-  .charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
-  @media(max-width:860px){{.charts{{grid-template-columns:1fr;}}}}
+  .charts{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:0 28px 16px;}}
+  @media(max-width:1100px){{.charts{{grid-template-columns:1fr 1fr;}}}}
+  @media(max-width:680px){{.charts{{grid-template-columns:1fr;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
   .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
   body.light-mode .chart-title{{color:var(--text);}}
@@ -246,6 +262,10 @@ def generate_html(slug, name, rows):
     <div class="chart-title">Certifications Over Time</div>
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
+  <div class="chart-card">
+    <div class="chart-title">Sub-Certification Breakdown</div>
+    <div class="chart-wrap"><canvas id="subcertChart"></canvas></div>
+  </div>
 </div>
 
 <div class="section">
@@ -270,7 +290,7 @@ const TLG_SET = new Set({tlg_json});
 
 let filtered = [];
 let hideTLG = false;
-let regionChart, trendChart;
+let regionChart, trendChart, subcertChart;
 
 function sel(id){{ return document.getElementById(id); }}
 function cv(v){{ return getComputedStyle(document.body).getPropertyValue(v).trim(); }}
@@ -403,6 +423,37 @@ function render(){{
     }}
   }});
 
+  // Sub-cert breakdown chart
+  const subLabels = ['Layered Security','Healthcare','Ambulatory','Extended Care'];
+  const subKeys   = ['LayeredSec','Healthcare','Ambulatory','Extended'];
+  const subColors = [cv('--accent'),cv('--green'),cv('--accent2'),cv('--teal')];
+  const subCounts = subKeys.map(k => filtered.filter(r=>r[k]==='Yes').length);
+  const subNotCounts = subKeys.map(k => filtered.filter(r=>r[k]==='No').length);
+
+  if(subcertChart) subcertChart.destroy();
+  subcertChart = new Chart(sel('subcertChart'), {{
+    type: 'bar',
+    data: {{
+      labels: subLabels,
+      datasets: [
+        {{ label:'Certified',     data:subCounts,    backgroundColor:subColors.map(c=>c+'cc'), borderRadius:4, borderSkipped:false }},
+        {{ label:'Not Certified', data:subNotCounts, backgroundColor:cv('--surface2'), borderRadius:4, borderSkipped:false, borderWidth:1, borderColor:cv('--border') }},
+      ]
+    }},
+    options: {{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{{
+        legend:{{position:'bottom',labels:{{color:chartLabel,font:{{size:11}},boxWidth:10,padding:8}}}},
+        tooltip:{{mode:'index',intersect:false}},
+        datalabels:{{display:false}}
+      }},
+      scales:{{
+        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:10}}}},stacked:true}},
+        y:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}},stepSize:1}},stacked:true}}
+      }}
+    }}
+  }});
+
   // Roster — certified first, then alphabetical by last name
   const sorted = [...filtered].sort((a,b)=>{{
     if(a.Complete!==b.Complete) return a.Complete==='Yes'?-1:1;
@@ -443,6 +494,15 @@ function rosterSelect(el){{
       <div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
       <div><div class="detail-label">Certification Date</div><div class="detail-value">${{p.Date||'&#8212;'}}</div></div>
       <div><div class="detail-label">Quarter Certified</div><div class="detail-value">${{p.Qtr||'&#8212;'}}</div></div>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Sub-Certifications</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${{[['LayeredSec','Layered Security'],['Healthcare','Healthcare'],['Ambulatory','Ambulatory'],['Extended','Extended Care']].map(([k,label])=>{{
+          const yes = p[k]==='Yes';
+          return `<span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:${{yes?'var(--green-subtle)':'var(--surface2)'}};color:${{yes?'var(--green)':'var(--muted)'}};border:1px solid ${{yes?'var(--green)':'var(--border)'}}">${{yes?'&#10003;':'&#8212;'}} ${{label}}</span>`;
+        }}).join('')}}
+      </div>
     </div>
     ${{p.Manager ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Manager</div>
