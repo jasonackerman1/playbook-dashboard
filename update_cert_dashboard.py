@@ -26,10 +26,16 @@ VERTICAL_MAP = {
 }
 
 # Column indices (0-based) matching Resmie's LMS export format
-COL_FIRST    = 2
-COL_LAST     = 3
-COL_REGION   = 6
-COL_COMPLETE = 19   # "Yes" / "No"
+COL_FIRST        = 2
+COL_LAST         = 3
+COL_EMAIL        = 4
+COL_JOBTITLE     = 5
+COL_REGION       = 6
+COL_MGR_FIRST    = 9
+COL_MGR_LAST     = 10
+COL_MGR_EMAIL    = 11
+COL_MGR_TITLE    = 12
+COL_COMPLETE     = 19   # "Yes" / "No"
 COL_DATE     = 20   # Curriculum Assignment Date (completion date)
 COL_QTR      = 21   # Qtr Certified
 
@@ -71,7 +77,12 @@ def load_rows(filepath):
         rows.append({
             'FirstName': str(raw[COL_FIRST]).strip(),
             'LastName':  str(raw[COL_LAST]).strip(),
+            'Email':     str(raw[COL_EMAIL]).strip() if raw[COL_EMAIL] else '',
+            'JobTitle':  str(raw[COL_JOBTITLE]).strip() if raw[COL_JOBTITLE] else '',
             'Region':    str(raw[COL_REGION]).strip() if raw[COL_REGION] else '',
+            'Manager':   ((str(raw[COL_MGR_FIRST]).strip() + ' ' + str(raw[COL_MGR_LAST]).strip()).strip()) if raw[COL_MGR_FIRST] else '',
+            'MgrEmail':  str(raw[COL_MGR_EMAIL]).strip() if raw[COL_MGR_EMAIL] else '',
+            'MgrTitle':  str(raw[COL_MGR_TITLE]).strip() if raw[COL_MGR_TITLE] else '',
             'Complete':  str(raw[COL_COMPLETE]).strip() if raw[COL_COMPLETE] else 'No',
             'Date':      raw[COL_DATE].strftime('%Y-%m-%d') if raw[COL_DATE] else '',
             'Qtr':       str(raw[COL_QTR]).strip() if raw[COL_QTR] else km_fiscal_quarter(raw[COL_DATE]),
@@ -427,10 +438,20 @@ function rosterSelect(el){{
       <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'Certified':'Not Yet Certified'}}</span>
     </div>
     <div class="detail-grid">
+      <div><div class="detail-label">Job Title</div><div class="detail-value">${{p.JobTitle||'&#8212;'}}</div></div>
       <div><div class="detail-label">Region</div><div class="detail-value">${{p.Region||'&#8212;'}}</div></div>
+      <div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
       <div><div class="detail-label">Certification Date</div><div class="detail-value">${{p.Date||'&#8212;'}}</div></div>
       <div><div class="detail-label">Quarter Certified</div><div class="detail-value">${{p.Qtr||'&#8212;'}}</div></div>
     </div>
+    ${{p.Manager ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Manager</div>
+      <div class="detail-grid">
+        <div><div class="detail-label">Name</div><div class="detail-value">${{p.Manager}}</div></div>
+        <div><div class="detail-label">Title</div><div class="detail-value">${{p.MgrTitle||'&#8212;'}}</div></div>
+        <div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.MgrEmail}}" style="color:var(--accent);text-decoration:none">${{p.MgrEmail||'&#8212;'}}</a></div></div>
+      </div>
+    </div>` : ''}}
   `;
 }}
 
