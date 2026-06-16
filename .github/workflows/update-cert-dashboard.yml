@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'cert-data/*.xlsx'
+      - 'update_cert_dashboard.py'
   workflow_dispatch:
 
 permissions:
