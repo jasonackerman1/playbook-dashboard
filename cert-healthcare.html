@@ -278,15 +278,15 @@ function render(){
     }
   });
 
-  // Trend chart — certified people per year-month
-  const yesRows = filtered.filter(r=>r.Complete==='Yes'&&r.Date);
-  const monthMap = {};
-  yesRows.forEach(r => {
-    const m = r.Date.slice(0,7);
-    monthMap[m] = (monthMap[m]||0)+1;
+  // Trend chart — certified people per fiscal quarter
+  const yesRows = filtered.filter(r=>r.Complete==='Yes'&&r.Qtr);
+  const qtrMap = {};
+  yesRows.forEach(r => { qtrMap[r.Qtr] = (qtrMap[r.Qtr]||0)+1; });
+  const trendMonths = Object.keys(qtrMap).sort((a,b) => {
+    const parse = s => { const m=s.match(/Q(\d)\s+FY(\d+)/); return m ? parseInt(m[2])*10+parseInt(m[1]) : 0; };
+    return parse(a)-parse(b);
   });
-  const trendMonths = Object.keys(monthMap).sort();
-  const trendCounts = trendMonths.map(m=>monthMap[m]);
+  const trendCounts = trendMonths.map(q=>qtrMap[q]);
 
   if(trendChart) trendChart.destroy();
   trendChart = new Chart(sel('trendChart'), {
