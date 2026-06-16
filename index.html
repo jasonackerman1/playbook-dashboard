@@ -199,7 +199,7 @@ const allPlaybooks= [...new Set([...Object.keys(PLAYBOOK_COLORS), ...RAW.map(r=>
 const allRegions  = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
 
 function sel(id){ return document.getElementById(id); }
-function cv(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function cv(v){ return getComputedStyle(document.body).getPropertyValue(v).trim(); }
 
 // Theme init
 (function(){
