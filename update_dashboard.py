@@ -436,6 +436,8 @@ function countBy(arr, key){{
 let barChart, pieChart, trendChart, pagesChart;
 
 function render(){{
+  const isLight = document.body.classList.contains('light-mode');
+  const chartLabel = isLight ? cv('--text') : cv('--muted');
   // Build per-person visit counts first (needed for sort)
   const visitorMap = {{}};
   filtered.forEach(r => {{
@@ -504,7 +506,7 @@ function render(){{
         }} : {{display:false}}
       }},
       scales:{{
-        x:{{grid:{{color:cv('--border')}},ticks:{{color:cv('--muted'),font:{{size:11}}}}}},
+        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}}}}}},
         y:{{grid:{{display:false}},ticks:{{color:cv('--text'),font:{{size:11}}}}}}
       }}
     }}
@@ -521,7 +523,7 @@ function render(){{
     options: {{
       responsive:true, maintainAspectRatio:false,
       plugins:{{
-        legend:{{position:'bottom',labels:{{color:cv('--muted'),font:{{size:11}},boxWidth:10,padding:8}}}},
+        legend:{{position:'bottom',labels:{{color:chartLabel,font:{{size:11}},boxWidth:10,padding:8}}}},
         tooltip:{{callbacks:{{label:c=>` ${{c.label}}: ${{c.raw.toLocaleString()}} views`}}}},
         datalabels:{{display:false}}
       }}
@@ -549,7 +551,7 @@ function render(){{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{{ legend:{{display:false}}, tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views · ${{pageVisitors[c.dataIndex]}} visitors · ${{pageAvgs[c.dataIndex]}} avg visits/person`}}}}, datalabels:{{display:false}} }},
       scales:{{
-        x:{{grid:{{color:cv('--border')}},ticks:{{color:cv('--muted'),font:{{size:11}}}}}},
+        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}}}}}},
         y:{{grid:{{display:false}},ticks:{{color:cv('--text'),font:{{size:11}}}}}}
       }}
     }}
@@ -578,13 +580,13 @@ function render(){{
     options: {{
       responsive:true, maintainAspectRatio:false,
       plugins:{{
-        legend:{{position:'bottom',labels:{{color:cv('--muted'),font:{{size:11}},boxWidth:10,padding:8}}}},
+        legend:{{position:'bottom',labels:{{color:chartLabel,font:{{size:11}},boxWidth:10,padding:8}}}},
         tooltip:{{mode:'index',intersect:false}},
         datalabels:{{display:false}}
       }},
       scales:{{
-        x:{{grid:{{color:cv('--border')}},ticks:{{color:cv('--muted'),font:{{size:11}}}}}},
-        y:{{grid:{{color:cv('--border')}},ticks:{{color:cv('--muted'),font:{{size:11}}}}}}
+        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}}}}}},
+        y:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}}}}}}
       }}
     }}
   }});
