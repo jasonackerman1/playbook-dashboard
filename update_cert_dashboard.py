@@ -29,7 +29,6 @@ VERTICAL_MAP = {
 COL_FIRST    = 2
 COL_LAST     = 3
 COL_REGION   = 6
-COL_EMPTYPE  = 13
 COL_COMPLETE = 19   # "Yes" / "No"
 COL_DATE     = 20   # Curriculum Assignment Date (completion date)
 COL_QTR      = 21   # Qtr Certified
@@ -73,7 +72,6 @@ def load_rows(filepath):
             'FirstName': str(raw[COL_FIRST]).strip(),
             'LastName':  str(raw[COL_LAST]).strip(),
             'Region':    str(raw[COL_REGION]).strip() if raw[COL_REGION] else '',
-            'EmpType':   str(raw[COL_EMPTYPE]).strip() if raw[COL_EMPTYPE] else '',
             'Complete':  str(raw[COL_COMPLETE]).strip() if raw[COL_COMPLETE] else 'No',
             'Date':      raw[COL_DATE].strftime('%Y-%m-%d') if raw[COL_DATE] else '',
             'Qtr':       str(raw[COL_QTR]).strip() if raw[COL_QTR] else km_fiscal_quarter(raw[COL_DATE]),
@@ -199,8 +197,6 @@ def generate_html(slug, name, rows):
   </select>
   <span class="filter-label">Region</span>
   <select id="f-region"><option value="">All Regions</option></select>
-  <span class="filter-label">Type</span>
-  <select id="f-emptype"><option value="">All Types</option></select>
   <span class="filter-label" style="margin-right:2px">From</span>
   <input type="date" id="f-date-from">
   <span class="filter-label" style="margin:0 2px">To</span>
@@ -281,12 +277,10 @@ function toggleTheme(){{
 }}
 
 // Populate filter dropdowns from data
-const allRegions  = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
-const allEmpTypes = [...new Set(RAW.map(r=>r.EmpType).filter(Boolean))].sort();
-allRegions.forEach(r  => sel('f-region').innerHTML  += `<option value="${{r}}">${{r}}</option>`);
-allEmpTypes.forEach(t => sel('f-emptype').innerHTML += `<option value="${{t}}">${{t}}</option>`);
+const allRegions = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
+allRegions.forEach(r => sel('f-region').innerHTML += `<option value="${{r}}">${{r}}</option>`);
 
-['f-status','f-region','f-emptype','f-date-from','f-date-to'].forEach(id => {{
+['f-status','f-region','f-date-from','f-date-to'].forEach(id => {{
   sel(id).addEventListener('change', applyFilters);
 }});
 
@@ -298,22 +292,20 @@ function toggleTLG(){{
 }}
 
 function resetFilters(){{
-  ['f-status','f-region','f-emptype','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
+  ['f-status','f-region','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
   if(hideTLG){{ hideTLG=false; sel('btn-tlg').classList.remove('active'); sel('btn-tlg').textContent='Hide TLG'; }}
   applyFilters();
 }}
 
 function applyFilters(){{
-  const status  = sel('f-status').value;
-  const region  = sel('f-region').value;
-  const emptype = sel('f-emptype').value;
-  const from    = sel('f-date-from').value;
-  const to      = sel('f-date-to').value;
+  const status = sel('f-status').value;
+  const region = sel('f-region').value;
+  const from   = sel('f-date-from').value;
+  const to     = sel('f-date-to').value;
   filtered = RAW.filter(r => {{
     if(hideTLG && TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
-    if(status  && r.Complete !== status)  return false;
-    if(region  && r.Region   !== region)  return false;
-    if(emptype && r.EmpType  !== emptype) return false;
+    if(status && r.Complete !== status) return false;
+    if(region && r.Region   !== region) return false;
     if(from && r.Date && r.Date < from) return false;
     if(to   && r.Date && r.Date > to)   return false;
     return true;
@@ -436,7 +428,6 @@ function rosterSelect(el){{
     </div>
     <div class="detail-grid">
       <div><div class="detail-label">Region</div><div class="detail-value">${{p.Region||'&#8212;'}}</div></div>
-      <div><div class="detail-label">Employee Type</div><div class="detail-value">${{p.EmpType||'&#8212;'}}</div></div>
       <div><div class="detail-label">Certification Date</div><div class="detail-value">${{p.Date||'&#8212;'}}</div></div>
       <div><div class="detail-label">Quarter Certified</div><div class="detail-value">${{p.Qtr||'&#8212;'}}</div></div>
     </div>
