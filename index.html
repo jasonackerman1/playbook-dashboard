@@ -24,13 +24,16 @@
 
   .filters{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}
   .filter-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}
-  select,input[type=text]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;}
+  select,input[type=text],input[type=date]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;color-scheme:dark;}
   select:focus,input:focus{border-color:var(--accent);}
   .btn-reset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}
   .btn-reset:hover{border-color:var(--accent);color:var(--text);}
   .btn-tlg{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}
   .btn-tlg:hover{border-color:var(--red);color:var(--red);}
   .btn-tlg.active{background:#f76f6f22;border-color:var(--red);color:var(--red);}
+  .btn-preset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;}
+  .btn-preset:hover{border-color:var(--accent);color:var(--text);}
+  .btn-preset.active{background:#4f8ef722;border-color:var(--accent);color:var(--accent);font-weight:600;}
   .result-count{margin-left:auto;font-size:12px;color:var(--muted);}
 
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}
@@ -92,12 +95,20 @@
   <div class="badges">
     <span class="badge" id="badge-views"></span>
     <span class="badge" id="badge-months"></span>
+    <span class="badge" id="badge-asof"></span>
   </div>
 </div>
 
 <div class="filters">
   <span class="filter-label">Filter</span>
-  <select id="f-month"><option value="">All Months</option></select>
+  <button class="btn-preset" id="btn-7d"  onclick="setRange(7,this)">7D</button>
+  <button class="btn-preset active" id="btn-30d" onclick="setRange(30,this)">30D</button>
+  <button class="btn-preset" id="btn-90d" onclick="setRange(90,this)">90D</button>
+  <button class="btn-preset" id="btn-all" onclick="setRange(0,this)">All</button>
+  <span class="filter-label" style="margin-right:2px">From</span>
+  <input type="date" id="f-date-from">
+  <span class="filter-label" style="margin:0 2px">To</span>
+  <input type="date" id="f-date-to">
   <select id="f-playbook"><option value="">All Playbooks</option></select>
   <select id="f-region"><option value="">All Regions</option></select>
   <select id="f-type"><option value="">Employee &amp; Dealer</option><option value="Employee">Employee</option><option value="Dealer">Dealer</option></select>
@@ -142,7 +153,7 @@
 <div class="table-section" id="drilldown-section">
   <div class="table-header">
     <span class="table-title">Who's Active<span class="info-btn" onclick="showInfo(event,'whos-active')">?</span></span>
-    <span class="section-hint" style="margin:0">Click a name to see their full page history</span>
+    <input type="text" id="drilldown-search" oninput="filterPersonList()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
   </div>
   <div class="drilldown-wrap">
     <div class="drilldown-left" id="drilldown-left"></div>
@@ -172,25 +183,44 @@ const allPlaybooks= [...new Set([...Object.keys(PLAYBOOK_COLORS), ...RAW.map(r=>
 const allRegions  = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
 
 function sel(id){ return document.getElementById(id); }
-allMonths.forEach(m => sel('f-month').innerHTML    += `<option value="${m}">${m}</option>`);
 allPlaybooks.forEach(p => sel('f-playbook').innerHTML += `<option value="${p}">${p}</option>`);
 allRegions.forEach(r => sel('f-region').innerHTML  += `<option value="${r}">${r}</option>`);
+
+function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+function today(){ return new Date().toISOString().slice(0,10); }
+sel('f-date-from').value = daysAgo(30);
+sel('f-date-to').value   = today();
+
+function setRange(days, btn){
+  document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(days===0){ sel('f-date-from').value=''; sel('f-date-to').value=''; }
+  else{ sel('f-date-from').value=daysAgo(days); sel('f-date-to').value=today(); }
+  applyFilters();
+}
 
 // Header badges
 function fmtMonth(m) {
   const [y,mo] = m.split('-');
   return new Date(y, mo-1).toLocaleString('en-US', {month:'long',year:'numeric'});
 }
+function fmtDate(d){
+  const [y,m,day]=d.split('-');
+  return new Date(+y,+m-1,+day).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+}
 sel('header-range').textContent = allMonths.length > 1
   ? `— ${fmtMonth(allMonths[0])} to ${fmtMonth(allMonths[allMonths.length-1])}`
   : `— ${fmtMonth(allMonths[0])}`;
 sel('badge-views').textContent  = `${RAW.length.toLocaleString()} total views`;
 sel('badge-months').textContent = `${allMonths.length} month${allMonths.length>1?'s':''}`;
+const maxDate = RAW.reduce((mx,r)=>r.Date>mx?r.Date:mx,'');
+if(maxDate) sel('badge-asof').textContent = 'Data through '+fmtDate(maxDate);
 
 let filtered = [...RAW];
 function getFilters(){
   return {
-    month:    sel('f-month').value,
+    fromDate: sel('f-date-from').value,
+    toDate:   sel('f-date-to').value,
     playbook: sel('f-playbook').value,
     region:   sel('f-region').value,
     type:     sel('f-type').value,
@@ -222,7 +252,8 @@ function applyFilters(){
   filtered = RAW.filter(r => {
     if (hideTLG && TLG.has(`${r.FirstName} ${r.LastName}`)) return false;
     if (hideVertical && !VERTICAL_PLAYBOOKS.has(r.Playbook)) return false;
-    if (f.month    && r.Month    !== f.month)    return false;
+    if (f.fromDate && r.Date < f.fromDate) return false;
+    if (f.toDate   && r.Date > f.toDate)   return false;
     if (f.playbook && r.Playbook !== f.playbook) return false;
     if (f.region   && r.Region   !== f.region)   return false;
     if (f.type     && r.Type     !== f.type)      return false;
@@ -231,10 +262,18 @@ function applyFilters(){
   render();
 }
 
-['f-month','f-playbook','f-region','f-type'].forEach(id => sel(id).addEventListener('change', applyFilters));
+['f-date-from','f-date-to'].forEach(id => sel(id).addEventListener('change', ()=>{
+  document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
+  applyFilters();
+}));
+['f-playbook','f-region','f-type'].forEach(id => sel(id).addEventListener('change', applyFilters));
 
 function resetFilters(){
-  ['f-month','f-playbook','f-region','f-type'].forEach(id => sel(id).value = '');
+  document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
+  sel('btn-30d').classList.add('active');
+  sel('f-date-from').value = daysAgo(30);
+  sel('f-date-to').value   = today();
+  ['f-playbook','f-region','f-type'].forEach(id => sel(id).value = '');
   hideTLG = false;
   sel('btn-tlg').classList.remove('active');
   sel('btn-tlg').textContent = 'Hide TLG';
@@ -242,6 +281,27 @@ function resetFilters(){
   sel('btn-vertical').classList.remove('active');
   sel('btn-vertical').textContent = 'Vertical Markets';
   applyFilters();
+}
+
+function filterForRange(fromStr, toStr){
+  const f=getFilters();
+  return RAW.filter(r=>{
+    if(hideTLG && TLG.has(r.FirstName+' '+r.LastName)) return false;
+    if(hideVertical && !VERTICAL_PLAYBOOKS.has(r.Playbook)) return false;
+    if(fromStr && r.Date<fromStr) return false;
+    if(toStr   && r.Date>toStr)   return false;
+    if(f.playbook && r.Playbook!==f.playbook) return false;
+    if(f.region   && r.Region!==f.region)     return false;
+    if(f.type     && r.Type!==f.type)         return false;
+    return true;
+  });
+}
+
+function filterPersonList(){
+  const q=(sel('drilldown-search')?.value||'').toLowerCase();
+  document.querySelectorAll('.drilldown-person').forEach(el=>{
+    el.style.display=(!q||el.dataset.name.toLowerCase().includes(q))?'':'none';
+  });
 }
 
 function countBy(arr, key){
@@ -268,10 +328,32 @@ function render(){
 
   const avgVisits = uniqueUsers > 0 ? (totalViews / uniqueUsers).toFixed(1) : '0';
 
+  // Prior period comparison (same date-range length, immediately before)
+  const fromDate=sel('f-date-from').value, toDate=sel('f-date-to').value;
+  let viewsDelta=null, usersDelta=null, avgDelta=null;
+  if(fromDate && toDate){
+    const dFrom=new Date(fromDate+'T00:00:00'), dTo=new Date(toDate+'T00:00:00');
+    const span=Math.round((dTo-dFrom)/86400000)+1;
+    const pTo=new Date(dFrom); pTo.setDate(pTo.getDate()-1);
+    const pFrom=new Date(pTo); pFrom.setDate(pFrom.getDate()-span+1);
+    const prior=filterForRange(pFrom.toISOString().slice(0,10), pTo.toISOString().slice(0,10));
+    const pViews=prior.length;
+    const pUsers=new Set(prior.map(r=>r.FirstName+' '+r.LastName)).size;
+    const pAvg=pUsers>0?(pViews/pUsers):0;
+    if(pViews>0) viewsDelta=Math.round((totalViews-pViews)/pViews*100);
+    if(pUsers>0) usersDelta=Math.round((uniqueUsers-pUsers)/pUsers*100);
+    if(pAvg>0)   avgDelta=Math.round((parseFloat(avgVisits)-pAvg)/pAvg*100);
+  }
+  function dHtml(d){
+    if(d===null) return '';
+    const arrow=d>=0?'↑':'↓', color=d>=0?'var(--green)':'var(--red)';
+    return '<span style="font-size:10px;color:'+color+';margin-left:6px;font-weight:600">'+arrow+Math.abs(d)+'%</span>';
+  }
+
   sel('stats-row').innerHTML = `
-    <div class="stat"><div class="stat-label">Total Page Views<span class="info-btn" onclick="showInfo(event,'total-views')">?</span></div><div class="stat-value blue">${totalViews.toLocaleString()}</div><div class="stat-sub">${monthsShown} month${monthsShown!==1?'s':''} shown</div></div>
-    <div class="stat"><div class="stat-label">Unique Users<span class="info-btn" onclick="showInfo(event,'unique-users')">?</span></div><div class="stat-value purple">${uniqueUsers}</div><div class="stat-sub">employees &amp; dealers</div></div>
-    <div class="stat"><div class="stat-label">Avg Visits / Person<span class="info-btn" onclick="showInfo(event,'avg-visits')">?</span></div><div class="stat-value" style="color:#2dd4bf">${avgVisits}</div><div class="stat-sub">this period</div></div>
+    <div class="stat"><div class="stat-label">Total Page Views<span class="info-btn" onclick="showInfo(event,'total-views')">?</span></div><div class="stat-value blue">${totalViews.toLocaleString()}${dHtml(viewsDelta)}</div><div class="stat-sub">${monthsShown} month${monthsShown!==1?'s':''} shown</div></div>
+    <div class="stat"><div class="stat-label">Unique Users<span class="info-btn" onclick="showInfo(event,'unique-users')">?</span></div><div class="stat-value purple">${uniqueUsers}${dHtml(usersDelta)}</div><div class="stat-sub">employees &amp; dealers</div></div>
+    <div class="stat"><div class="stat-label">Avg Visits / Person<span class="info-btn" onclick="showInfo(event,'avg-visits')">?</span></div><div class="stat-value" style="color:#2dd4bf">${avgVisits}${dHtml(avgDelta)}</div><div class="stat-sub">vs prior period</div></div>
     <div class="stat"><div class="stat-label">Top Playbook<span class="info-btn" onclick="showInfo(event,'top-playbook')">?</span></div><div class="stat-value yellow" style="font-size:16px;padding-top:4px">${topPB[0]}</div><div class="stat-sub">${topPB[1].toLocaleString()} views</div></div>
     <div class="stat"><div class="stat-label">Playbooks Active<span class="info-btn" onclick="showInfo(event,'playbooks-active')">?</span></div><div class="stat-value green">${Object.keys(pbCounts).length}</div><div class="stat-sub">out of 9 total</div></div>
   `;
@@ -390,9 +472,10 @@ function render(){
        <span class="drilldown-count">${count}</span>
      </div>`
   ).join('') || `<div class="no-data">No data</div>`;
+  filterPersonList();
   if (personList.length) {
-    const first = sel('drilldown-left').querySelector('.drilldown-person');
-    drillSelect(first, personList[0][0]);
+    const first = sel('drilldown-left').querySelector('.drilldown-person:not([style*="none"])') || sel('drilldown-left').querySelector('.drilldown-person');
+    if(first) drillSelect(first, first.dataset.name);
   } else {
     sel('drilldown-right').innerHTML = `<div class="no-data">No records match your filters.</div>`;
   }
