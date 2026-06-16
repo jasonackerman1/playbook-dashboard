@@ -29,8 +29,17 @@
   body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}
 
   .header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .header-left{display:flex;align-items:center;gap:16px;}
   .header h1{font-size:18px;font-weight:700;letter-spacing:.3px;}
   .header h1 span{color:var(--muted);font-weight:400;}
+  .hamburger{position:relative;}
+  .hamburger-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}
+  .hamburger-btn:hover,.hamburger-btn.open{border-color:var(--accent);color:var(--text);}
+  .hamburger-menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:240px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}
+  .hamburger-menu.open{display:block;}
+  .hamburger-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}
+  .hamburger-item{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}
+  .hamburger-item:hover{background:var(--surface2);}
   .badges{display:flex;gap:8px;flex-wrap:wrap;}
   .badge{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--muted);}
 
@@ -108,7 +117,16 @@
 <body>
 
 <div class="header">
-  <h1>Playbook Traffic Dashboard</h1>
+  <div class="header-left">
+    <div class="hamburger" id="hamburger">
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
+      <div class="hamburger-menu" id="hamburger-menu">
+        <div class="hamburger-section-label">Certifications</div>
+        <a href="cert-healthcare.html" class="hamburger-item">&#127973; Healthcare Certification Dashboard</a>
+      </div>
+    </div>
+    <h1>Playbook Traffic Dashboard</h1>
+  </div>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <span class="badge" id="badge-asof"></span>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">☀ Light</button>
@@ -584,7 +602,20 @@ function showInfo(e, key) {
   pop.style.top = (r.bottom + 8 + window.scrollY) + 'px';
   pop.style.position = 'absolute';
 }
-document.addEventListener('click', () => document.getElementById('info-popover')?.classList.remove('visible'));
+function toggleHamburger(){
+  const menu = sel('hamburger-menu');
+  const btn  = sel('hamburger-btn');
+  const open = menu.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+document.addEventListener('click', function(e){
+  const h = sel('hamburger');
+  if(h && !h.contains(e.target)){
+    sel('hamburger-menu').classList.remove('open');
+    sel('hamburger-btn').classList.remove('open');
+  }
+  document.getElementById('info-popover')?.classList.remove('visible');
+});
 </script>
 <div id="info-popover" class="info-popover"></div>
 </body>
