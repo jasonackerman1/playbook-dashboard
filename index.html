@@ -11,6 +11,7 @@
     --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
     --accent:#4f8ef7; --accent2:#7c5cfc; --accent3:#f7c94f;
     --text:#e8ecf4; --muted:#7b82a0; --green:#3ecf8e; --red:#f76f6f;
+    --teal:#2dd4bf; --teal-subtle:#2dd4bf18;
     --font:'Segoe UI',system-ui,sans-serif;
     --pill-emp-bg:#1a2a4a; --pill-emp-color:#4f8ef7;
     --pill-dlr-bg:#2a1a3a; --pill-dlr-color:#cf5cf7;
@@ -18,7 +19,8 @@
   body.light-mode {
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#eef1f7; --border:#d0d7e8;
     --accent:#2563eb; --accent2:#6d28d9; --accent3:#d97706;
-    --text:#1a1d27; --muted:#64748b; --green:#059669; --red:#dc2626;
+    --text:#1a1d27; --muted:#475569; --green:#059669; --red:#dc2626;
+    --teal:#0f766e; --teal-subtle:#0f766e18;
     --pill-emp-bg:#dbeafe; --pill-emp-color:#1d4ed8;
     --pill-dlr-bg:#f3e8ff; --pill-dlr-color:#7c3aed;
   }
@@ -91,7 +93,8 @@
   .drilldown-person:hover{background:var(--surface2);}
   .drilldown-person.active{background:#4f8ef711;border-left:3px solid var(--accent);padding-left:11px;}
   .drilldown-name{flex:1;font-size:13px;}
-  .drilldown-count{font-size:11px;font-weight:700;color:#2dd4bf;background:#2dd4bf18;border-radius:10px;padding:2px 8px;}
+  .drilldown-count{font-size:11px;font-weight:700;color:var(--teal);background:var(--teal-subtle);border-radius:10px;padding:2px 8px;}
+  body.light-mode .pill-pb{filter:brightness(0.55);}
   .drilldown-right{flex:1;overflow-y:auto;max-height:820px;padding:16px 18px;}
   .drilldown-right-header{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);font-size:13px;}
   .drilldown-right table thead th{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
@@ -372,7 +375,7 @@ function render(){
   sel('stats-row').innerHTML = `
     <div class="stat"><div class="stat-label">Total Page Views<span class="info-btn" onclick="showInfo(event,'total-views')">?</span></div><div class="stat-value blue">${totalViews.toLocaleString()}${dHtml(viewsDelta)}</div><div class="stat-sub">${monthsShown} month${monthsShown!==1?'s':''} shown</div></div>
     <div class="stat"><div class="stat-label">Unique Users<span class="info-btn" onclick="showInfo(event,'unique-users')">?</span></div><div class="stat-value purple">${uniqueUsers}${dHtml(usersDelta)}</div><div class="stat-sub">employees &amp; dealers</div></div>
-    <div class="stat"><div class="stat-label">Avg Visits / Person<span class="info-btn" onclick="showInfo(event,'avg-visits')">?</span></div><div class="stat-value" style="color:#2dd4bf">${avgVisits}${dHtml(avgDelta)}</div><div class="stat-sub">vs prior period</div></div>
+    <div class="stat"><div class="stat-label">Avg Visits / Person<span class="info-btn" onclick="showInfo(event,'avg-visits')">?</span></div><div class="stat-value" style="color:${cv('--teal')}">${avgVisits}${dHtml(avgDelta)}</div><div class="stat-sub">vs prior period</div></div>
     <div class="stat"><div class="stat-label">Top Playbook<span class="info-btn" onclick="showInfo(event,'top-playbook')">?</span></div><div class="stat-value yellow" style="font-size:16px;padding-top:4px">${topPB[0]}</div><div class="stat-sub">${topPB[1].toLocaleString()} views</div></div>
     <div class="stat"><div class="stat-label">Playbooks Active<span class="info-btn" onclick="showInfo(event,'playbooks-active')">?</span></div><div class="stat-value green">${Object.keys(pbCounts).length}</div><div class="stat-sub">out of 9 total</div></div>
   `;
@@ -534,9 +537,9 @@ function drillSelect(el, name) {
           const c = pbColor(v.playbook);
           return `<tr>
             <td style="color:var(--muted)">${v.date}</td>
-            <td><span class="pill" style="background:${c}22;color:${c}">${v.playbook}</span></td>
+            <td><span class="pill pill-pb" style="background:${c}22;color:${c}">${v.playbook}</span></td>
             <td style="color:var(--muted)">${v.page}</td>
-            <td style="text-align:right;color:#2dd4bf;font-weight:600">${v.count}</td>
+            <td style="text-align:right;color:${cv('--teal')};font-weight:600">${v.count}</td>
           </tr>`;
         }).join('')}
       </tbody>
