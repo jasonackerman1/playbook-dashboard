@@ -35,6 +35,17 @@ COL_DATE     = 20   # Curriculum Assignment Date (completion date)
 COL_QTR      = 21   # Qtr Certified
 
 
+def km_fiscal_quarter(date):
+    """Replicates the Excel formula: ="Q"&ROUNDUP(MOD(MONTH(U)-4,12)/3+1,0)&" FY"&YEAR(U)-(MONTH(U)<4)"""
+    if date is None:
+        return ''
+    import math
+    m = date.month
+    q = math.ceil((((m - 4) % 12) / 3) + 1)
+    fy = date.year if m >= 4 else date.year - 1
+    return f'Q{q} FY{fy}'
+
+
 def detect_vertical(fname):
     """Extract vertical slug from filename — supports both naming conventions."""
     fn = os.path.basename(fname).lower()
@@ -64,7 +75,7 @@ def load_rows(filepath):
             'EmpType':   str(raw[COL_EMPTYPE]).strip() if raw[COL_EMPTYPE] else '',
             'Complete':  str(raw[COL_COMPLETE]).strip() if raw[COL_COMPLETE] else 'No',
             'Date':      raw[COL_DATE].strftime('%Y-%m-%d') if raw[COL_DATE] else '',
-            'Qtr':       str(raw[COL_QTR]).strip() if raw[COL_QTR] else '',
+            'Qtr':       str(raw[COL_QTR]).strip() if raw[COL_QTR] else km_fiscal_quarter(raw[COL_DATE]),
         })
     wb.close()
     return rows
