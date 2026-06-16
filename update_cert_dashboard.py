@@ -36,12 +36,13 @@ COL_QTR      = 21   # Qtr Certified
 
 
 def km_fiscal_quarter(date):
-    """Replicates the Excel formula: ="Q"&ROUNDUP(MOD(MONTH(U)-4,12)/3+1,0)&" FY"&YEAR(U)-(MONTH(U)<4)"""
+    """KM fiscal year starts April. Q1=Apr-Jun, Q2=Jul-Sep, Q3=Oct-Dec, Q4=Jan-Mar."""
     if date is None:
         return ''
     import math
     m = date.month
-    q = math.ceil((((m - 4) % 12) / 3) + 1)
+    # Shift so April=1 ... March=12, then divide into 4 equal quarters
+    q = math.ceil(((m - 4) % 12 + 1) / 3)
     fy = date.year if m >= 4 else date.year - 1
     return f'Q{q} FY{fy}'
 
