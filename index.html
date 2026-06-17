@@ -287,6 +287,7 @@ function getFilters(){
 
 const TLG = new Set(["Jason Ackerman","Bianca Davis","James Parker","Resmie Biba","Chris Curtis","Sara Thompson","Jeremy MacBean","Bradley Pierce","Laura Sefcik","Samantha Maresca","Staci Musco","CJ Homer","Rich Moore","Dale Kinsey"]);
 let hideTLG = false;
+let lastVisitMap = {};
 
 function toggleTLG(){
   hideTLG = !hideTLG;
@@ -373,7 +374,7 @@ function render(){
   const chartLabel = isLight ? cv('--text') : cv('--muted');
   // Build per-person visit counts first (needed for sort)
   const visitorMap = {};
-  const lastVisitMap = {};
+  lastVisitMap = {};
   filtered.forEach(r => {
     const key = `${r.FirstName} ${r.LastName}`;
     visitorMap[key] = (visitorMap[key] || 0) + 1;
