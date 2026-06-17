@@ -251,6 +251,9 @@ def generate_html(slug, name, rows):
   .no-data{{text-align:center;color:var(--muted);padding:40px;font-size:13px;}}
   @media(max-width:680px){{.roster-wrap{{flex-direction:column;}}.roster-left{{width:100%;max-height:220px;border-right:none;border-bottom:1px solid var(--border);}}}}
 
+  .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
+  .sort-btn:hover{{border-color:var(--accent);color:var(--text);}}
+  .sort-btn.active{{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}}
   .detail-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;margin-top:14px;}}
   .detail-label{{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}}
   .detail-value{{font-size:14px;font-weight:500;}}
@@ -343,6 +346,12 @@ def generate_html(slug, name, rows):
       <div class="section-title">Certification Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
       <div class="section-hint">Click a person to see their details &mdash; sorted by status then name</div>
     </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--muted);margin-right:2px;">Sort:</span>
+      <button class="sort-btn active" data-sort="status" data-label="Status" onclick="setRosterSort('status')">Status ↓</button>
+      <button class="sort-btn" data-sort="name"   data-label="Name"   onclick="setRosterSort('name')">Name</button>
+      <button class="sort-btn" data-sort="region" data-label="Region" onclick="setRosterSort('region')">Region</button>
+    </div>
     <input type="text" class="roster-search" id="roster-search" placeholder="Search by name&hellip;" oninput="filterRoster()">
   </div>
   <div class="roster-wrap">
@@ -360,6 +369,8 @@ const TLG_SET = new Set({tlg_json});
 let filtered = [];
 let hideTLG = false;
 let regionChart, trendChart, subcertChart;
+let rosterSortField = 'status';
+let rosterSortDir   = 'desc';
 
 function sel(id){{ return document.getElementById(id); }}
 function cv(v){{ return getComputedStyle(document.body).getPropertyValue(v).trim(); }}
@@ -571,18 +582,55 @@ function render(){{
     }}
   }});
 
-  // Roster — certified first, then alphabetical by last name
-  const sorted = [...filtered].sort((a,b)=>{{
-    if(a[certField]!==b[certField]) return a[certField]==='Yes'?-1:1;
-    return (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
+  renderRosterList();
+}}
+
+function subCertCount(r){{
+  return ['LayeredSec','Healthcare','AcuteCare','Ambulatory','Extended'].filter(k=>r[k]==='Yes').length;
+}}
+
+function setRosterSort(field){{
+  if(rosterSortField === field) {{
+    rosterSortDir = rosterSortDir === 'desc' ? 'asc' : 'desc';
+  }} else {{
+    rosterSortField = field;
+    rosterSortDir   = 'desc';
+  }}
+  renderRosterList();
+}}
+
+function renderRosterList(){{
+  const certField = sel('f-cert').value || 'Complete';
+  const d = rosterSortDir === 'desc' ? -1 : 1;
+  const sorted = [...filtered].sort((a,b) => {{
+    if(rosterSortField === 'name') {{
+      return d * (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
+    }} else if(rosterSortField === 'region') {{
+      const rc = d * (a.Region||'').localeCompare(b.Region||'');
+      return rc !== 0 ? rc : (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
+    }} else {{
+      // status: certified first (desc) or not-first (asc); within group, most sub-certs first
+      if(a[certField] !== b[certField]) return d * (a[certField]==='Yes' ? -1 : 1);
+      return subCertCount(b) - subCertCount(a);
+    }}
   }});
-  sel('roster-left').innerHTML = sorted.map(p=>{{
+
+  // Update sort button labels
+  document.querySelectorAll('.sort-btn').forEach(btn => {{
+    const active = btn.dataset.sort === rosterSortField;
+    btn.classList.toggle('active', active);
+    const arrow = active ? (rosterSortDir === 'desc' ? ' ↓' : ' ↑') : '';
+    btn.textContent = btn.dataset.label + arrow;
+  }});
+
+  sel('roster-left').innerHTML = sorted.map(p => {{
     const fullName = `${{p.FirstName}} ${{p.LastName}}`;
     const isCert   = p[certField]==='Yes';
+    const count    = subCertCount(p);
     return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}">
       <div class="cert-dot ${{isCert?'yes':'no'}}"></div>
       <span class="roster-name">${{fullName}}</span>
-      <span class="cert-badge ${{isCert?'yes':'no'}}">${{isCert?'Certified':'Not Yet'}}</span>
+      <span class="cert-badge ${{isCert?'yes':'no'}}" title="${{count}}/5 sub-certs">${{isCert?'Certified':'Not Yet'}}</span>
     </div>`;
   }}).join('') || `<div class="no-data">No people match filters</div>`;
 
