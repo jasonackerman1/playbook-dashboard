@@ -26,27 +26,43 @@ VERTICAL_MAP = {
     'roadtodx':     'Road to DX',
 }
 
-# Column indices (0-based) matching Resmie's LMS export format
-COL_FIRST        = 2
-COL_LAST         = 3
-COL_EMAIL        = 4
-COL_JOBTITLE     = 5
-COL_REGION       = 6
-COL_MGR_FIRST    = 9
-COL_MGR_LAST     = 10
-COL_MGR_EMAIL    = 11
-COL_MGR_TITLE    = 12
-COL_COMPLETE     = 19   # "Yes" / "No"
-COL_DATE         = 20   # Curriculum Assignment Date (completion date)
-COL_QTR          = 21   # Qtr Certified
-COL_LAYERED_SEC  = 22   # Layered Security Certified Status
-COL_HEALTHCARE   = 23   # Healthcare Certified Status
-COL_AMBULATORY   = 24   # Ambulatory Certified
-COL_EXTENDED     = 25   # Extended Care Certified
+# Column indices (0-based) matching Resmie's LMS export format.
+# CAUTION: verify against each new file before regenerating — Resmie may adjust columns.
+# Last verified: FY26-Healthcare-Certification-Courses_2026-05.xlsx
+COL_FIRST        = 1   # First Name
+COL_LAST         = 2   # Last Name
+COL_EMAIL        = 3   # Email Address
+COL_JOBTITLE     = 4   # Job Title
+COL_REGION       = 5   # Region
+COL_MARKET       = 6   # Market
+COL_MGR_FIRST    = 8   # ManagerFirstName
+COL_MGR_LAST     = 9   # ManagerLastName
+COL_MGR_EMAIL    = 10  # SUPEMAILADDR (manager email)
+COL_MGR_TITLE    = 11  # Manager JobTitle
+COL_HIRE_DATE    = 13  # Hire Date
+COL_COMPLETE     = 18  # Curriculum Complete — "Yes" / "No"
+COL_DATE         = 19  # Curriculum Assignment Date (enrollment date; used for date-range filter)
+# No overall Qtr column — computed via km_fiscal_quarter(raw[COL_DATE])
+COL_LS_DATE      = 20  # Layered Security Certification Date
+COL_LS_QTR       = 21  # LS Qtr Certified
+COL_LAYERED_SEC  = 22  # LS Certified
+COL_HC_DATE      = 23  # Healthcare Certification Date
+COL_HC_QTR       = 24  # HC Qtr Certified
+COL_HEALTHCARE   = 25  # HC Certified
+COL_ACUTE_DATE   = 26  # Acute Care Certification Date
+COL_ACUTE_QTR    = 27  # Acute Care Qtr Certified
+COL_ACUTE        = 28  # Acute Care Certified
+COL_AMB_DATE     = 29  # Ambulatory Certification Date
+COL_AMB_QTR      = 30  # Ambulatory Qtr Certified
+COL_AMBULATORY   = 31  # Ambulatory Certified
+COL_EXT_DATE     = 32  # Extended Care Certification Date
+COL_EXT_QTR      = 33  # Extended Care Qtr Certified
+COL_EXTENDED     = 34  # Extended Care Certified
 
 SUB_CERTS = [
     ('LayeredSec', 'Layered Security'),
     ('Healthcare', 'Healthcare'),
+    ('AcuteCare',  'Acute Care'),
     ('Ambulatory', 'Ambulatory'),
     ('Extended',   'Extended Care'),
 ]
@@ -61,7 +77,7 @@ def km_fiscal_quarter(date):
     # Shift so April=1 ... March=12, then divide into 4 equal quarters
     q = math.ceil(((m - 4) % 12 + 1) / 3)
     fy = date.year if m >= 4 else date.year - 1
-    return f'Q{q} FY{fy}'
+    return f'FY{fy} Q{q}'
 
 
 def extract_file_date(fname):
@@ -97,22 +113,38 @@ def load_rows(filepath):
     for raw in ws.iter_rows(min_row=2, values_only=True):
         if raw[COL_FIRST] is None:
             continue
+        def _date(v): return v.strftime('%Y-%m-%d') if v and hasattr(v, 'strftime') else ''
+        def _qtr(v):  return str(v).strip() if v and str(v).strip() not in ('None','') else ''
+        def _cert(v): return str(v).strip() if v else 'No'
         rows.append({
-            'FirstName': str(raw[COL_FIRST]).strip(),
-            'LastName':  str(raw[COL_LAST]).strip(),
-            'Email':     str(raw[COL_EMAIL]).strip() if raw[COL_EMAIL] else '',
-            'JobTitle':  str(raw[COL_JOBTITLE]).strip() if raw[COL_JOBTITLE] else '',
-            'Region':    str(raw[COL_REGION]).strip() if raw[COL_REGION] else '',
-            'Manager':   ((str(raw[COL_MGR_FIRST]).strip() + ' ' + str(raw[COL_MGR_LAST]).strip()).strip()) if raw[COL_MGR_FIRST] else '',
-            'MgrEmail':  str(raw[COL_MGR_EMAIL]).strip() if raw[COL_MGR_EMAIL] else '',
-            'MgrTitle':  str(raw[COL_MGR_TITLE]).strip() if raw[COL_MGR_TITLE] else '',
-            'Complete':   str(raw[COL_COMPLETE]).strip() if raw[COL_COMPLETE] else 'No',
-            'Date':       raw[COL_DATE].strftime('%Y-%m-%d') if raw[COL_DATE] else '',
-            'Qtr':        str(raw[COL_QTR]).strip() if raw[COL_QTR] else km_fiscal_quarter(raw[COL_DATE]),
-            'LayeredSec': str(raw[COL_LAYERED_SEC]).strip() if raw[COL_LAYERED_SEC] else 'No',
-            'Healthcare': str(raw[COL_HEALTHCARE]).strip() if raw[COL_HEALTHCARE] else 'No',
-            'Ambulatory': str(raw[COL_AMBULATORY]).strip() if raw[COL_AMBULATORY] else 'No',
-            'Extended':   str(raw[COL_EXTENDED]).strip() if raw[COL_EXTENDED] else 'No',
+            'FirstName':  str(raw[COL_FIRST]).strip(),
+            'LastName':   str(raw[COL_LAST]).strip(),
+            'Email':      str(raw[COL_EMAIL]).strip() if raw[COL_EMAIL] else '',
+            'JobTitle':   str(raw[COL_JOBTITLE]).strip() if raw[COL_JOBTITLE] else '',
+            'Region':     str(raw[COL_REGION]).strip() if raw[COL_REGION] else '',
+            'Market':     str(raw[COL_MARKET]).strip() if raw[COL_MARKET] else '',
+            'Manager':    ((str(raw[COL_MGR_FIRST]).strip() + ' ' + str(raw[COL_MGR_LAST]).strip()).strip()) if raw[COL_MGR_FIRST] else '',
+            'MgrEmail':   str(raw[COL_MGR_EMAIL]).strip() if raw[COL_MGR_EMAIL] else '',
+            'MgrTitle':   str(raw[COL_MGR_TITLE]).strip() if raw[COL_MGR_TITLE] else '',
+            'HireDate':   _date(raw[COL_HIRE_DATE]),
+            'Complete':   _cert(raw[COL_COMPLETE]),
+            'Date':       _date(raw[COL_DATE]),
+            'Qtr':        km_fiscal_quarter(raw[COL_DATE]),
+            'LSDate':     _date(raw[COL_LS_DATE]),
+            'LSQtr':      _qtr(raw[COL_LS_QTR]),
+            'LayeredSec': _cert(raw[COL_LAYERED_SEC]),
+            'HCDate':     _date(raw[COL_HC_DATE]),
+            'HCQtr':      _qtr(raw[COL_HC_QTR]),
+            'Healthcare': _cert(raw[COL_HEALTHCARE]),
+            'AcuteDate':  _date(raw[COL_ACUTE_DATE]),
+            'AcuteQtr':   _qtr(raw[COL_ACUTE_QTR]),
+            'AcuteCare':  _cert(raw[COL_ACUTE]),
+            'AmbDate':    _date(raw[COL_AMB_DATE]),
+            'AmbQtr':     _qtr(raw[COL_AMB_QTR]),
+            'Ambulatory': _cert(raw[COL_AMBULATORY]),
+            'ExtDate':    _date(raw[COL_EXT_DATE]),
+            'ExtQtr':     _qtr(raw[COL_EXT_QTR]),
+            'Extended':   _cert(raw[COL_EXTENDED]),
         })
     wb.close()
     return rows
@@ -249,6 +281,7 @@ def generate_html(slug, name, rows):
     <option value="">All Certifications</option>
     <option value="LayeredSec">Layered Security</option>
     <option value="Healthcare">Healthcare</option>
+    <option value="AcuteCare">Acute Care</option>
     <option value="Ambulatory">Ambulatory</option>
     <option value="Extended">Extended Care</option>
   </select>
@@ -374,8 +407,8 @@ const INFO_MSGS = {{
   'not-certified':   'People assigned the curriculum who have not yet completed it.',
   'completion-rate': 'Percentage of assigned people who have earned the certification. Updates when a specific Certification is selected.',
   'by-region':       'Certified vs. not certified broken down by sales region. Responds to the Certification and Status filters.',
-  'over-time':       'Number of overall curriculum certifications earned per fiscal quarter (Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar).',
-  'subcert':         'How many people have earned each of the four sub-certifications within this curriculum.',
+  'over-time':       'Sub-certifications earned per fiscal quarter, stacked by type. FY2026 Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar.',
+  'subcert':         'How many people have earned each of the five sub-certifications within this curriculum.',
   'roster':          'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
 }};
 function showInfo(e, key){{
@@ -467,43 +500,50 @@ function render(){{
     }}
   }});
 
-  // Trend chart — certified people per fiscal quarter
-  const yesRows = filtered.filter(r=>r.Complete==='Yes'&&r.Qtr);
-  const qtrMap = {{}};
-  yesRows.forEach(r => {{ qtrMap[r.Qtr] = (qtrMap[r.Qtr]||0)+1; }});
-  const trendMonths = Object.keys(qtrMap).sort((a,b) => {{
-    const parse = s => {{ const m=s.match(/Q(\d)\s+FY(\d+)/); return m ? parseInt(m[2])*10+parseInt(m[1]) : 0; }};
-    return parse(a)-parse(b);
+  // Trend chart — stacked bars by sub-cert per fiscal quarter
+  const TREND_SUBCERTS = [
+    {{key:'LayeredSec', qtrKey:'LSQtr',    label:'Layered Security', color:cv('--accent')}},
+    {{key:'Healthcare', qtrKey:'HCQtr',    label:'Healthcare',       color:cv('--green')}},
+    {{key:'AcuteCare',  qtrKey:'AcuteQtr', label:'Acute Care',       color:cv('--accent3')}},
+    {{key:'Ambulatory', qtrKey:'AmbQtr',   label:'Ambulatory',       color:cv('--accent2')}},
+    {{key:'Extended',   qtrKey:'ExtQtr',   label:'Extended Care',    color:cv('--teal')}},
+  ];
+  const parseQtr = s => {{ const m=s.match(/FY(\d+)\s+Q(\d)/); return m ? parseInt(m[1])*10+parseInt(m[2]) : 0; }};
+  const allTrendQtrs = new Set();
+  TREND_SUBCERTS.forEach(sc => {{
+    filtered.forEach(r => {{ if(r[sc.key]==='Yes' && r[sc.qtrKey]) allTrendQtrs.add(r[sc.qtrKey]); }});
   }});
-  const trendCounts = trendMonths.map(q=>qtrMap[q]);
+  const trendQtrs = [...allTrendQtrs].sort((a,b)=>parseQtr(a)-parseQtr(b));
+  const trendDatasets = TREND_SUBCERTS.map(sc => ({{
+    label: sc.label,
+    data:  trendQtrs.map(q => filtered.filter(r=>r[sc.key]==='Yes'&&r[sc.qtrKey]===q).length),
+    backgroundColor: sc.color+'bb',
+    borderRadius: 3,
+    borderSkipped: false,
+  }}));
 
   if(trendChart) trendChart.destroy();
   trendChart = new Chart(sel('trendChart'), {{
     type: 'bar',
-    data: {{ labels:trendMonths, datasets:[{{
-      data:trendCounts,
-      backgroundColor:cv('--accent')+'99',
-      borderRadius:4,
-      borderSkipped:false
-    }}]}},
+    data: {{ labels:trendQtrs, datasets:trendDatasets }},
     options: {{
       responsive:true, maintainAspectRatio:false,
       plugins:{{
-        legend:{{display:false}},
-        tooltip:{{callbacks:{{label:c=>` ${{c.raw}} certified`}}}},
+        legend:{{position:'bottom',labels:{{color:chartLabel,font:{{size:10}},boxWidth:8,padding:6}}}},
+        tooltip:{{mode:'index',intersect:false}},
         datalabels:{{display:false}}
       }},
       scales:{{
-        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:10}},maxRotation:45}}}},
-        y:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}},stepSize:1}}}}
+        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:10}},maxRotation:45}},stacked:true}},
+        y:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}},stepSize:1}},stacked:true}}
       }}
     }}
   }});
 
   // Sub-cert breakdown chart
-  const subLabels = ['Layered Security','Healthcare','Ambulatory','Extended Care'];
-  const subKeys   = ['LayeredSec','Healthcare','Ambulatory','Extended'];
-  const subColors = [cv('--accent'),cv('--green'),cv('--accent2'),cv('--teal')];
+  const subLabels = ['Layered Security','Healthcare','Acute Care','Ambulatory','Extended Care'];
+  const subKeys   = ['LayeredSec','Healthcare','AcuteCare','Ambulatory','Extended'];
+  const subColors = [cv('--accent'),cv('--green'),cv('--accent3'),cv('--accent2'),cv('--teal')];
   const subCounts = subKeys.map(k => filtered.filter(r=>r[k]==='Yes').length);
   const subNotCounts = subKeys.map(k => filtered.filter(r=>r[k]==='No').length);
 
@@ -560,6 +600,19 @@ function rosterSelect(el){{
   const p = filtered.find(r=>`${{r.FirstName}} ${{r.LastName}}`===name);
   if(!p) return;
   const isCert = p.Complete==='Yes';
+  function fmtDate(d) {{
+    if (!d) return '&#8212;';
+    const [y,mo,dy] = d.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[parseInt(mo)-1] + ' ' + parseInt(dy) + ', ' + y;
+  }}
+  const SUBCERT_DEFS = [
+    {{key:'LayeredSec', dateKey:'LSDate',    qtrKey:'LSQtr',    label:'Layered Security'}},
+    {{key:'Healthcare', dateKey:'HCDate',    qtrKey:'HCQtr',    label:'Healthcare'}},
+    {{key:'AcuteCare',  dateKey:'AcuteDate', qtrKey:'AcuteQtr', label:'Acute Care'}},
+    {{key:'Ambulatory', dateKey:'AmbDate',   qtrKey:'AmbQtr',   label:'Ambulatory'}},
+    {{key:'Extended',   dateKey:'ExtDate',   qtrKey:'ExtQtr',   label:'Extended Care'}},
+  ];
   sel('roster-right').innerHTML = `
     <div class="roster-right-header">
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">${{p.FirstName}} ${{p.LastName}}</div>
@@ -568,16 +621,20 @@ function rosterSelect(el){{
     <div class="detail-grid">
       <div><div class="detail-label">Job Title</div><div class="detail-value">${{p.JobTitle||'&#8212;'}}</div></div>
       <div><div class="detail-label">Region</div><div class="detail-value">${{p.Region||'&#8212;'}}</div></div>
-      <div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
-      <div><div class="detail-label">Certification Date</div><div class="detail-value">${{p.Date||'&#8212;'}}</div></div>
-      <div><div class="detail-label">Quarter Certified</div><div class="detail-value">${{p.Qtr||'&#8212;'}}</div></div>
+      <div><div class="detail-label">Market</div><div class="detail-value">${{p.Market||'&#8212;'}}</div></div>
+      <div><div class="detail-label">Hire Date</div><div class="detail-value">${{fmtDate(p.HireDate)}}</div></div>
+      <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
     </div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Sub-Certifications</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${{[['LayeredSec','Layered Security'],['Healthcare','Healthcare'],['Ambulatory','Ambulatory'],['Extended','Extended Care']].map(([k,label])=>{{
-          const yes = p[k]==='Yes';
-          return `<span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:${{yes?'var(--green-subtle)':'var(--surface2)'}};color:${{yes?'var(--green)':'var(--muted)'}};border:1px solid ${{yes?'var(--green)':'var(--border)'}}">${{yes?'&#10003;':'&#8212;'}} ${{label}}</span>`;
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Sub-Certifications</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${{SUBCERT_DEFS.map(sc => {{
+          const yes = p[sc.key]==='Yes';
+          const dateStr = yes && p[sc.dateKey] ? fmtDate(p[sc.dateKey]) + (p[sc.qtrKey] ? ' &middot; ' + p[sc.qtrKey] : '') : '';
+          return `<div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;min-width:140px;text-align:center;background:${{yes?'var(--green-subtle)':'var(--surface2)'}};color:${{yes?'var(--green)':'var(--muted)'}};border:1px solid ${{yes?'var(--green)':'var(--border)'}}">${{yes?'&#10003;':'&#8212;'}} ${{sc.label}}</span>
+            ${{dateStr ? `<span style="font-size:12px;color:var(--muted)">${{dateStr}}</span>` : ''}}
+          </div>`;
         }}).join('')}}
       </div>
     </div>
