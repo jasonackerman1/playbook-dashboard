@@ -204,6 +204,9 @@ html = f"""<!DOCTYPE html>
   .drilldown-person.active{{background:#4f8ef711;border-left:3px solid var(--accent);padding-left:11px;}}
   .drilldown-name{{flex:1;font-size:13px;}}
   .drilldown-count{{font-size:11px;font-weight:700;color:var(--teal);background:var(--teal-subtle);border-radius:10px;padding:2px 8px;}}
+  .recency-dot{{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;}}
+  .recency-legend{{display:flex;gap:16px;align-items:center;padding:8px 0 10px;font-size:11px;color:var(--muted);flex-wrap:wrap;}}
+  .recency-legend-item{{display:flex;align-items:center;gap:5px;}}
   body.light-mode .pill-pb{{filter:brightness(0.55);}}
   body.light-mode .chart-title,body.light-mode .table-title{{color:var(--text);}}
   body.light-mode .section-hint{{opacity:1;color:var(--muted);}}
@@ -290,6 +293,12 @@ html = f"""<!DOCTYPE html>
     <span class="table-title">Who's Active<span class="info-btn" onclick="showInfo(event,'whos-active')">?</span></span>
     <input type="text" id="drilldown-search" oninput="filterPersonList()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
   </div>
+  <div class="recency-legend">
+    <span style="font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Last visit:</span>
+    <span class="recency-legend-item"><span class="recency-dot" style="background:var(--green)"></span> Within 30 days</span>
+    <span class="recency-legend-item"><span class="recency-dot" style="background:var(--accent3)"></span> 31–60 days</span>
+    <span class="recency-legend-item"><span class="recency-dot" style="background:var(--red)"></span> 60+ days</span>
+  </div>
   <div class="drilldown-wrap">
     <div class="drilldown-left" id="drilldown-left"></div>
     <div class="drilldown-right" id="drilldown-right"><div class="no-data">Select a person to see their activity</div></div>
@@ -312,6 +321,13 @@ const PLAYBOOK_COLORS = {{
   "Road to DX":             "#2dd4bf",
 }};
 function pbColor(pb){{ return PLAYBOOK_COLORS[pb] || "#7b82a0"; }}
+function recencyColor(dateStr){{
+  if(!dateStr) return cv('--muted');
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if(days <= 30) return cv('--green');
+  if(days <= 60) return cv('--accent3');
+  return cv('--red');
+}}
 
 const allMonths   = [...new Set(RAW.map(r=>r.Month))].sort();
 const allPlaybooks= [...new Set([...Object.keys(PLAYBOOK_COLORS), ...RAW.map(r=>r.Playbook)])].sort();
@@ -458,9 +474,11 @@ function render(){{
   const chartLabel = isLight ? cv('--text') : cv('--muted');
   // Build per-person visit counts first (needed for sort)
   const visitorMap = {{}};
+  const lastVisitMap = {{}};
   filtered.forEach(r => {{
     const key = `${{r.FirstName}} ${{r.LastName}}`;
     visitorMap[key] = (visitorMap[key] || 0) + 1;
+    if (!lastVisitMap[key] || r.Date > lastVisitMap[key]) lastVisitMap[key] = r.Date;
   }});
 
   // Stats
@@ -611,12 +629,14 @@ function render(){{
 
   // Who's Active — left panel
   const personList = Object.entries(visitorMap).sort((a,b)=>b[1]-a[1]);
-  sel('drilldown-left').innerHTML = personList.map(([name, count]) =>
-    `<div class="drilldown-person" onclick="drillSelect(this,'${{name.replace(/'/g,"\\'")}}')" data-name="${{name}}">
+  sel('drilldown-left').innerHTML = personList.map(([name, count]) => {{
+    const dot = `<span class="recency-dot" style="background:${{recencyColor(lastVisitMap[name])}}"></span>`;
+    return `<div class="drilldown-person" onclick="drillSelect(this,'${{name.replace(/'/g,"\\'")}}')" data-name="${{name}}">
+       ${{dot}}
        <span class="drilldown-name">${{name}}</span>
        <span class="drilldown-count">${{count}}</span>
-     </div>`
-  ).join('') || `<div class="no-data">No data</div>`;
+     </div>`;
+  }}).join('') || `<div class="no-data">No data</div>`;
   filterPersonList();
   if (personList.length) {{
     const first = sel('drilldown-left').querySelector('.drilldown-person:not([style*="none"])') || sel('drilldown-left').querySelector('.drilldown-person');
@@ -645,11 +665,14 @@ function drillSelect(el, name) {{
   }});
   const rows = Object.values(grouped).sort((a,b) => b.date.localeCompare(a.date));
 
+  const lastVisit = lastVisitMap[name] || '';
+  const lastVisitColor = recencyColor(lastVisit);
   sel('drilldown-right').innerHTML = `
     <div class="drilldown-right-header">
       <strong style="font-size:14px">${{name}}</strong>
       <span style="color:var(--muted)"> · ${{visits.length}} visit${{visits.length!==1?'s':''}} · ${{region}} · </span>
       <span class="pill" style="background:${{typeBg}};color:${{typeColor}}">${{type}}</span>
+      <span style="color:var(--muted)"> · Last visit: </span><span style="color:${{lastVisitColor}};font-weight:600">${{lastVisit||'—'}}</span>
     </div>
     <table style="width:100%;border-collapse:collapse;">
       <thead><tr>
