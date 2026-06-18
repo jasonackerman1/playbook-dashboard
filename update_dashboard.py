@@ -242,11 +242,10 @@ html = f"""<!DOCTYPE html>
 
 <div class="filters">
   <span class="filter-label">Filter</span>
-  <button class="btn-preset" id="btn-7d"  onclick="setRange(7,this)">7D</button>
-  <button class="btn-preset" id="btn-30d" onclick="setRange(30,this)">30D</button>
-  <button class="btn-preset active" id="btn-prev" onclick="setPrevMonth(this)">Prev Month</button>
-  <button class="btn-preset" id="btn-90d" onclick="setRange(90,this)">90D</button>
-  <button class="btn-preset" id="btn-all" onclick="setRange(0,this)">All</button>
+  <button class="btn-preset active" id="btn-prev"  onclick="setPrevMonth(this)">Prev Month</button>
+  <button class="btn-preset" id="btn-90d"  onclick="setRange(90,this)">90D</button>
+  <button class="btn-preset" id="btn-120d" onclick="setRange(120,this)">120D</button>
+  <button class="btn-preset" id="btn-all"  onclick="setRange(0,this)">All</button>
   <span class="filter-label" style="margin-right:2px">From</span>
   <input type="date" id="f-date-from">
   <span class="filter-label" style="margin:0 2px">To</span>
