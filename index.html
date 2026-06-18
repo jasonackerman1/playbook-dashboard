@@ -142,7 +142,8 @@
 <div class="filters">
   <span class="filter-label">Filter</span>
   <button class="btn-preset" id="btn-7d"  onclick="setRange(7,this)">7D</button>
-  <button class="btn-preset active" id="btn-30d" onclick="setRange(30,this)">30D</button>
+  <button class="btn-preset" id="btn-30d" onclick="setRange(30,this)">30D</button>
+  <button class="btn-preset active" id="btn-prev" onclick="setPrevMonth(this)">Prev Month</button>
   <button class="btn-preset" id="btn-90d" onclick="setRange(90,this)">90D</button>
   <button class="btn-preset" id="btn-all" onclick="setRange(0,this)">All</button>
   <span class="filter-label" style="margin-right:2px">From</span>
@@ -258,8 +259,17 @@ allRegions.forEach(r => sel('f-region').innerHTML  += `<option value="${r}">${r}
 
 function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
 function today(){ return new Date().toISOString().slice(0,10); }
-sel('f-date-from').value = daysAgo(30);
-sel('f-date-to').value   = today();
+function prevMonthFrom(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth()-1,1).toISOString().slice(0,10); }
+function prevMonthTo(){  const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),0).toISOString().slice(0,10); }
+function setPrevMonth(btn){
+  document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  sel('f-date-from').value = prevMonthFrom();
+  sel('f-date-to').value   = prevMonthTo();
+  applyFilters();
+}
+sel('f-date-from').value = prevMonthFrom();
+sel('f-date-to').value   = prevMonthTo();
 
 function setRange(days, btn){
   document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
@@ -339,9 +349,9 @@ function applyFilters(){
 
 function resetFilters(){
   document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
-  sel('btn-30d').classList.add('active');
-  sel('f-date-from').value = daysAgo(30);
-  sel('f-date-to').value   = today();
+  sel('btn-prev').classList.add('active');
+  sel('f-date-from').value = prevMonthFrom();
+  sel('f-date-to').value   = prevMonthTo();
   ['f-playbook','f-region','f-type'].forEach(id => sel(id).value = '');
   hideTLG = false;
   sel('btn-tlg').classList.remove('active');
