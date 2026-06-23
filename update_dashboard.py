@@ -98,6 +98,355 @@ months     = sorted(set(r['Month'] for r in records))
 print(f"\nTotal rows combined: {total_rows:,}")
 print(f"Months covered: {', '.join(months)}")
 
+# ── Playbook Intelligence: static analysis content ────────────────────────────
+PLAYBOOK_ANALYSIS = {
+    "Healthcare Playbook": {
+        "headline": "Strong content, poor discoverability — one commented-out nav link accounts for most of the opportunity.",
+        "working": [
+            "Certification page drives 22% of all Healthcare traffic. Reps prioritize cert tracking, and the prominent nav placement reflects that.",
+            "Home page draws 73 visits — the initial positioning and entry experience are working.",
+            "Vertical sub-pages (Acute Care, Ambulatory, Extended Care) are being discovered, confirming segment-specific content resonates with the audience."
+        ],
+        "issues": [
+            {
+                "page": "prospectingforappointmentsbestpractices.html",
+                "type": "Hidden from nav",
+                "summary": "Complete, polished page — email scripts, phone scripts, voicemail templates, 16-touch campaign model — commented out of navigation. Got 1 visit in May.",
+                "effort": "Quick",
+                "owner": "L&D"
+            },
+            {
+                "page": "knowthecompetition.html",
+                "type": "Fragile content",
+                "summary": "100% dependent on an external iframe hosted at bradleyapierce.github.io. If that URL goes offline, the page is blank. Also has a title typo: 'Know the Competiton.'",
+                "effort": "Medium",
+                "owner": "Content Owner"
+            },
+            {
+                "page": "salespractices.html",
+                "type": "Architecture",
+                "summary": "Hub page getting bypassed — users navigate directly to sub-pages. Sales Practices content is written as reference material reps read once, not tools they return to before specific calls.",
+                "effort": "Medium",
+                "owner": "Content Owner"
+            }
+        ],
+        "strategies": [
+            {
+                "title": "Restore the hidden navigation link immediately",
+                "effort": "Quick",
+                "owner": "L&D",
+                "problem": "The prospecting best practices page is the most immediately useful pre-call resource in the entire playbook. It has been commented out of navigation, so zero reps can find it organically.",
+                "approach": "Uncomment two lines in the nav template. No content changes required — the page is complete and ready to use.",
+                "example": None
+            },
+            {
+                "title": "Reframe Sales Practices pages as pre-call tools, not reference articles",
+                "effort": "Medium",
+                "owner": "Content Owner",
+                "problem": "Pages are written as general knowledge: 'Here is what you should know about selling to healthcare.' A rep 15 minutes before a call with a hospital CFO needs to know what to say, not what to study.",
+                "approach": "Add a 'When to use this page' header to each Sales Practices sub-page with a clear scenario statement. Move the most actionable content (scripts, qualifying questions) above the background context.",
+                "example": "Current: 'The healthcare market is evolving rapidly...' — Better: 'Preparing for an Acute Care call? Three things to have ready before you dial: [Scripts] [Qualifying questions] [Key challenges to listen for].'"
+            },
+            {
+                "title": "Add competitive talking points directly to Know the Competition",
+                "effort": "Medium",
+                "owner": "Content Owner",
+                "problem": "The entire page delegates to an external interactive module. There is no backup text, no standalone value if the module fails to load.",
+                "approach": "Add 4-5 key competitive talking points as inline text above the iframe. Cover who shows up in deals most frequently, what their main pitch is, and what KM's response is. The interactive module stays as a deep-dive supplement.",
+                "example": "See how the Legal Playbook's Layered Security page handles it: inline competitive differentiation text, then supporting external resources. The text stands alone; resources add depth."
+            }
+        ]
+    },
+    "Accelerate": {
+        "headline": "Some of the richest training content in any playbook — invisible because the home page does not show it exists.",
+        "working": [
+            "Content quality is high: Prospecting Skills has 8 courses, 7 downloadable guides, and a live workshop registration — among the most complete pages in any playbook.",
+            "Call Prep is equally strong: 4 structured courses, 3 downloadable guides, 5 flip-card activities.",
+            "The numbered learning path gives new reps a clear, structured on-ramp into the material."
+        ],
+        "issues": [
+            {
+                "page": "prospectingskills.html / callprep.html / workingwithnumbers.html / pipelineownership.html",
+                "type": "Navigation burial",
+                "summary": "These 4 pages are accessible only via dropdown hover — not visible as cards on the home screen. Prospecting Skills (8 courses, 7 downloads) got 2 visits in May.",
+                "effort": "Quick",
+                "owner": "L&D"
+            },
+            {
+                "page": "pipelineownership.html",
+                "type": "Incomplete content",
+                "summary": "1 course, no downloadable guides, no activities section. Every other Accelerate page has multiple courses, guides, and flip-card activities. This reads as unfinished.",
+                "effort": "Medium",
+                "owner": "Content Owner"
+            },
+            {
+                "page": "workingwithnumbers.html",
+                "type": "Coming Soon placeholder",
+                "summary": "'Commission Confidence' course is marked Coming Soon. A placeholder at the end of a page tells reps the section is not done and discourages return visits.",
+                "effort": "Medium",
+                "owner": "Content Owner"
+            }
+        ],
+        "strategies": [
+            {
+                "title": "Surface sub-pages as visible cards or links on the home screen",
+                "effort": "Quick",
+                "owner": "L&D",
+                "problem": "The Accelerate home page shows 6 numbered section cards. Sub-pages within each section — where the actual training content lives — are hidden behind dropdown hover. Most reps never find them.",
+                "approach": "Two options: (1) Add sub-page link cards beneath each parent section card. (2) Add a 'This section includes' text list under each card. Either approach surfaces the content without a full redesign.",
+                "example": "Under the 'Prospecting' section card, add: 'Includes: Prospecting Skills (3 hrs) | Live Workshop Registration' with a direct link to each sub-page."
+            },
+            {
+                "title": "Add a situation selector above the learning path",
+                "effort": "Medium",
+                "owner": "Content Owner",
+                "problem": "The numbered path (1-6) assumes linear learning. Most reps have a specific immediate need: prepping for a call, working a stalled deal, understanding pricing. They do not know which step in the path addresses their situation.",
+                "approach": "Add a 3-4 scenario selector at the top of the home page. Each scenario routes directly to the most relevant page or module, bypassing the nav entirely — the same pattern as the Canada/US location selector already built into this playbook.",
+                "example": "'What do you need right now?' [I'm prepping for a first call] → Call Prep + Prospecting Skills. [I'm working a deal that's stalling] → Pipeline Ownership + Moving Deals Forward. [I need to talk numbers] → Working with Numbers."
+            },
+            {
+                "title": "Complete Pipeline Ownership to match the rest of the playbook",
+                "effort": "Medium",
+                "owner": "Content Owner",
+                "problem": "Every other Accelerate page has multiple courses, downloadable guides, and flip-card activities. Pipeline Ownership has one course and nothing else. The gap is immediately visible to any rep who has seen the other pages.",
+                "approach": "Add 2 additional courses covering pipeline review methodology and forecast accuracy. Add one downloadable pipeline review template. Add the flip-card activities section used on every other page in this playbook.",
+                "example": None
+            }
+        ]
+    },
+    "Legal Playbook": {
+        "headline": "43 pages, 31 visits, 2.3% of traffic — but the pages that work tell you exactly how to fix the ones that do not.",
+        "working": [
+            "Layered Security is one of the best-built pages in any playbook: industry news hook, multiple videos, an interactive embedded tool, 6+ resource types, and a persona section specifying exactly who to target and in what order.",
+            "Security and Compliance earns top traffic with regulatory language (GDPR, HIPAA, SOX, PCI-DSS), a cited industry study, and a custom infographic. It gives reps a credible reason to open a conversation.",
+            "Document Workflow has a 15+ video playlist and comprehensive resources — built for depth, and it shows."
+        ],
+        "issues": [
+            {
+                "page": "vss.html",
+                "type": "Wrong content",
+                "summary": "Page describes IP surveillance systems and security camera monitoring — not Legal vertical content. Appears to have been copied from another vertical and never updated.",
+                "effort": "Quick",
+                "owner": "L&D"
+            },
+            {
+                "page": "iim.html + bpo.html",
+                "type": "Duplicate content",
+                "summary": "Both pages cover the same topic: scanning and document conversion services. Two URLs for identical content splits traffic, creates maintenance overhead, and confuses reps looking for the right resource.",
+                "effort": "Quick",
+                "owner": "L&D"
+            },
+            {
+                "page": "cloudservices.html / collaborationtools.html / digitalfax.html",
+                "type": "Missing business context",
+                "summary": "Each has 1 video, qualifying questions, and 5 resource cards — functional but thin. None have the industry news hook that distinguishes the high-traffic pages. A rep cannot start a conversation without a reason that comes from the customer's world.",
+                "effort": "Medium",
+                "owner": "Content Owner"
+            }
+        ],
+        "strategies": [
+            {
+                "title": "Add a 'why this matters now' section to every low-traffic Legal page",
+                "effort": "Medium",
+                "owner": "Content Owner",
+                "problem": "A rep cannot walk into a law firm and say 'you should consider our fax solution.' They need a reason that comes from the firm's world, not KM's. High-traffic pages provide this — they open with an industry article, a regulatory requirement, or an ILTA reference. Low-traffic pages skip it entirely.",
+                "approach": "For each thin page, find one recent legal industry development that creates a natural conversation opener. Add a 2-column section at the top: a brief context paragraph plus a link to an external article or resource. Two hours of editorial work per page.",
+                "example": "Digital Fax: 'Courts in 17 states now require electronic service of process. Firms still relying on fax for court documents are a compliance call waiting to happen.' — Cloud Services: 'The ABA tech survey shows 75% of firms store client data in the cloud, but only 31% have a formal cloud security policy.'"
+            },
+            {
+                "title": "Add persona sections to every page that is missing them",
+                "effort": "Strategic",
+                "owner": "Content Owner",
+                "problem": "The Layered Security page specifies exactly who to call at a law firm, in what order, and what their role is — a direct selling tool. A rep who knows 'the IT Director is primary, but the Office Administrator controls budget' makes a different call than one who does not.",
+                "approach": "Survey top-performing Legal reps or review CRM deal data: who actually shows up in the buying process for each solution? Add a 'Who to target' card to each solution page: job title, what they care about, and how to frame the conversation.",
+                "example": "For Collaboration Tools: 'Primary: IT Director (standardization, security). Secondary: Managing Partner (billable efficiency). Influencer: Office Manager (daily user, champion or blocker). Lead IT with [X], lead Managing Partner with [Y].'"
+            },
+            {
+                "title": "Use Layered Security as the template for rebuilding every other page",
+                "effort": "Strategic",
+                "owner": "Content Owner",
+                "problem": "There is no need to invent a new structure for the Legal Playbook — you already have a page that works. Layered Security has the exact formula that drives engagement: news hook, product overview, multiple videos, resource cards, qualifying questions, personas, deep resources.",
+                "approach": "Document the Layered Security page structure as a formal template. For each low-traffic page, audit it against that template and identify what is missing. Rebuild in order of highest impact: (1) news hook, (2) persona section, (3) resource depth, (4) additional videos.",
+                "example": None
+            }
+        ]
+    },
+    "Public Sector Playbook": {
+        "headline": "The best individual pages in any playbook — the problem is getting reps to them.",
+        "working": [
+            "Education Print Management is a model page: customer challenges, benefits, personas with account sizing, specific product recommendations, 4 case studies, and separate materials for K-12 vs. Higher Ed. Every playbook should have pages built this way.",
+            "The dual-track structure (Government vs. Education) is the right call — these are different buyers and different conversations. Keeping them separated prevents audience confusion.",
+            "Hub pages (Gov Solutions, Edu Solutions) are card-based and well-structured. The top-level entry experience is working."
+        ],
+        "issues": [
+            {
+                "page": "Multiple page titles",
+                "type": "Typos",
+                "summary": "'Education Soltions' and 'Government Soltions' appear on multiple page titles and headings (missing the 'u'). Visible in browser tabs and bookmarks.",
+                "effort": "Quick",
+                "owner": "L&D"
+            },
+            {
+                "page": "Security sub-pages (Gov + Edu)",
+                "type": "Navigation depth",
+                "summary": "Security content requires 3-level nested dropdown navigation: main nav, then Solutions, then Security, then the sub-page. Among the lowest-traffic pages in the playbook despite having solid content.",
+                "effort": "Medium",
+                "owner": "Content Owner"
+            },
+            {
+                "page": "resourcesgoveduglossary.html",
+                "type": "Buried resource",
+                "summary": "200+ education and government terms, well-organized, high quality. Gets 2 visits in May because it lives under Resources > Glossary and is never linked to from solution pages.",
+                "effort": "Medium",
+                "owner": "Content Owner"
+            }
+        ],
+        "strategies": [
+            {
+                "title": "Add Security sub-pages as cards on the solution hub pages",
+                "effort": "Medium",
+                "owner": "Content Owner",
+                "problem": "Security sub-topics (MFP/Document, Cybersecurity, Physical) are buried in nested dropdown navigation rather than appearing as cards alongside Print Management, IIM, and other solutions. Reps navigate 3 levels to reach them.",
+                "approach": "Add security sub-topic cards directly to the Gov Solutions and Edu Solutions hub pages. This reduces the path from 3 clicks to 2 and makes the content discoverable without a dropdown. The card format already exists — this is an additive change.",
+                "example": "Edu Solutions Home already has 13 cards. Add 3 more: MFP/Document Security, Cybersecurity, Physical Security. Same card template, same layout, no structural redesign needed."
+            },
+            {
+                "title": "Cross-link solution pages to the Glossary with relevant terms",
+                "effort": "Medium",
+                "owner": "L&D",
+                "problem": "The Glossary has 200+ terms covering CIPA, FERPA, E-Rate, IIM, and more. Reps reading a solution page encounter these terms but have no path to look them up in context. The Glossary is invisible unless you already know it exists.",
+                "approach": "Add a 'Key Terms' link at the bottom of each solution page routing to the relevant section. For K-12 Security: link to FERPA, CIPA, COPPA. For Gov Print Management: link to procurement terms. In-content links are more discoverable than navigation items.",
+                "example": None
+            },
+            {
+                "title": "Consider a sector selector on the home page",
+                "effort": "Strategic",
+                "owner": "Content Owner",
+                "problem": "Government-focused reps and Education-focused reps are different people with different buyers. The home page gives both an identical entry, requiring everyone to navigate past the half of the content that is not relevant to them.",
+                "approach": "Add a 'I primarily sell to: Government | Education' selector on the home page stored in localStorage, highlighting the relevant track on return visits. This mirrors the Canada/US location filter already built into the Accelerate Playbook.",
+                "example": "The Accelerate playbook has this infrastructure in js/locationfilter.js. The same pattern applies here, without the translation layer."
+            }
+        ]
+    },
+    "DX Playbook": {
+        "headline": "Not a standalone playbook — pages embedded in other playbooks. Reps do not know where to find it or if it applies to them.",
+        "working": [
+            "12 real customer case studies across government, education, and local government verticals. Concrete proof points a rep can reference in a meeting.",
+            "The DX Battlecard iframe covers useful competitive territory: discovery questions, challenge framing, and solution mapping.",
+            "The accordion structure addresses the right customer challenges: cloud migration, compliance, legacy systems, and budget constraints."
+        ],
+        "issues": [
+            {
+                "page": "dx.html + dxlegal.html",
+                "type": "No standalone home",
+                "summary": "DX content exists only as embedded pages within the Legal and Public Sector playbooks. There is no central DX entry point. Reps who know they need DX content do not know where to look.",
+                "effort": "Strategic",
+                "owner": "Content Owner"
+            },
+            {
+                "page": "dx.html + dxlegal.html",
+                "type": "Wrong content posture",
+                "summary": "Pages explain KM's DX capabilities. What reps need: how to respond intelligently when a customer brings up digital transformation. The pages answer 'what does KM offer' rather than 'what do I say when a customer mentions DX.'",
+                "effort": "Strategic",
+                "owner": "Content Owner"
+            },
+            {
+                "page": "dx.html + dxlegal.html",
+                "type": "Missing qualifying questions",
+                "summary": "Every other solution page has qualifying questions. The DX pages do not. There is no guidance on how to identify a genuine DX opportunity or what to ask to uncover one.",
+                "effort": "Medium",
+                "owner": "Content Owner"
+            }
+        ],
+        "strategies": [
+            {
+                "title": "Reposition DX from 'what we offer' to 'how to respond when customers bring it up'",
+                "effort": "Strategic",
+                "owner": "Content Owner",
+                "problem": "Most reps encounter DX as a customer-driven conversation — a CIO mentions they are in the middle of a digital transformation initiative. The rep needs to respond intelligently, connect it to KM's capabilities, and qualify the opportunity. Current pages do not enable this.",
+                "approach": "Restructure DX pages around customer-initiated scenarios. 'When a customer says they are prioritizing DX' — here are the questions to ask, the challenges they are likely facing, and how KM fits. Lead with the customer's moment, not KM's pitch.",
+                "example": "The Legal Playbook's Security and Compliance page does this well — it starts with what the customer is experiencing (regulatory requirements, cyber threats) and works backward to KM's response. DX needs the same structure."
+            },
+            {
+                "title": "Add qualifying questions for DX opportunities",
+                "effort": "Medium",
+                "owner": "Content Owner",
+                "problem": "DX is mentioned frequently by prospects but rarely qualifies to a real opportunity without proper discovery. There is currently no guidance on what questions reveal whether a prospect's DX initiative creates an opening for KM.",
+                "approach": "Add a qualifying questions section following the format used across every other solution page. Focus on: initiative scope (who owns it, timeline), current pain points (document workflows, legacy systems, compliance), and decision process (budget, stakeholders).",
+                "example": "'Is your organization planning or executing a digital transformation initiative?' / 'What are your biggest obstacles to modernizing document and information workflows?' / 'Who is sponsoring the initiative — IT, Operations, or Executive leadership?'"
+            },
+            {
+                "title": "Create a standalone DX hub that all verticals can link to",
+                "effort": "Strategic",
+                "owner": "Content Owner",
+                "problem": "DX content is scattered across Legal and Public Sector playbooks. Reps in Healthcare or Salesforce who need DX messaging have no equivalent resource. There is no single DX entry point.",
+                "approach": "Build a standalone DX Playbook page as the central hub for all DX sales enablement content. Each vertical playbook links to it as a 'See also: DX Playbook' cross-reference. The hub holds universal content (case studies, battlecards, qualifying questions) while vertical pages provide industry-specific context.",
+                "example": None
+            }
+        ]
+    },
+    "GC/IP Sales Playbook": {
+        "headline": "9 visits in May to a playbook that does not exist in the standard location — the content is somewhere, but we cannot find it.",
+        "working": [
+            "Analytics data shows 25+ tracked pages including Commercial Print, Lithographic, Job Shops, Direct Mail, and Packaging. Someone built this playbook.",
+            "The topic specificity (GC = Graphic Communications, IP = Industrial Print) suggests a well-defined audience with real content needs."
+        ],
+        "issues": [
+            {
+                "page": "All GC/IP pages",
+                "type": "Not found locally",
+                "summary": "No HTML playbook files found in the standard location. Analytics data exists but the actual playbook is hosted elsewhere or development stalled. 9 reps found it in May — we need to find it too.",
+                "effort": "Quick",
+                "owner": "L&D"
+            }
+        ],
+        "strategies": [
+            {
+                "title": "Locate the GC/IP playbook and confirm it is current",
+                "effort": "Quick",
+                "owner": "L&D",
+                "problem": "9 reps visited GC/IP content in May and found something — but we cannot find what they found or confirm it is accurate and up to date.",
+                "approach": "Check with the team: where is the GC/IP playbook hosted? Once located, confirm it is linked from the main playbook list, content is current, and traffic is being tracked correctly.",
+                "example": None
+            }
+        ]
+    },
+    "IQ501": {
+        "headline": "29 visits in May, no playbook found — what are these reps finding, and is it actually helping them?",
+        "working": [
+            "29 visits per month signals real, ongoing audience demand — reps are actively searching for IQ501 content.",
+            "Technical documentation exists in OneDrive (though dated 2019), meaning there is source material to build from if needed."
+        ],
+        "issues": [
+            {
+                "page": "All IQ501 pages",
+                "type": "Not found locally",
+                "summary": "No HTML playbook found. Only 2019 technical training materials in OneDrive (printer manuals, ILT lab guides). 29 monthly visits are going somewhere — need to find out where and whether the content serves sales conversations.",
+                "effort": "Quick",
+                "owner": "L&D"
+            }
+        ],
+        "strategies": [
+            {
+                "title": "Find out what IQ501 visitors are actually viewing",
+                "effort": "Quick",
+                "owner": "L&D",
+                "problem": "29 visits per month to an unknown location is a meaningful blind spot. We do not know if these reps are finding useful content or dead ends.",
+                "approach": "Pull the specific IQ501 page URLs from dashboard traffic data. Once we know the exact URLs being visited, we can locate where the content is hosted and assess whether it serves its audience.",
+                "example": None
+            },
+            {
+                "title": "Build a minimal IQ501 sales enablement page",
+                "effort": "Strategic",
+                "owner": "Content Owner",
+                "problem": "If 29 reps per month are looking for IQ501 content and finding 2019 technical manuals, they are not getting what they need for sales conversations.",
+                "approach": "A minimal page would cover: what IQ501 is and who it is for, key differentiators vs. alternatives, target customer profile and qualifying questions, and links to current technical documentation. One to two days of content work, not a full playbook build.",
+                "example": None
+            }
+        ]
+    }
+}
+
 # ── HTML template ─────────────────────────────────────────────────────────────
 html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -219,6 +568,52 @@ html = f"""<!DOCTYPE html>
   .drilldown-right table tbody tr{{border-top:1px solid var(--border);}}
   .drilldown-right table tbody td{{padding:8px 12px;font-size:13px;}}
   @media(max-width:680px){{.drilldown-wrap{{flex-direction:column;}}.drilldown-left{{width:100%;max-height:200px;border-right:none;border-bottom:1px solid var(--border);}}}}
+  .intel-tabs {{ display:flex; gap:0; overflow-x:auto; border-bottom:1px solid var(--border); margin-bottom:20px; scrollbar-width:none; }}
+  .intel-tabs::-webkit-scrollbar {{ display:none; }}
+  .intel-tab {{ flex-shrink:0; padding:8px 16px; font-size:12px; font-weight:600; letter-spacing:.3px; color:var(--muted); background:transparent; border:none; border-bottom:2px solid transparent; cursor:pointer; transition:color .15s,border-color .15s; white-space:nowrap; }}
+  .intel-tab:hover {{ color:var(--text); }}
+  .intel-tab.active {{ border-bottom-color:currentColor; }}
+  @keyframes intelFade {{ from {{ opacity:0; transform:translateY(4px); }} to {{ opacity:1; transform:none; }} }}
+  .intel-panel {{ animation:intelFade .15s ease; }}
+  .intel-pb-header {{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap; }}
+  .intel-pb-stats {{ display:flex; gap:20px; flex-shrink:0; }}
+  .intel-stat {{ text-align:right; }}
+  .intel-stat-num {{ font-size:22px; font-weight:700; line-height:1.1; }}
+  .intel-stat-lbl {{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }}
+  .intel-headline {{ font-size:13px; color:var(--muted); font-style:italic; line-height:1.55; max-width:560px; }}
+  .intel-h3 {{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin:18px 0 10px; border-top:1px solid var(--border); padding-top:14px; }}
+  .intel-working-item {{ display:flex; gap:8px; font-size:13px; line-height:1.5; color:var(--text); margin-bottom:6px; }}
+  .intel-working-item::before {{ content:"✓"; color:var(--green); font-weight:700; flex-shrink:0; margin-top:1px; }}
+  .intel-issue-card {{ background:var(--surface2); border-radius:8px; padding:12px 14px; margin-bottom:8px; border-left:3px solid #f76f6f; }}
+  .intel-issue-top {{ display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap; }}
+  .intel-issue-page {{ font-size:11px; font-weight:600; font-family:monospace; color:var(--text); }}
+  .intel-issue-type {{ font-size:10px; padding:2px 7px; border-radius:999px; background:#f76f6f22; color:#f76f6f; font-weight:600; }}
+  .intel-issue-body {{ font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:8px; }}
+  .intel-tags {{ display:flex; gap:6px; flex-wrap:wrap; }}
+  .intel-tag {{ font-size:10px; padding:2px 8px; border-radius:999px; font-weight:600; }}
+  .intel-tag.effort-quick {{ background:#3ecf8e22; color:#3ecf8e; }}
+  .intel-tag.effort-medium {{ background:#f7c94f22; color:#e0a800; }}
+  .intel-tag.effort-strategic {{ background:#7c5cfc22; color:#a48cf7; }}
+  .intel-tag.owner-ld {{ background:#4f8ef722; color:#4f8ef7; }}
+  .intel-tag.owner-co {{ background:#f7944f22; color:#f7944f; }}
+  .intel-strat-item {{ background:var(--surface2); border-radius:8px; margin-bottom:8px; overflow:hidden; border:1px solid var(--border); }}
+  .intel-strat-head {{ display:flex; align-items:center; padding:11px 14px; cursor:pointer; gap:10px; }}
+  .intel-strat-head:hover {{ background:var(--surface); }}
+  .intel-strat-tags {{ display:flex; gap:5px; flex-shrink:0; }}
+  .intel-strat-title {{ font-size:13px; font-weight:600; flex:1; line-height:1.4; }}
+  .intel-strat-chevron {{ color:var(--muted); font-size:10px; flex-shrink:0; transition:transform .15s; }}
+  .intel-strat-item.open .intel-strat-chevron {{ transform:rotate(180deg); }}
+  .intel-strat-body {{ display:none; padding:0 14px 14px; border-top:1px solid var(--border); padding-top:12px; }}
+  .intel-strat-item.open .intel-strat-body {{ display:block; }}
+  .intel-strat-section {{ margin-bottom:10px; }}
+  .intel-strat-label {{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:4px; }}
+  .intel-strat-text {{ font-size:13px; color:var(--text); line-height:1.6; }}
+  .intel-strat-example {{ font-size:12px; color:var(--muted); line-height:1.6; font-style:italic; padding:8px 12px; background:var(--surface); border-left:2px solid var(--accent2); border-radius:0 4px 4px 0; margin-top:6px; }}
+  .intel-top-pages {{ margin-bottom:4px; }}
+  .intel-page-row {{ display:flex; align-items:center; gap:8px; margin-bottom:5px; font-size:12px; }}
+  .intel-page-name {{ flex:1; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px; }}
+  .intel-page-bar {{ height:4px; border-radius:2px; min-width:4px; }}
+  .intel-page-count {{ color:var(--muted); min-width:28px; text-align:right; }}
 </style>
 </head>
 <body>
@@ -313,9 +708,20 @@ html = f"""<!DOCTYPE html>
   </div>
 </div>
 
+<div class="table-section" id="intel-section">
+  <div class="table-header">
+    <span class="table-title">Playbook Intelligence<span class="info-btn" onclick="showInfo(event,'intel')">?</span></span>
+  </div>
+  <div style="padding:0 20px 20px">
+    <div class="intel-tabs" id="intel-tabs"></div>
+    <div id="intel-panel"></div>
+  </div>
+</div>
+
 <script>
 if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 const RAW = {json.dumps(records)};
+const ANALYSIS = {json.dumps(PLAYBOOK_ANALYSIS)};
 
 const PLAYBOOK_COLORS = {{
   "Salesforce Playbook":    "#4f8ef7",
@@ -650,6 +1056,7 @@ function render(){{
 
   // Who's Active — left panel
   renderPersonList();
+  renderIntelligence();
 }}
 
 function renderPersonList() {{
@@ -741,6 +1148,152 @@ function drillSelect(el, name) {{
   `;
 }}
 
+let _intelTab = null;
+
+function intelSelectTab(pb) {{
+  _intelTab = pb;
+  renderIntelligence();
+}}
+
+function intelToggleStrat(el) {{
+  el.closest('.intel-strat-item').classList.toggle('open');
+}}
+
+function renderIntelligence() {{
+  // Build traffic map from filtered rows
+  const pbVisits = {{}};
+  const pbPages  = {{}};
+  let totalV = 0;
+  filtered.forEach(r => {{
+    pbVisits[r.Playbook] = (pbVisits[r.Playbook] || 0) + 1;
+    if (!pbPages[r.Playbook]) pbPages[r.Playbook] = {{}};
+    const pg = r.Page || 'Home';
+    pbPages[r.Playbook][pg] = (pbPages[r.Playbook][pg] || 0) + 1;
+    totalV++;
+  }});
+
+  // All playbooks ordered by traffic desc
+  const allPbs = Object.keys(PLAYBOOK_COLORS);
+  const pbsSorted = allPbs.slice().sort((a,b) => (pbVisits[b]||0) - (pbVisits[a]||0));
+
+  // Default tab: highest traffic playbook
+  if (!_intelTab || !allPbs.includes(_intelTab)) _intelTab = pbsSorted[0] || allPbs[0];
+
+  // ── Render tabs ───────────────────────────────────────────────────────────
+  const tabBar = sel('intel-tabs');
+  tabBar.innerHTML = pbsSorted.map(pb => {{
+    const v  = pbVisits[pb] || 0;
+    const isActive = pb === _intelTab;
+    const col = pbColor(pb);
+    return `<button class="intel-tab${{isActive ? ' active' : ''}}"
+      style="color:${{isActive ? col : ''}};"
+      onclick="intelSelectTab(${{JSON.stringify(pb)}})"
+    >${{pb}} <span style="font-size:10px;opacity:.6">${{v > 0 ? '(' + v + ')' : ''}}</span></button>`;
+  }}).join('');
+
+  // ── Render panel ──────────────────────────────────────────────────────────
+  const pb     = _intelTab;
+  const visits = pbVisits[pb] || 0;
+  const pct    = totalV > 0 ? ((visits / totalV) * 100).toFixed(1) : '0.0';
+  const col    = pbColor(pb);
+
+  // Top pages bar chart
+  const pageEntries = Object.entries(pbPages[pb] || {{}}).sort((a,b) => b[1]-a[1]).slice(0,8);
+  const maxV2 = pageEntries.length > 0 ? pageEntries[0][1] : 1;
+  const trafficHtml = pageEntries.length > 0
+    ? `<div class="intel-top-pages">${{pageEntries.map(([pg,v]) =>
+        `<div class="intel-page-row">
+          <span class="intel-page-name">${{pg}}</span>
+          <div class="intel-page-bar" style="width:${{Math.max(4, Math.round(v/maxV2*90))}}px;background:${{col}}"></div>
+          <span class="intel-page-count">${{v}}</span>
+        </div>`).join('')}}</div>`
+    : `<div style="color:var(--muted);font-size:13px">No page data in the selected period.</div>`;
+
+  // Analysis content
+  const intel = ANALYSIS[pb];
+  let workingHtml = '', issuesHtml = '', stratHtml = '';
+
+  if (intel) {{
+    workingHtml = intel.working.map(w => `<div class="intel-working-item">${{w}}</div>`).join('');
+
+    issuesHtml = intel.issues.map(issue => {{
+      const ec = 'effort-' + issue.effort.toLowerCase();
+      const oc = issue.owner === 'L&D' ? 'owner-ld' : 'owner-co';
+      return `<div class="intel-issue-card">
+        <div class="intel-issue-top">
+          <span class="intel-issue-page">${{issue.page}}</span>
+          <span class="intel-issue-type">${{issue.type}}</span>
+        </div>
+        <div class="intel-issue-body">${{issue.summary}}</div>
+        <div class="intel-tags">
+          <span class="intel-tag ${{ec}}">${{issue.effort}}</span>
+          <span class="intel-tag ${{oc}}">${{issue.owner}}</span>
+        </div>
+      </div>`;
+    }}).join('');
+
+    stratHtml = intel.strategies.map((s, i) => {{
+      const ec = 'effort-' + s.effort.toLowerCase();
+      const oc = s.owner === 'L&D' ? 'owner-ld' : 'owner-co';
+      const exHtml = s.example
+        ? `<div class="intel-strat-section"><div class="intel-strat-label">Example</div>
+           <div class="intel-strat-example">${{s.example}}</div></div>`
+        : '';
+      return `<div class="intel-strat-item" id="strat-${{i}}">
+        <div class="intel-strat-head" onclick="intelToggleStrat(this)">
+          <div class="intel-strat-tags">
+            <span class="intel-tag ${{ec}}">${{s.effort}}</span>
+            <span class="intel-tag ${{oc}}">${{s.owner}}</span>
+          </div>
+          <span class="intel-strat-title">${{s.title}}</span>
+          <span class="intel-strat-chevron">▼</span>
+        </div>
+        <div class="intel-strat-body">
+          <div class="intel-strat-section">
+            <div class="intel-strat-label">The Problem</div>
+            <div class="intel-strat-text">${{s.problem}}</div>
+          </div>
+          <div class="intel-strat-section">
+            <div class="intel-strat-label">Recommended Approach</div>
+            <div class="intel-strat-text">${{s.approach}}</div>
+          </div>
+          ${{exHtml}}
+        </div>
+      </div>`;
+    }}).join('');
+  }} else {{
+    workingHtml = `<div style="font-size:13px;color:var(--muted);line-height:1.6">
+      ${{visits > 0
+        ? 'This playbook is performing well. Detailed content analysis not included in this report — use it as a structural benchmark when evaluating other playbooks.'
+        : 'No visits recorded in the selected period.'}}
+    </div>`;
+  }}
+
+  sel('intel-panel').innerHTML = `<div class="intel-panel">
+    <div class="intel-pb-header">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:${{col}};margin-bottom:6px">${{pb}}</div>
+        <div class="intel-headline">${{intel ? intel.headline : ''}}</div>
+      </div>
+      <div class="intel-pb-stats">
+        <div class="intel-stat">
+          <div class="intel-stat-num" style="color:${{col}}">${{visits.toLocaleString()}}</div>
+          <div class="intel-stat-lbl">Views</div>
+        </div>
+        <div class="intel-stat">
+          <div class="intel-stat-num" style="color:${{col}}">${{pct}}%</div>
+          <div class="intel-stat-lbl">of Total</div>
+        </div>
+      </div>
+    </div>
+    <div class="intel-h3" style="border-top:none;padding-top:0;margin-top:0">Traffic — Top Pages</div>
+    ${{trafficHtml}}
+    ${{intel ? '<div class="intel-h3">What\'s Working</div>' + workingHtml : workingHtml}}
+    ${{issuesHtml ? '<div class="intel-h3">Watch List — Pages That Need Attention</div>' + issuesHtml : ''}}
+    ${{stratHtml ? '<div class="intel-h3">Strategic Recommendations</div>' + stratHtml : ''}}
+  </div>`;
+}}
+
 applyFilters();
 
 const INFO = {{
@@ -756,6 +1309,7 @@ const INFO = {{
   'hide-tlg':       'Removes the internal L&D team (TLG) from all data — charts, stats, and the Active Users panel. Use this when sharing results with managers or stakeholders outside the team.',
   'vertical-filter': 'Filters to only the three vertical market playbooks — Healthcare, Legal, and Public Sector. All other playbooks are hidden while active. Can be combined with Hide TLG.',
   'whos-active':    'Lists every person who accessed a playbook in the selected period, sorted by total page views. The number next to each name is their total page views — not unique pages visited. Clicking a page 5 times counts as 5.',
+  'intel':          'Per-playbook content analysis: what is working, what is not, and strategic recommendations with effort and ownership tags. Traffic data responds to date filters. Analysis content is based on a full audit of each playbook.',
 }};
 
 function showInfo(e, key) {{
