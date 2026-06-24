@@ -29,38 +29,34 @@ VERTICAL_MAP = {
 # Column indices (0-based) matching Resmie's LMS export format.
 # CAUTION: verify against each new file before regenerating — Resmie may adjust columns.
 # Last verified: FY26-Healthcare-Certification-Courses_2026-05.xlsx
-COL_FIRST        = 1   # First Name
-COL_LAST         = 2   # Last Name
-COL_EMAIL        = 3   # Email Address
-COL_JOBTITLE     = 4   # Job Title
-COL_REGION       = 5   # Region
-COL_MARKET       = 6   # Market
-COL_MGR_FIRST    = 8   # ManagerFirstName
-COL_MGR_LAST     = 9   # ManagerLastName
-COL_MGR_EMAIL    = 10  # SUPEMAILADDR (manager email)
-COL_MGR_TITLE    = 11  # Manager JobTitle
-COL_HIRE_DATE    = 13  # Hire Date
-COL_COMPLETE     = 18  # Curriculum Complete — "Yes" / "No"
-COL_DATE         = 19  # Curriculum Assignment Date (enrollment date; used for date-range filter)
-# No overall Qtr column — computed via km_fiscal_quarter(raw[COL_DATE])
-COL_LS_DATE      = 20  # Layered Security Certification Date
-COL_LS_QTR       = 21  # LS Qtr Certified
-COL_LAYERED_SEC  = 22  # LS Certified
-COL_HC_DATE      = 23  # Healthcare Certification Date
-COL_HC_QTR       = 24  # HC Qtr Certified
-COL_HEALTHCARE   = 25  # HC Certified
-COL_ACUTE_DATE   = 26  # Acute Care Certification Date
-COL_ACUTE_QTR    = 27  # Acute Care Qtr Certified
-COL_ACUTE        = 28  # Acute Care Certified
-COL_AMB_DATE     = 29  # Ambulatory Certification Date
-COL_AMB_QTR      = 30  # Ambulatory Qtr Certified
-COL_AMBULATORY   = 31  # Ambulatory Certified
-COL_EXT_DATE     = 32  # Extended Care Certification Date
-COL_EXT_QTR      = 33  # Extended Care Qtr Certified
-COL_EXTENDED     = 34  # Extended Care Certified
+COL_FIRST        = 2   # First Name
+COL_LAST         = 3   # Last Name
+COL_EMAIL        = 4   # Email Address
+COL_JOBTITLE     = 5   # Job Title
+COL_REGION       = 6   # Region (in data; Market used for grouping/filtering)
+COL_MARKET       = 7   # Market
+COL_MGR_FIRST    = 9   # ManagerFirstName
+COL_MGR_LAST     = 10  # ManagerLastName
+COL_MGR_EMAIL    = 11  # SUPEMAILADDR (manager email)
+COL_MGR_TITLE    = 12  # Manager JobTitle
+COL_HIRE_DATE    = 14  # Hire Date
+COL_COMPLETE     = 19  # Curriculum Complete — "Yes"/"No" (LMS-driven)
+COL_DATE         = 20  # Curriculum Assignment Date (enrollment date; used for date-range filter)
+COL_HC_DATE      = 21  # Healthcare Certification Date (compute quarter from this)
+# col 22 = HC Qtr Certified — Excel formula string, ignored; quarter computed via km_fiscal_quarter()
+COL_HEALTHCARE   = 23  # HC Certified (manager sign-off)
+COL_ACUTE_DATE   = 24  # Acute Care Certification Date
+# col 25 = Acute Care Qtr Certified — Excel formula string, ignored
+COL_ACUTE        = 26  # Acute Care Certified
+COL_AMB_DATE     = 27  # Ambulatory Certification Date
+# col 28 = Ambulatory Qtr Certified — Excel formula string, ignored
+COL_AMBULATORY   = 29  # Ambulatory Certified
+COL_EXT_DATE     = 30  # Extended Care Certification Date
+# col 31 = Extended Care Qtr Certified — Excel formula string, ignored
+COL_EXTENDED     = 32  # Extended Care Certified
+# Layered Security: completely removed from new file
 
 SUB_CERTS = [
-    ('LayeredSec', 'Layered Security'),
     ('Healthcare', 'Healthcare'),
     ('AcuteCare',  'Acute Care'),
     ('Ambulatory', 'Ambulatory'),
@@ -116,12 +112,13 @@ def load_rows(filepath):
         def _date(v): return v.strftime('%Y-%m-%d') if v and hasattr(v, 'strftime') else ''
         def _qtr(v):  return str(v).strip() if v and str(v).strip() not in ('None','') else ''
         def _cert(v): return str(v).strip() if v else 'No'
+        def _qtr_from_date(v):
+            return km_fiscal_quarter(v) if v and hasattr(v, 'month') else ''
         rows.append({
             'FirstName':  str(raw[COL_FIRST]).strip(),
             'LastName':   str(raw[COL_LAST]).strip(),
             'Email':      str(raw[COL_EMAIL]).strip() if raw[COL_EMAIL] else '',
             'JobTitle':   str(raw[COL_JOBTITLE]).strip() if raw[COL_JOBTITLE] else '',
-            'Region':     str(raw[COL_REGION]).strip() if raw[COL_REGION] else '',
             'Market':     str(raw[COL_MARKET]).strip() if raw[COL_MARKET] else '',
             'Manager':    ((str(raw[COL_MGR_FIRST]).strip() + ' ' + str(raw[COL_MGR_LAST]).strip()).strip()) if raw[COL_MGR_FIRST] else '',
             'MgrEmail':   str(raw[COL_MGR_EMAIL]).strip() if raw[COL_MGR_EMAIL] else '',
@@ -129,21 +126,17 @@ def load_rows(filepath):
             'HireDate':   _date(raw[COL_HIRE_DATE]),
             'Complete':   _cert(raw[COL_COMPLETE]),
             'Date':       _date(raw[COL_DATE]),
-            'Qtr':        km_fiscal_quarter(raw[COL_DATE]),
-            'LSDate':     _date(raw[COL_LS_DATE]),
-            'LSQtr':      _qtr(raw[COL_LS_QTR]),
-            'LayeredSec': _cert(raw[COL_LAYERED_SEC]),
             'HCDate':     _date(raw[COL_HC_DATE]),
-            'HCQtr':      _qtr(raw[COL_HC_QTR]),
+            'HCQtr':      _qtr_from_date(raw[COL_HC_DATE]),
             'Healthcare': _cert(raw[COL_HEALTHCARE]),
             'AcuteDate':  _date(raw[COL_ACUTE_DATE]),
-            'AcuteQtr':   _qtr(raw[COL_ACUTE_QTR]),
+            'AcuteQtr':   _qtr_from_date(raw[COL_ACUTE_DATE]),
             'AcuteCare':  _cert(raw[COL_ACUTE]),
             'AmbDate':    _date(raw[COL_AMB_DATE]),
-            'AmbQtr':     _qtr(raw[COL_AMB_QTR]),
+            'AmbQtr':     _qtr_from_date(raw[COL_AMB_DATE]),
             'Ambulatory': _cert(raw[COL_AMBULATORY]),
             'ExtDate':    _date(raw[COL_EXT_DATE]),
-            'ExtQtr':     _qtr(raw[COL_EXT_QTR]),
+            'ExtQtr':     _qtr_from_date(raw[COL_EXT_DATE]),
             'Extended':   _cert(raw[COL_EXTENDED]),
         })
     wb.close()
@@ -216,6 +209,7 @@ def generate_html(slug, name, rows):
   .stat-value.green{{color:var(--green);}}
   .stat-value.red{{color:var(--red);}}
   .stat-value.teal{{color:var(--teal);}}
+  .stat-value.blue{{color:var(--accent);}}
   .stat-sub{{font-size:11px;color:var(--muted);margin-top:4px;}}
 
   .charts{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:0 28px 16px;}}
@@ -282,7 +276,6 @@ def generate_html(slug, name, rows):
   <span class="filter-label">Certification</span>
   <select id="f-cert">
     <option value="">All Certifications</option>
-    <option value="LayeredSec">Layered Security</option>
     <option value="Healthcare">Healthcare</option>
     <option value="AcuteCare">Acute Care</option>
     <option value="Ambulatory">Ambulatory</option>
@@ -294,8 +287,8 @@ def generate_html(slug, name, rows):
     <option value="Yes">Certified</option>
     <option value="No">Not Certified</option>
   </select>
-  <span class="filter-label">Region</span>
-  <select id="f-region"><option value="">All Regions</option></select>
+  <span class="filter-label">Market</span>
+  <select id="f-market"><option value="">All Markets</option></select>
   <span class="filter-label" style="margin-right:2px">From</span>
   <input type="date" id="f-date-from">
   <span class="filter-label" style="margin:0 2px">To</span>
@@ -311,7 +304,12 @@ def generate_html(slug, name, rows):
     <div class="stat-value" id="s-total">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
+    <div class="stat-label">Curriculum Complete <span class="info-btn" onclick="showInfo(event,'curriculum-complete')">?</span></div>
+    <div class="stat-value blue" id="s-curriculum">&#8212;</div>
+    <div class="stat-sub" id="s-curriculum-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">HC Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
     <div class="stat-value green" id="s-certified">&#8212;</div>
   </div>
   <div class="stat">
@@ -327,7 +325,7 @@ def generate_html(slug, name, rows):
 
 <div class="charts">
   <div class="chart-card">
-    <div class="chart-title">Certified vs Not Certified by Region <span class="info-btn" onclick="showInfo(event,'by-region')">?</span></div>
+    <div class="chart-title">Certified vs Not Certified by Market <span class="info-btn" onclick="showInfo(event,'by-market')">?</span></div>
     <div class="chart-wrap"><canvas id="regionChart"></canvas></div>
   </div>
   <div class="chart-card">
@@ -350,7 +348,7 @@ def generate_html(slug, name, rows):
       <span style="font-size:11px;color:var(--muted);margin-right:2px;">Sort:</span>
       <button class="sort-btn active" data-sort="status" data-label="Status" onclick="setRosterSort('status')">Status ↓</button>
       <button class="sort-btn" data-sort="name"   data-label="Name"   onclick="setRosterSort('name')">Name</button>
-      <button class="sort-btn" data-sort="region" data-label="Region" onclick="setRosterSort('region')">Region</button>
+      <button class="sort-btn" data-sort="market" data-label="Market" onclick="setRosterSort('market')">Market</button>
     </div>
     <input type="text" class="roster-search" id="roster-search" placeholder="Search by name&hellip;" oninput="filterRoster()">
   </div>
@@ -388,10 +386,10 @@ function toggleTheme(){{
 }}
 
 // Populate filter dropdowns from data
-const allRegions = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
-allRegions.forEach(r => sel('f-region').innerHTML += `<option value="${{r}}">${{r}}</option>`);
+const allMarkets = [...new Set(RAW.map(r=>r.Market).filter(Boolean))].sort();
+allMarkets.forEach(m => sel('f-market').innerHTML += `<option value="${{m}}">${{m}}</option>`);
 
-['f-cert','f-status','f-region','f-date-from','f-date-to'].forEach(id => {{
+['f-cert','f-status','f-market','f-date-from','f-date-to'].forEach(id => {{
   sel(id).addEventListener('change', applyFilters);
 }});
 
@@ -413,14 +411,15 @@ document.addEventListener('click', function(e){{
 }});
 
 const INFO_MSGS = {{
-  'total-assigned':  'Total number of people assigned this certification curriculum.',
-  'certified':       'People who have completed and passed the curriculum certification.',
-  'not-certified':   'People assigned the curriculum who have not yet completed it.',
-  'completion-rate': 'Percentage of assigned people who have earned the certification. Updates when a specific Certification is selected.',
-  'by-region':       'Certified vs. not certified broken down by sales region. Responds to the Certification and Status filters.',
-  'over-time':       'Sub-certifications earned per fiscal quarter, stacked by type. FY2026 Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar.',
-  'subcert':         'How many people have earned each of the five sub-certifications within this curriculum.',
-  'roster':          'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
+  'total-assigned':      'Total number of people assigned this certification curriculum.',
+  'curriculum-complete': 'People who have completed all required LMS coursework. This is the first step — manager-confirmed HC certification is tracked separately.',
+  'certified':           'People who have received full Healthcare certification, confirmed by their manager. The final step after completing LMS coursework.',
+  'not-certified':       'People assigned the curriculum who have not yet received manager-confirmed HC certification.',
+  'completion-rate':     'Percentage of assigned people who have earned manager-confirmed HC certification.',
+  'by-market':           'HC certified vs. not certified broken down by sales market. Responds to the Certification and Status filters.',
+  'over-time':           'Sub-certifications earned per fiscal quarter, stacked by type. FY2026 Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar.',
+  'subcert':             'How many people have earned each of the four sub-certifications within this curriculum.',
+  'roster':              'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
 }};
 function showInfo(e, key){{
   const pop = sel('info-popover');
@@ -440,23 +439,23 @@ function toggleTLG(){{
 }}
 
 function resetFilters(){{
-  ['f-cert','f-status','f-region','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
+  ['f-cert','f-status','f-market','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
   if(hideTLG){{ hideTLG=false; sel('btn-tlg').classList.remove('active'); sel('btn-tlg').textContent='Hide TLG'; }}
   applyFilters();
 }}
 
 function applyFilters(){{
   const cert   = sel('f-cert').value;
-  const certField = cert || 'Complete';
+  const certField = cert || 'Healthcare';
   const status = sel('f-status').value;
-  const region = sel('f-region').value;
+  const market = sel('f-market').value;
   const from   = sel('f-date-from').value;
   const to     = sel('f-date-to').value;
   const effectiveStatus = (cert && !status) ? 'Yes' : status;
   filtered = RAW.filter(r => {{
     if(hideTLG && TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
     if(effectiveStatus && r[certField] !== effectiveStatus) return false;
-    if(region && r.Region   !== region) return false;
+    if(market && r.Market !== market) return false;
     if(from && r.Date && r.Date < from) return false;
     if(to   && r.Date && r.Date > to)   return false;
     return true;
@@ -468,33 +467,36 @@ function applyFilters(){{
 function render(){{
   const isLight    = document.body.classList.contains('light-mode');
   const chartLabel = isLight ? cv('--text') : cv('--muted');
-  const certField  = sel('f-cert').value || 'Complete';
+  const certField  = sel('f-cert').value || 'Healthcare';
 
   // Stat cards
-  const total    = filtered.length;
-  const certified = filtered.filter(r=>r[certField]==='Yes').length;
-  const notCert  = total - certified;
-  const rate     = total > 0 ? Math.round(certified/total*100) : 0;
+  const total          = filtered.length;
+  const curriculumDone = filtered.filter(r=>r.Complete==='Yes').length;
+  const certified      = filtered.filter(r=>r[certField]==='Yes').length;
+  const notCert        = total - certified;
+  const rate           = total > 0 ? Math.round(certified/total*100) : 0;
 
-  sel('s-total').textContent     = total;
-  sel('s-certified').textContent = certified;
-  sel('s-not').textContent       = notCert;
-  sel('s-rate').textContent      = rate + '%';
-  sel('s-rate-sub').textContent  = total > 0 ? `${{certified}} of ${{total}} assigned` : '';
+  sel('s-total').textContent          = total;
+  sel('s-curriculum').textContent     = curriculumDone;
+  sel('s-curriculum-sub').textContent = total > 0 ? `${{curriculumDone}} of ${{total}} assigned` : '';
+  sel('s-certified').textContent      = certified;
+  sel('s-not').textContent            = notCert;
+  sel('s-rate').textContent           = rate + '%';
+  sel('s-rate-sub').textContent       = total > 0 ? `${{certified}} of ${{total}} assigned` : '';
 
-  // Region chart — grouped bars
-  const regions         = [...new Set(filtered.map(r=>r.Region).filter(Boolean))].sort();
-  const certByRegion    = regions.map(rg => filtered.filter(r=>r.Region===rg&&r[certField]==='Yes').length);
-  const notCertByRegion = regions.map(rg => filtered.filter(r=>r.Region===rg&&r[certField]==='No').length);
+  // Market chart — grouped bars
+  const markets         = [...new Set(filtered.map(r=>r.Market).filter(Boolean))].sort();
+  const certByMarket    = markets.map(m => filtered.filter(r=>r.Market===m&&r[certField]==='Yes').length);
+  const notCertByMarket = markets.map(m => filtered.filter(r=>r.Market===m&&r[certField]==='No').length);
 
   if(regionChart) regionChart.destroy();
   regionChart = new Chart(sel('regionChart'), {{
     type: 'bar',
     data: {{
-      labels: regions,
+      labels: markets,
       datasets: [
-        {{ label:'Certified',     data:certByRegion,    backgroundColor:cv('--green')+'cc', borderRadius:4, borderSkipped:false }},
-        {{ label:'Not Certified', data:notCertByRegion, backgroundColor:cv('--red')+'cc',   borderRadius:4, borderSkipped:false }},
+        {{ label:'Certified',     data:certByMarket,    backgroundColor:cv('--green')+'cc', borderRadius:4, borderSkipped:false }},
+        {{ label:'Not Certified', data:notCertByMarket, backgroundColor:cv('--red')+'cc',   borderRadius:4, borderSkipped:false }},
       ]
     }},
     options: {{
@@ -513,11 +515,10 @@ function render(){{
 
   // Trend chart — stacked bars by sub-cert per fiscal quarter
   const TREND_SUBCERTS = [
-    {{key:'LayeredSec', qtrKey:'LSQtr',    label:'Layered Security', color:cv('--accent')}},
-    {{key:'Healthcare', qtrKey:'HCQtr',    label:'Healthcare',       color:cv('--green')}},
-    {{key:'AcuteCare',  qtrKey:'AcuteQtr', label:'Acute Care',       color:cv('--accent3')}},
-    {{key:'Ambulatory', qtrKey:'AmbQtr',   label:'Ambulatory',       color:cv('--accent2')}},
-    {{key:'Extended',   qtrKey:'ExtQtr',   label:'Extended Care',    color:cv('--teal')}},
+    {{key:'Healthcare', qtrKey:'HCQtr',    label:'Healthcare',    color:cv('--green')}},
+    {{key:'AcuteCare',  qtrKey:'AcuteQtr', label:'Acute Care',    color:cv('--accent3')}},
+    {{key:'Ambulatory', qtrKey:'AmbQtr',   label:'Ambulatory',    color:cv('--accent2')}},
+    {{key:'Extended',   qtrKey:'ExtQtr',   label:'Extended Care', color:cv('--teal')}},
   ];
   const parseQtr = s => {{ const m=s.match(/FY(\d+)\s+Q(\d)/); return m ? parseInt(m[1])*10+parseInt(m[2]) : 0; }};
   const allTrendQtrs = new Set();
@@ -552,9 +553,9 @@ function render(){{
   }});
 
   // Sub-cert breakdown chart
-  const subLabels = ['Layered Security','Healthcare','Acute Care','Ambulatory','Extended Care'];
-  const subKeys   = ['LayeredSec','Healthcare','AcuteCare','Ambulatory','Extended'];
-  const subColors = [cv('--accent'),cv('--green'),cv('--accent3'),cv('--accent2'),cv('--teal')];
+  const subLabels = ['Healthcare','Acute Care','Ambulatory','Extended Care'];
+  const subKeys   = ['Healthcare','AcuteCare','Ambulatory','Extended'];
+  const subColors = [cv('--green'),cv('--accent3'),cv('--accent2'),cv('--teal')];
   const subCounts = subKeys.map(k => filtered.filter(r=>r[k]==='Yes').length);
   const subNotCounts = subKeys.map(k => filtered.filter(r=>r[k]==='No').length);
 
@@ -586,7 +587,7 @@ function render(){{
 }}
 
 function subCertCount(r){{
-  return ['LayeredSec','Healthcare','AcuteCare','Ambulatory','Extended'].filter(k=>r[k]==='Yes').length;
+  return ['Healthcare','AcuteCare','Ambulatory','Extended'].filter(k=>r[k]==='Yes').length;
 }}
 
 function setRosterSort(field){{
@@ -600,13 +601,13 @@ function setRosterSort(field){{
 }}
 
 function renderRosterList(){{
-  const certField = sel('f-cert').value || 'Complete';
+  const certField = sel('f-cert').value || 'Healthcare';
   const d = rosterSortDir === 'desc' ? -1 : 1;
   const sorted = [...filtered].sort((a,b) => {{
     if(rosterSortField === 'name') {{
       return d * (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
-    }} else if(rosterSortField === 'region') {{
-      const rc = d * (a.Region||'').localeCompare(b.Region||'');
+    }} else if(rosterSortField === 'market') {{
+      const rc = d * (a.Market||'').localeCompare(b.Market||'');
       return rc !== 0 ? rc : (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     }} else {{
       // status: certified first (desc) or not-first (asc); within group, most sub-certs first
@@ -630,7 +631,7 @@ function renderRosterList(){{
     return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}">
       <div class="cert-dot ${{isCert?'yes':'no'}}"></div>
       <span class="roster-name">${{fullName}}</span>
-      <span class="cert-badge ${{isCert?'yes':'no'}}" title="${{count}}/5 sub-certs">${{isCert?'Certified':'Not Yet'}}</span>
+      <span class="cert-badge ${{isCert?'yes':'no'}}" title="${{count}}/4 sub-certs">${{isCert?'Certified':'Not Yet'}}</span>
     </div>`;
   }}).join('') || `<div class="no-data">No people match filters</div>`;
 
@@ -647,7 +648,7 @@ function rosterSelect(el){{
   const name = el.dataset.name;
   const p = filtered.find(r=>`${{r.FirstName}} ${{r.LastName}}`===name);
   if(!p) return;
-  const isCert = p.Complete==='Yes';
+  const isCert = p.Healthcare==='Yes';
   function fmtDate(d) {{
     if (!d) return '&#8212;';
     const [y,mo,dy] = d.split('-');
@@ -655,7 +656,6 @@ function rosterSelect(el){{
     return months[parseInt(mo)-1] + ' ' + parseInt(dy) + ', ' + y;
   }}
   const SUBCERT_DEFS = [
-    {{key:'LayeredSec', dateKey:'LSDate',    qtrKey:'LSQtr',    label:'Layered Security'}},
     {{key:'Healthcare', dateKey:'HCDate',    qtrKey:'HCQtr',    label:'Healthcare'}},
     {{key:'AcuteCare',  dateKey:'AcuteDate', qtrKey:'AcuteQtr', label:'Acute Care'}},
     {{key:'Ambulatory', dateKey:'AmbDate',   qtrKey:'AmbQtr',   label:'Ambulatory'}},
@@ -664,12 +664,12 @@ function rosterSelect(el){{
   sel('roster-right').innerHTML = `
     <div class="roster-right-header">
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">${{p.FirstName}} ${{p.LastName}}</div>
-      <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'Certified':'Not Yet Certified'}}</span>
+      <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'HC Certified':'Not Yet Certified'}}</span>
     </div>
     <div class="detail-grid">
       <div><div class="detail-label">Job Title</div><div class="detail-value">${{p.JobTitle||'&#8212;'}}</div></div>
-      <div><div class="detail-label">Region</div><div class="detail-value">${{p.Region||'&#8212;'}}</div></div>
       <div><div class="detail-label">Market</div><div class="detail-value">${{p.Market||'&#8212;'}}</div></div>
+      <div><div class="detail-label">LMS Curriculum</div><div class="detail-value">${{p.Complete==='Yes' ? '&#10003; Complete' : 'Not Complete'}}</div></div>
       <div><div class="detail-label">Hire Date</div><div class="detail-value">${{fmtDate(p.HireDate)}}</div></div>
       <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
     </div>
@@ -748,7 +748,7 @@ def main():
             for r in rows:
                 r['_file_date'] = file_date
             all_rows.extend(rows)
-            print(f'    {len(rows)} rows  ({sum(1 for r in rows if r["Complete"]=="Yes")} certified)')
+            print(f'    {len(rows)} rows  ({sum(1 for r in rows if r["Healthcare"]=="Yes")} HC certified, {sum(1 for r in rows if r["Complete"]=="Yes")} curriculum complete)')
 
         # Deduplicate: later files overwrite earlier ones for the same person
         all_rows.sort(key=lambda r: r['_file_date'])
@@ -759,8 +759,9 @@ def main():
         for r in deduped:
             del r['_file_date']
 
-        certified = sum(1 for r in deduped if r['Complete'] == 'Yes')
-        print(f'  → {len(deduped)} unique people  ({certified} certified, {len(deduped)-certified} not yet)')
+        hc_certified  = sum(1 for r in deduped if r['Healthcare'] == 'Yes')
+        curr_complete = sum(1 for r in deduped if r['Complete'] == 'Yes')
+        print(f'  → {len(deduped)} unique people  ({hc_certified} HC certified, {curr_complete} curriculum complete, {len(deduped)-hc_certified} not yet)')
 
         html = generate_html(slug, vert_name, deduped)
         out  = f'cert-{slug}.html'
