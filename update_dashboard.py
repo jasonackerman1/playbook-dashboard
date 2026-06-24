@@ -1176,8 +1176,10 @@ function renderIntelligence() {{
   const allPbs = Object.keys(PLAYBOOK_COLORS);
   const pbsSorted = allPbs.slice().sort((a,b) => (pbVisits[b]||0) - (pbVisits[a]||0));
 
-  // Default tab: highest traffic playbook
-  if (!_intelTab || !allPbs.includes(_intelTab)) _intelTab = pbsSorted[0] || allPbs[0];
+  // Default tab: first playbook with actual analysis data (sorted by traffic)
+  if (!_intelTab || !allPbs.includes(_intelTab)) {{
+    _intelTab = pbsSorted.find(p => ANALYSIS[p]) || pbsSorted[0] || allPbs[0];
+  }}
 
   // ── Render tabs ───────────────────────────────────────────────────────────
   const tabBar = sel('intel-tabs');
@@ -1186,8 +1188,9 @@ function renderIntelligence() {{
     const isActive = pb === _intelTab;
     const col = pbColor(pb);
     return `<button class="intel-tab${{isActive ? ' active' : ''}}"
+      data-pb="${{pb}}"
       style="color:${{isActive ? col : ''}};"
-      onclick="intelSelectTab(${{JSON.stringify(pb)}})"
+      onclick="intelSelectTab(this.dataset.pb)"
     >${{pb}} <span style="font-size:10px;opacity:.6">${{v > 0 ? '(' + v + ')' : ''}}</span></button>`;
   }}).join('');
 
