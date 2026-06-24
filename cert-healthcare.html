@@ -176,7 +176,7 @@
 
 <div class="charts">
   <div class="chart-card">
-    <div class="chart-title">Certified vs Not Certified by Market <span class="info-btn" onclick="showInfo(event,'by-market')">?</span></div>
+    <div class="chart-title">Certification Pipeline <span class="info-btn" onclick="showInfo(event,'pipeline')">?</span></div>
     <div class="chart-wrap"><canvas id="regionChart"></canvas></div>
   </div>
   <div class="chart-card">
@@ -267,7 +267,7 @@ const INFO_MSGS = {
   'certified':           'People who have received full Healthcare certification, confirmed by their manager. The final step after completing LMS coursework.',
   'not-certified':       'People assigned the curriculum who have not yet received manager-confirmed HC certification.',
   'completion-rate':     'Percentage of assigned people who have earned manager-confirmed HC certification.',
-  'by-market':           'HC certified vs. not certified broken down by sales market. Responds to the Certification and Status filters.',
+  'pipeline':            'Where people stand in the certification journey: Not Started (no LMS work), Curriculum Complete (LMS done, awaiting manager sign-off), HC Certified (fully certified).',
   'over-time':           'Sub-certifications earned per fiscal quarter, stacked by type. FY2026 Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar.',
   'subcert':             'How many people have earned each of the four sub-certifications within this curriculum.',
   'roster':              'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
@@ -335,31 +335,38 @@ function render(){
   sel('s-rate').textContent           = rate + '%';
   sel('s-rate-sub').textContent       = total > 0 ? `${certified} of ${total} assigned` : '';
 
-  // Market chart — grouped bars
-  const markets         = [...new Set(filtered.map(r=>r.Market).filter(Boolean))].sort();
-  const certByMarket    = markets.map(m => filtered.filter(r=>r.Market===m&&r[certField]==='Yes').length);
-  const notCertByMarket = markets.map(m => filtered.filter(r=>r.Market===m&&r[certField]==='No').length);
+  // Pipeline chart — three stages of the HC certification journey
+  const pipelineNotStarted   = filtered.filter(r=>r.Complete!=='Yes'&&r.Healthcare!=='Yes').length;
+  const pipelineCurrComplete = filtered.filter(r=>r.Complete==='Yes'&&r.Healthcare!=='Yes').length;
+  const pipelineHCCertified  = filtered.filter(r=>r.Healthcare==='Yes').length;
 
   if(regionChart) regionChart.destroy();
   regionChart = new Chart(sel('regionChart'), {
     type: 'bar',
     data: {
-      labels: markets,
-      datasets: [
-        { label:'Certified',     data:certByMarket,    backgroundColor:cv('--green')+'cc', borderRadius:4, borderSkipped:false },
-        { label:'Not Certified', data:notCertByMarket, backgroundColor:cv('--red')+'cc',   borderRadius:4, borderSkipped:false },
-      ]
+      labels: ['Not Started','Curriculum Complete','HC Certified'],
+      datasets: [{
+        data: [pipelineNotStarted, pipelineCurrComplete, pipelineHCCertified],
+        backgroundColor: [cv('--red')+'cc', cv('--accent')+'cc', cv('--green')+'cc'],
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
     },
     options: {
+      indexAxis: 'y',
       responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{position:'bottom',labels:{color:chartLabel,font:{size:11},boxWidth:10,padding:8}},
-        tooltip:{mode:'index',intersect:false},
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label: ctx => ` ${ctx.raw} person${ctx.raw!==1?'s':''}`
+          }
+        },
         datalabels:{display:false}
       },
       scales:{
-        x:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11}}},
-        y:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11},stepSize:1}}
+        x:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11},stepSize:1}},
+        y:{grid:{display:false},ticks:{color:chartLabel,font:{size:12}}}
       }
     }
   });
