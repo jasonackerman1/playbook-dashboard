@@ -1288,7 +1288,7 @@ function renderIntelligence() {{
     </div>
     <div class="intel-h3" style="border-top:none;padding-top:0;margin-top:0">Traffic — Top Pages</div>
     ${{trafficHtml}}
-    ${{intel ? '<div class="intel-h3">What\'s Working</div>' + workingHtml : workingHtml}}
+    ${{intel ? '<div class="intel-h3">What&#39;s Working</div>' + workingHtml : workingHtml}}
     ${{issuesHtml ? '<div class="intel-h3">Watch List — Pages That Need Attention</div>' + issuesHtml : ''}}
     ${{stratHtml ? '<div class="intel-h3">Strategic Recommendations</div>' + stratHtml : ''}}
   </div>`;
