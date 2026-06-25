@@ -496,9 +496,9 @@ function render(){{
   sel('s-rate-sub').textContent       = total > 0 ? `${{certified}} of ${{total}} assigned` : '';
 
   // Pipeline chart — three stages of the HC certification journey
-  const pipelineNotStarted   = filtered.filter(r=>r.Complete!=='Yes'&&r.Healthcare!=='Yes').length;
-  const pipelineCurrComplete = filtered.filter(r=>r.Complete==='Yes'&&r.Healthcare!=='Yes').length;
-  const pipelineHCCertified  = filtered.filter(r=>r.Healthcare==='Yes').length;
+  const pipelineNotStarted   = filtered.filter(r=>r.Complete!=='Yes'&&r[certField]!=='Yes').length;
+  const pipelineCurrComplete = filtered.filter(r=>r.Complete==='Yes'&&r[certField]!=='Yes').length;
+  const pipelineHCCertified  = filtered.filter(r=>r[certField]==='Yes').length;
 
   if(regionChart) regionChart.destroy();
   regionChart = new Chart(sel('regionChart'), {{
@@ -697,7 +697,7 @@ function renderRosterList(){{
     const mgrsSorted = Object.keys(groups).sort((a,b) => groups[b].length - groups[a].length);
     sel('roster-left').innerHTML = mgrsSorted.map(mgr => {{
       const team = groups[mgr];
-      const cert = team.filter(p=>p.Healthcare==='Yes').length;
+      const cert = team.filter(p=>p[certField]==='Yes').length;
       const lms  = team.filter(p=>p.Complete==='Yes').length;
       const peopleHtml = team
         .sort((a,b)=>(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
