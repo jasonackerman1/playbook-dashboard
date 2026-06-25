@@ -369,24 +369,18 @@ def generate_html(slug, name, rows):
   <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 18px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);">
     <span style="font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-right:4px;">Legend</span>
     <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
-      <span style="width:3px;height:14px;background:var(--green);border-radius:2px;flex-shrink:0;"></span>Certified
-    </span>
-    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
-      <span style="width:3px;height:14px;background:#f59e0b;border-radius:2px;flex-shrink:0;"></span>Curriculum Complete
-    </span>
-    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
-      <span style="width:3px;height:14px;background:var(--border);border-radius:2px;flex-shrink:0;"></span>In Progress
-    </span>
-    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
-      <svg width="36" height="12" viewBox="0 0 36 12" style="flex-shrink:0;">
-        <circle cx="6" cy="6" r="5" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
-        <text x="6" y="10" text-anchor="middle" font-size="7" font-weight="700" fill="var(--green)">&#10003;</text>
-        <line x1="11" y1="6" x2="16" y2="6" stroke="var(--border)" stroke-width="1"/>
-        <circle cx="21" cy="6" r="5" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
-        <text x="21" y="10" text-anchor="middle" font-size="7" font-weight="700" fill="var(--green)">&#10003;</text>
-        <line x1="26" y1="6" x2="31" y2="6" stroke="var(--border)" stroke-width="1"/>
+      <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;">
+        <circle cx="7" cy="7" r="6" fill="#f59e0b33" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#f59e0b">&#10003;</text>
       </svg>
-      LMS then Certified
+      LMS Complete
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;">
+        <circle cx="7" cy="7" r="6" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
+        <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="var(--green)">&#10003;</text>
+      </svg>
+      Certified
     </span>
     <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
       <svg width="14" height="14" viewBox="0 0 16 16" style="flex-shrink:0;">
@@ -397,7 +391,7 @@ def generate_html(slug, name, rows):
         <line x1="14.06" y1="11.5" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
         <line x1="1.94" y1="11.5" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
       </svg>
-      Secondary Curriculums
+      Secondary Curriculum Complete
     </span>
   </div>
   <div class="roster-wrap">
