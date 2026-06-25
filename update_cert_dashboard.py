@@ -623,20 +623,31 @@ function pipelineSteps(p) {{
   const bothDone = p.Healthcare==='Yes';
   const lmsOnly  = !bothDone && p.Complete==='Yes';
   const amber    = '#f59e0b';
+  const blue     = cv('--accent');
   function dot(color, tip, check) {{
     const bg = check ? color+'33' : 'var(--surface2)';
     const border = check ? color : 'var(--border)';
     const txt    = check ? color : 'var(--muted)';
     return `<div title="${{tip}}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${{bg}};border:1.5px solid ${{border}};color:${{txt}}">${{check?'&#10003;':''}}</div>`;
   }}
+  function miniDot(done, tip) {{
+    return `<div title="${{tip}}" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${{done?blue+'33':'var(--surface2)'}};border:1.5px solid ${{done?blue:'var(--border)'}}"></div>`;
+  }}
   const lmsColor = bothDone ? cv('--green') : lmsOnly ? amber : 'var(--border)';
   const lmsCheck = p.Complete==='Yes';
   const hcColor  = cv('--green');
   const hcCheck  = p.Healthcare==='Yes';
+  const secDots  = [
+    miniDot(p.AcuteCare==='Yes',  'Acute Care'),
+    miniDot(p.Ambulatory==='Yes', 'Ambulatory'),
+    miniDot(p.Extended==='Yes',   'Extended Care'),
+  ].join('');
   return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
     ${{dot(lmsColor,'LMS Complete',lmsCheck)}}
     <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
     ${{dot(hcColor,'HC Certified',hcCheck)}}
+    <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
+    <div style="display:flex;align-items:center;gap:2px;">${{secDots}}</div>
   </div>`;
 }}
 
