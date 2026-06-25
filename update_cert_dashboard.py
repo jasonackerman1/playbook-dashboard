@@ -864,6 +864,9 @@ function tierStyle(p, extraIndent) {{
   const base = 14 + extraIndent;
   const green = cv('--green');
   const amber = '#f59e0b';
+  const blue  = cv('--accent');
+  const allSec = p.AcuteCare==='Yes' && p.Ambulatory==='Yes' && p.Extended==='Yes';
+  if(p.Healthcare==='Yes' && allSec) return `border-left:3px solid ${{blue}};padding-left:${{base-3}}px;`;
   if(p.Healthcare==='Yes') return `border-left:3px solid ${{green}};padding-left:${{base-3}}px;`;
   if(p.Complete==='Yes')   return `border-left:3px solid ${{amber}};padding-left:${{base-3}}px;`;
   return extraIndent ? `padding-left:${{base}}px;` : '';
@@ -931,7 +934,7 @@ function renderRosterList(){{
       const rc = d * (a.Market||'').localeCompare(b.Market||'');
       return rc !== 0 ? rc : (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     }} else {{
-      function score(p) {{ return p[certField]==='Yes' ? 2 : p.Complete==='Yes' ? 1 : 0; }}
+      function score(p) {{ const allSec=p.AcuteCare==='Yes'&&p.Ambulatory==='Yes'&&p.Extended==='Yes'; return (p[certField]==='Yes'&&allSec)?3:p[certField]==='Yes'?2:p.Complete==='Yes'?1:0; }}
       const diff = score(a) - score(b);
       if(diff !== 0) return d * diff;
       return subCertCount(b) - subCertCount(a);
