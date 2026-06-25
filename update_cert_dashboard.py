@@ -474,7 +474,7 @@ function applyFilters(){{
     if(to   && r.Date && r.Date > to)   return false;
     return true;
   }});
-  sel('result-count').textContent = `${{filtered.length}} person${{filtered.length!==1?'s':''}}`;
+  sel('result-count').textContent = `${{filtered.length}} people`;
   render();
 }}
 
@@ -526,7 +526,7 @@ function render(){{
         legend:{{display:false}},
         tooltip:{{
           callbacks:{{
-            label: ctx => ` ${{ctx.raw}} person${{ctx.raw!==1?'s':''}}`
+            label: ctx => ` ${{ctx.raw}} people`
           }}
         }},
         datalabels:{{display:false}}
