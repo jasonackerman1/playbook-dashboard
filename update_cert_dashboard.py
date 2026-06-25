@@ -672,6 +672,7 @@ function rosterSelect(el){{
     <div class="roster-right-header">
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">${{p.FirstName}} ${{p.LastName}}</div>
       <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'HC Certified':'Not Yet Certified'}}</span>
+      ${{isCert && p.HCDate ? `<span style="font-size:12px;color:var(--muted);margin-left:8px">${{fmtDate(p.HCDate)}}</span>` : ''}}
     </div>
     <div class="detail-grid">
       <div><div class="detail-label">Job Title</div><div class="detail-value">${{p.JobTitle||'&#8212;'}}</div></div>
