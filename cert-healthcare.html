@@ -99,6 +99,12 @@
   .sort-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}
   .sort-btn:hover{border-color:var(--accent);color:var(--text);}
   .sort-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}
+  .mgr-group-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--surface2);border-bottom:1px solid var(--border);user-select:none;}
+  .mgr-group-hdr:hover{background:var(--border);}
+  .mgr-group-hdr.open .mgr-chevron{transform:rotate(180deg);}
+  .mgr-chevron{transition:transform .15s;font-size:10px;color:var(--muted);flex-shrink:0;}
+  .mgr-team{display:none;}
+  .mgr-team.open{display:block;}
   .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;margin-top:14px;}
   .detail-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
   .detail-value{font-size:14px;font-weight:500;}
@@ -196,10 +202,15 @@
       <div class="section-hint">Click a person to see their details &mdash; sorted by status then name</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-      <span style="font-size:11px;color:var(--muted);margin-right:2px;">Sort:</span>
-      <button class="sort-btn active" data-sort="status" data-label="Status" onclick="setRosterSort('status')">Status ↓</button>
-      <button class="sort-btn" data-sort="name"   data-label="Name"   onclick="setRosterSort('name')">Name</button>
-      <button class="sort-btn" data-sort="market" data-label="Market" onclick="setRosterSort('market')">Market</button>
+      <span style="font-size:11px;color:var(--muted);margin-right:2px;">View:</span>
+      <button class="sort-btn active" id="view-individual" onclick="setRosterView('individual')">Individual</button>
+      <button class="sort-btn" id="view-manager" onclick="setRosterView('manager')">By Manager</button>
+      <span id="sort-controls" style="display:flex;align-items:center;gap:6px;margin-left:6px;">
+        <span style="font-size:11px;color:var(--muted);margin-right:2px;">Sort:</span>
+        <button class="sort-btn active" data-sort="status" data-label="Status" onclick="setRosterSort('status')">Status ↓</button>
+        <button class="sort-btn" data-sort="name"   data-label="Name"   onclick="setRosterSort('name')">Name</button>
+        <button class="sort-btn" data-sort="market" data-label="Market" onclick="setRosterSort('market')">Market</button>
+      </span>
     </div>
     <input type="text" class="roster-search" id="roster-search" placeholder="Search by name&hellip;" oninput="filterRoster()">
   </div>
@@ -220,6 +231,7 @@ let hideTLG = false;
 let regionChart, trendChart, subcertChart;
 let rosterSortField = 'status';
 let rosterSortDir   = 'desc';
+let rosterView      = 'individual';
 
 function sel(id){ return document.getElementById(id); }
 function cv(v){ return getComputedStyle(document.body).getPropertyValue(v).trim(); }
@@ -458,8 +470,71 @@ function setRosterSort(field){
   renderRosterList();
 }
 
+function pipelineSteps(p) {
+  function step(done, tip) {
+    return `<div title="${tip}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${done?cv('--green')+'33':'var(--surface2)'};border:1.5px solid ${done?cv('--green'):'var(--border)'};color:${done?cv('--green'):'var(--muted)'}">${done?'&#10003;':''}</div>`;
+  }
+  return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
+    ${step(p.Complete==='Yes','LMS Complete')}
+    <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
+    ${step(p.Healthcare==='Yes','HC Certified')}
+  </div>`;
+}
+
+function setRosterView(v) {
+  rosterView = v;
+  sel('view-individual').classList.toggle('active', v==='individual');
+  sel('view-manager').classList.toggle('active', v==='manager');
+  sel('sort-controls').style.display = v==='individual' ? 'flex' : 'none';
+  sel('roster-right').innerHTML = '<div class="no-data">Select a person to see their details</div>';
+  renderRosterList();
+}
+
+function toggleMgrGroup(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
 function renderRosterList(){
   const certField = sel('f-cert').value || 'Healthcare';
+
+  if(rosterView === 'manager') {
+    const groups = {};
+    filtered.forEach(p => {
+      const mgr = p.Manager || 'No Manager';
+      if(!groups[mgr]) groups[mgr] = [];
+      groups[mgr].push(p);
+    });
+    const mgrsSorted = Object.keys(groups).sort((a,b) => groups[b].length - groups[a].length);
+    sel('roster-left').innerHTML = mgrsSorted.map(mgr => {
+      const team = groups[mgr];
+      const cert = team.filter(p=>p.Healthcare==='Yes').length;
+      const lms  = team.filter(p=>p.Complete==='Yes').length;
+      const peopleHtml = team
+        .sort((a,b)=>(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
+        .map(p => {
+          const fullName = `${p.FirstName} ${p.LastName}`;
+          return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${fullName}" style="padding-left:24px;">
+            <span class="roster-name">${fullName}</span>
+            ${pipelineSteps(p)}
+          </div>`;
+        }).join('');
+      return `<div>
+        <div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text)">${mgr}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${team.length} rep${team.length!==1?'s':''} &middot; ${lms} LMS &middot; ${cert} certified</div>
+          </div>
+          <span class="mgr-chevron">&#9660;</span>
+        </div>
+        <div class="mgr-team open">${peopleHtml}</div>
+      </div>`;
+    }).join('') || `<div class="no-data">No people match filters</div>`;
+    filterRoster();
+    return;
+  }
+
+  // Individual view
   const d = rosterSortDir === 'desc' ? -1 : 1;
   const sorted = [...filtered].sort((a,b) => {
     if(rosterSortField === 'name') {
@@ -468,14 +543,13 @@ function renderRosterList(){
       const rc = d * (a.Market||'').localeCompare(b.Market||'');
       return rc !== 0 ? rc : (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     } else {
-      // status: certified first (desc) or not-first (asc); within group, most sub-certs first
       if(a[certField] !== b[certField]) return d * (a[certField]==='Yes' ? -1 : 1);
       return subCertCount(b) - subCertCount(a);
     }
   });
 
-  // Update sort button labels
   document.querySelectorAll('.sort-btn').forEach(btn => {
+    if(!btn.dataset.sort) return;
     const active = btn.dataset.sort === rosterSortField;
     btn.classList.toggle('active', active);
     const arrow = active ? (rosterSortDir === 'desc' ? ' ↓' : ' ↑') : '';
@@ -484,17 +558,13 @@ function renderRosterList(){
 
   sel('roster-left').innerHTML = sorted.map(p => {
     const fullName = `${p.FirstName} ${p.LastName}`;
-    const isCert   = p[certField]==='Yes';
-    const count    = subCertCount(p);
     return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${fullName}">
-      <div class="cert-dot ${isCert?'yes':'no'}"></div>
       <span class="roster-name">${fullName}</span>
-      <span class="cert-badge ${isCert?'yes':'no'}" title="${count}/4 certifications">${isCert?'Certified':'Not Yet'}</span>
+      ${pipelineSteps(p)}
     </div>`;
   }).join('') || `<div class="no-data">No people match filters</div>`;
 
   filterRoster();
-
   const first = sel('roster-left').querySelector('.roster-person:not([style*="none"])') ||
                 sel('roster-left').querySelector('.roster-person');
   if(first) rosterSelect(first);
