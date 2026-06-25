@@ -543,7 +543,9 @@ function renderRosterList(){
       const rc = d * (a.Market||'').localeCompare(b.Market||'');
       return rc !== 0 ? rc : (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     } else {
-      if(a[certField] !== b[certField]) return d * (a[certField]==='Yes' ? -1 : 1);
+      function score(p) { return p[certField]==='Yes' ? 2 : p.Complete==='Yes' ? 1 : 0; }
+      const diff = score(b) - score(a);
+      if(diff !== 0) return d * diff;
       return subCertCount(b) - subCertCount(a);
     }
   });
