@@ -384,7 +384,7 @@ def generate_html(slug, name, rows):
     </span>
     <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
       <svg width="14" height="14" viewBox="0 0 16 16" style="flex-shrink:0;">
-        <path d="M8,8 L8,1 A7,7,0,0,1,14.06,11.5 Z" fill="var(--accent)33" stroke="var(--accent)" stroke-width="1"/>
+        <path d="M8,8 L8,1 A7,7,0,0,1,14.06,11.5 Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1"/>
         <path d="M8,8 L14.06,11.5 A7,7,0,0,1,1.94,11.5 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
         <path d="M8,8 L1.94,11.5 A7,7,0,0,1,8,1 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
         <line x1="8" y1="1" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
@@ -670,7 +670,7 @@ function pipelineSteps(p) {{
     const bd   = cv('--border');
     function seg(done) {{
       return done
-        ? `fill="${{blue}}33" stroke="${{blue}}" stroke-width="1"`
+        ? `fill="${{blue}}" stroke="${{blue}}" stroke-width="1"`
         : `fill="${{s2}}" stroke="${{bd}}" stroke-width="1"`;
     }}
     return `<svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;overflow:visible">
