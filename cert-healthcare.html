@@ -217,38 +217,38 @@
     </div>
     <input type="text" class="roster-search" id="roster-search" placeholder="Search by name&hellip;" oninput="filterRoster()">
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:10px 18px 4px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);">
-    <span style="font-weight:600;color:var(--text);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Legend</span>
-    <span style="display:flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:10px;height:100%;border-left:3px solid var(--green);"></span>Certified
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 18px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);">
+    <span style="font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-right:4px;">Legend</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <span style="width:3px;height:14px;background:var(--green);border-radius:2px;flex-shrink:0;"></span>Certified
     </span>
-    <span style="display:flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:10px;height:100%;border-left:3px solid #f59e0b;"></span>Curriculum Complete
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <span style="width:3px;height:14px;background:#f59e0b;border-radius:2px;flex-shrink:0;"></span>Curriculum Complete
     </span>
-    <span style="display:flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:10px;height:100%;border-left:3px solid var(--border);"></span>In Progress
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <span style="width:3px;height:14px;background:var(--border);border-radius:2px;flex-shrink:0;"></span>In Progress
     </span>
-    <span style="margin-left:4px;display:flex;align-items:center;gap:5px;">
-      <svg width="38" height="14" viewBox="0 0 38 14" style="flex-shrink:0;overflow:visible">
-        <circle cx="7" cy="7" r="6" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
-        <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="var(--green)">&#10003;</text>
-        <line x1="13" y1="7" x2="18" y2="7" stroke="var(--border)" stroke-width="1"/>
-        <circle cx="24" cy="7" r="6" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
-        <text x="24" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="var(--green)">&#10003;</text>
-        <line x1="30" y1="7" x2="35" y2="7" stroke="var(--border)" stroke-width="1"/>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <svg width="36" height="12" viewBox="0 0 36 12" style="flex-shrink:0;">
+        <circle cx="6" cy="6" r="5" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
+        <text x="6" y="10" text-anchor="middle" font-size="7" font-weight="700" fill="var(--green)">&#10003;</text>
+        <line x1="11" y1="6" x2="16" y2="6" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="21" cy="6" r="5" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
+        <text x="21" y="10" text-anchor="middle" font-size="7" font-weight="700" fill="var(--green)">&#10003;</text>
+        <line x1="26" y1="6" x2="31" y2="6" stroke="var(--border)" stroke-width="1"/>
       </svg>
-      LMS &#x2192; Certified
+      LMS then Certified
     </span>
-    <span style="display:flex;align-items:center;gap:5px;">
-      <svg width="16" height="14" viewBox="0 0 16 14">
-        <path d="M8,7 L8,0 A7,7,0,0,1,14.06,10.5 Z" fill="var(--accent)33" stroke="var(--accent)" stroke-width="1"/>
-        <path d="M8,7 L14.06,10.5 A7,7,0,0,1,1.94,10.5 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
-        <path d="M8,7 L1.94,10.5 A7,7,0,0,1,8,0 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
-        <line x1="8" y1="0" x2="8" y2="7" stroke="var(--bg)" stroke-width="1.5"/>
-        <line x1="14.06" y1="10.5" x2="8" y2="7" stroke="var(--bg)" stroke-width="1.5"/>
-        <line x1="1.94" y1="10.5" x2="8" y2="7" stroke="var(--bg)" stroke-width="1.5"/>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <svg width="14" height="14" viewBox="0 0 16 16" style="flex-shrink:0;">
+        <path d="M8,8 L8,1 A7,7,0,0,1,14.06,11.5 Z" fill="var(--accent)33" stroke="var(--accent)" stroke-width="1"/>
+        <path d="M8,8 L14.06,11.5 A7,7,0,0,1,1.94,11.5 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+        <path d="M8,8 L1.94,11.5 A7,7,0,0,1,8,1 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+        <line x1="8" y1="1" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
+        <line x1="14.06" y1="11.5" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
+        <line x1="1.94" y1="11.5" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
       </svg>
-      Secondary curriculums (Acute Care / Ambulatory / Extended Care) — each slice fills blue when complete
+      Secondary Curriculums
     </span>
   </div>
   <div class="roster-wrap">
