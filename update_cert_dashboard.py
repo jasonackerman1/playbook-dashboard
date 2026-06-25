@@ -267,6 +267,8 @@ def generate_html(slug, name, rows):
     body{{background:#fff!important;color:#111!important;}}
     .header,.filters,.stat-cards,.chart-section,.roster-section,.print-hide{{display:none!important;}}
     #print-header{{display:block!important;}}
+    #print-stats{{display:flex!important;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}}
+    #print-charts{{display:flex!important;gap:48px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}}
     #print-roster-wrap{{display:block!important;}}
     #print-roster-table{{width:100%;border-collapse:collapse;font-size:11px;}}
     #print-roster-table th{{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}}
@@ -481,6 +483,44 @@ function exportPDF() {{
       <td style="font-size:10px">${{p.Email||'—'}}</td>
     </tr>`;
   }}).join('');
+  // Stats numbers
+  var pTotal=filtered.length;
+  var pCert=filtered.filter(p=>p[certField]==='Yes').length;
+  var pLMS=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes').length;
+  var pIP=filtered.filter(p=>p.Complete!=='Yes'&&p[certField]!=='Yes').length;
+  var pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
+  function pBox(n,l){{
+    return '<div style="min-width:90px"><div style="font-size:30px;font-weight:700;color:#1a3a5c;line-height:1">'+n+'</div>'
+          +'<div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:5px">'+l+'</div></div>';
+  }}
+  sel('print-stats').innerHTML=pBox(pTotal,'Total Assigned')+pBox(pCert,'Certified')+pBox(pLMS,'LMS Complete')+pBox(pIP,'In Progress')+pBox(pRate+'%','Completion Rate');
+  // Charts as numbers
+  function pSection(title,rows){{
+    var h='<div style="min-width:150px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#666;margin-bottom:10px">'+title+'</div>';
+    rows.forEach(function(r){{
+      h+='<div style="display:flex;justify-content:space-between;gap:32px;padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span>'+r[0]+'</span><strong>'+r[1]+'</strong></div>';
+    }});
+    return h+'</div>';
+  }}
+  function pFiscalQtr(d){{
+    if(!d) return null;
+    var pts=d.split('-'),yr=+pts[0],mo=+pts[1];
+    var fy=mo>=4?yr+1:yr,q=mo>=10?3:mo>=7?2:mo>=4?1:4;
+    return 'Q'+q+' FY'+String(fy).slice(2);
+  }}
+  var qMap={{}};
+  filtered.filter(p=>p[certField]==='Yes'&&p.Date).forEach(p=>{{
+    var q=pFiscalQtr(p.Date); if(q) qMap[q]=(qMap[q]||0)+1;
+  }});
+  var qRows=Object.entries(qMap).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(!qRows.length) qRows=[['No data','—']];
+  var pAcute=filtered.filter(p=>p.AcuteCare==='Yes').length;
+  var pAmb=filtered.filter(p=>p.Ambulatory==='Yes').length;
+  var pExt=filtered.filter(p=>p.Extended==='Yes').length;
+  sel('print-charts').innerHTML=
+    pSection('Certification Pipeline',[['In Progress',pIP],['LMS Complete',pLMS],['Certified',pCert]])
+    +pSection('Certifications by Quarter',qRows)
+    +pSection('Secondary Curriculum',[['Acute Care',pAcute],['Ambulatory',pAmb],['Extended Care',pExt]]);
   const wasLight = document.body.classList.contains('light-mode');
   if(!wasLight) document.body.classList.add('light-mode');
   window.onafterprint = function() {{
@@ -930,6 +970,8 @@ applyFilters();
   <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
   <div style="font-size:12px;color:#555;" id="ph-filters"></div>
 </div>
+<div id="print-stats" style="display:none;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
+<div id="print-charts" style="display:none;gap:48px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
 <div id="print-roster-wrap" style="display:none;">
   <table id="print-roster-table">
     <thead><tr>
