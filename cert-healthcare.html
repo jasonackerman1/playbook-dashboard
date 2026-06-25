@@ -330,16 +330,14 @@ function setupPrintHeader(title,subtitle) {
 }
 function doPrint(noSummary) {
   if(noSummary) document.body.classList.add('print-no-summary');
-  const wasLight=document.body.classList.contains('light-mode');
-  if(!wasLight) document.body.classList.add('light-mode');
   window.onafterprint=function() {
     document.body.classList.remove('print-no-summary');
     sel('print-s1-label').style.display='none';
     sel('print-s2').style.display='none';
-    if(!wasLight) document.body.classList.remove('light-mode');
+    sel('ph-desc').style.display='none';
     window.onafterprint=null;
   };
-  setTimeout(()=>window.print(),150);
+  window.print();
 }
 function tds(cells) { return '<tr>'+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>'; }
 function thRow(labels) { return '<tr>'+labels.map(l=>`<th>${l}</th>`).join('')+'</tr>'; }
@@ -396,6 +394,8 @@ function runExport(type) {
       ? notCert.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
           .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.JobTitle||'—',p.Market||'—',p.Email||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
       : '<tr><td colspan="7" style="color:#999;font-style:italic;padding:10px 8px">All employees are certified</td></tr>';
+    sel('ph-desc').textContent=`Employees who have not yet earned ${sel('f-cert').options[sel('f-cert').selectedIndex].text} certification, sorted by manager. Use this list to contact employees and their managers to drive completion.`;
+    sel('ph-desc').style.display='block';
     doPrint(true);
 
   } else if(type==='manager-summary') {
@@ -414,13 +414,17 @@ function runExport(type) {
     sel('print-roster-body').innerHTML=mgrs.map(m=>tds([
       `<b>${m.name}</b>`,m.email,m.total,m.cert,m.lms,m.ip,`<b>${Math.round(m.cert/m.total*100)}%</b>`
     ])).join('');
+    sel('ph-desc').textContent='Certification completion rates by manager, sorted from lowest to highest. Managers at the top of the list have the most employees still in progress and need the most follow-up.';
+    sel('ph-desc').style.display='block';
     doPrint(true);
 
   } else if(type==='action-required') {
     const almostThere=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes');
     const secGaps=filtered.filter(p=>p[certField]==='Yes'&&(p.AcuteCare!=='Yes'||p.Ambulatory!=='Yes'||p.Extended!=='Yes'));
     setupPrintHeader('Action Required — Healthcare',`Generated: ${now}  |  ${almostThere.length+secGaps.length} Employees Need Follow-Up`);
-    sel('print-s1-label').textContent=`LMS COMPLETE — AWAITING CERTIFICATION (${almostThere.length})`;
+    sel('ph-desc').textContent='Employees who have started but not yet completed their certification journey. Each section identifies a different gap and the managers responsible for follow-up.';
+    sel('ph-desc').style.display='block';
+    sel('print-s1-label').innerHTML=`LMS COMPLETE — AWAITING CERTIFICATION (${almostThere.length})<div style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:#555;font-style:italic;margin-top:4px">These employees have completed the LMS curriculum but have not yet been certified. Follow up to confirm exam status or escalate to completion.</div>`;
     sel('print-s1-label').style.display='block';
     sel('print-roster-head').innerHTML=thRow(['#','Name','Email','Market','Manager','Manager Email']);
     sel('print-roster-body').innerHTML=almostThere.length
@@ -428,15 +432,13 @@ function runExport(type) {
           .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
       : '<tr><td colspan="6" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
     sel('print-s2').style.display='block';
-    sel('print-s2-label').textContent=`CERTIFIED — MISSING SECONDARY CURRICULUM (${secGaps.length})`;
-    sel('print-roster-head2').innerHTML=thRow(['#','Name','Email','Market','Manager','Missing Curriculum']);
+    sel('print-s2-label').innerHTML=`CERTIFIED — MISSING SECONDARY CURRICULUM (${secGaps.length})<div style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:#555;font-style:italic;margin-top:4px">These employees hold their certification but have not completed all secondary curriculums. Follow up to encourage enrollment in outstanding courses.</div>`;
+    sel('print-roster-head2').innerHTML=thRow(['#','Name','Email','Market','Manager','Acute Care','Ambulatory','Extended Care']);
     sel('print-roster-body2').innerHTML=secGaps.length
       ? secGaps.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||''))
-          .map((p,i)=>{
-            const missing=[p.AcuteCare!=='Yes'?'Acute Care':null,p.Ambulatory!=='Yes'?'Ambulatory':null,p.Extended!=='Yes'?'Extended Care':null].filter(Boolean).join(', ');
-            return tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',missing]);
-          }).join('')
-      : '<tr><td colspan="6" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
+          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',
+            p.AcuteCare==='Yes'?'&#10003;':'&#10007;',p.Ambulatory==='Yes'?'&#10003;':'&#10007;',p.Extended==='Yes'?'&#10003;':'&#10007;'])).join('')
+      : '<tr><td colspan="8" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
     doPrint(true);
   }
 }
@@ -880,6 +882,7 @@ applyFilters();
   <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title"></div>
   <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
   <div style="font-size:12px;color:#555;" id="ph-filters"></div>
+  <div id="ph-desc" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #dde4f0;font-size:12px;color:#444;font-style:italic;"></div>
 </div>
 <div id="print-stats" style="display:none;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
 <div id="print-charts" style="display:none;gap:48px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
