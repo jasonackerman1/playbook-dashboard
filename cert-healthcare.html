@@ -544,7 +544,7 @@ function renderRosterList(){
       return rc !== 0 ? rc : (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     } else {
       function score(p) { return p[certField]==='Yes' ? 2 : p.Complete==='Yes' ? 1 : 0; }
-      const diff = score(b) - score(a);
+      const diff = score(a) - score(b);
       if(diff !== 0) return d * diff;
       return subCertCount(b) - subCertCount(a);
     }
