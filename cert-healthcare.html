@@ -43,6 +43,11 @@
   .btn-theme:hover{border-color:var(--accent);color:var(--text);}
   .btn-export{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}
   .btn-export:hover{opacity:0.88;}
+  .export-drop{position:relative;}
+  .export-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:hidden;}
+  .export-menu.open{display:block;}
+  .export-item{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}
+  .export-item:hover{background:var(--surface2);}
 
   .filters{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}
   .filter-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}
@@ -121,10 +126,11 @@
     #print-stats{display:flex!important;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}
     #print-charts{display:flex!important;gap:48px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}
     #print-roster-wrap{display:block!important;}
-    #print-roster-table{width:100%;border-collapse:collapse;font-size:11px;}
-    #print-roster-table th{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}
-    #print-roster-table td{padding:5px 8px;border:1px solid #ddd;vertical-align:middle;}
-    #print-roster-table tr:nth-child(even) td{background:#fafafa;}
+    body.print-no-summary #print-stats,body.print-no-summary #print-charts{display:none!important;}
+    .ptable{width:100%;border-collapse:collapse;font-size:11px;}
+    .ptable th{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}
+    .ptable td{padding:5px 8px;border:1px solid #ddd;vertical-align:middle;}
+    .ptable tr:nth-child(even) td{background:#fafafa;}
   }
 </style>
 </head>
@@ -142,7 +148,15 @@
     <h1>Healthcare <span>Certification Dashboard</span></h1>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
-    <button class="btn-export print-hide" onclick="exportPDF()">&#128438; Export Report</button>
+    <div class="export-drop print-hide" id="export-drop">
+      <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
+      <div class="export-menu" id="export-menu">
+        <button class="export-item" onclick="runExport('full')">Full Report</button>
+        <button class="export-item" onclick="runExport('not-certified')">Not Certified</button>
+        <button class="export-item" onclick="runExport('manager-summary')">Manager Summary</button>
+        <button class="export-item" onclick="runExport('action-required')">Action Required</button>
+      </div>
+    </div>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
   </div>
 </div>
@@ -296,89 +310,135 @@ function toggleTheme(){
   sel('btn-theme').textContent = light ? '🌙 Dark' : '☀ Light';
   applyFilters();
 }
-function exportPDF() {
-  const certField = sel('f-cert').value || 'Healthcare';
-  const certLabel = sel('f-cert').options[sel('f-cert').selectedIndex].text;
-  const statusLabel = sel('f-status').options[sel('f-status').selectedIndex].text;
-  const market = sel('f-market').value || 'All Markets';
-  const from = sel('f-date-from').value || '';
-  const to   = sel('f-date-to').value   || '';
-  const parts = [];
-  parts.push(`Curriculum: ${certLabel}`);
-  parts.push(`Status: ${statusLabel}`);
-  parts.push(`Market: ${market}`);
-  if(from || to) parts.push(`Dates: ${from||'—'} to ${to||'—'}`);
+function toggleExportDrop() {
+  sel('export-menu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  const d=sel('export-drop'); if(d&&!d.contains(e.target)) sel('export-menu').classList.remove('open');
+});
+function setupPrintHeader(title,subtitle) {
+  sel('ph-title').textContent=title;
+  sel('ph-date').textContent=subtitle;
+  const certLabel=sel('f-cert').options[sel('f-cert').selectedIndex].text;
+  const statusLabel=sel('f-status').options[sel('f-status').selectedIndex].text;
+  const market=sel('f-market').value||'All Markets';
+  const from=sel('f-date-from').value||'',to=sel('f-date-to').value||'';
+  const parts=[`Curriculum: ${certLabel}`,`Status: ${statusLabel}`,`Market: ${market}`];
+  if(from||to) parts.push(`Dates: ${from||'—'} to ${to||'—'}`);
   if(hideTLG) parts.push('TLG hidden');
-  sel('ph-title').textContent = 'Healthcare Certification Report';
-  sel('ph-date').textContent = `Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}  |  ${filtered.length} People`;
-  sel('ph-filters').textContent = parts.join('  |  ');
-  const tbody = sel('print-roster-body');
-  tbody.innerHTML = filtered.map((p,i) => {
-    const status = p[certField]==='Yes' ? 'Certified' : p.Complete==='Yes' ? 'LMS Complete' : 'In Progress';
-    const certDate = p.Date || '—';
-    const acute = p.AcuteCare==='Yes'  ? `Yes (${p.AcuteDate||''})` : 'No';
-    const amb   = p.Ambulatory==='Yes' ? `Yes (${p.AmbDate  ||''})` : 'No';
-    const ext   = p.Extended==='Yes'   ? `Yes (${p.ExtDate  ||''})` : 'No';
-    const mgr   = p.Manager || '—';
-    return `<tr>
-      <td>${i+1}</td>
-      <td style="font-weight:600">${p.FirstName} ${p.LastName}</td>
-      <td>${p.Market||'—'}</td>
-      <td>${p.JobTitle||'—'}</td>
-      <td>${status}</td>
-      <td>${certDate}</td>
-      <td>${acute}</td>
-      <td>${amb}</td>
-      <td>${ext}</td>
-      <td>${mgr}</td>
-      <td style="font-size:10px">${p.Email||'—'}</td>
-    </tr>`;
-  }).join('');
-  // Stats numbers
-  var pTotal=filtered.length;
-  var pCert=filtered.filter(p=>p[certField]==='Yes').length;
-  var pLMS=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes').length;
-  var pIP=filtered.filter(p=>p.Complete!=='Yes'&&p[certField]!=='Yes').length;
-  var pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
-  function pBox(n,l){
-    return '<div style="min-width:90px"><div style="font-size:30px;font-weight:700;color:#1a3a5c;line-height:1">'+n+'</div>'
-          +'<div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:5px">'+l+'</div></div>';
-  }
-  sel('print-stats').innerHTML=pBox(pTotal,'Total Assigned')+pBox(pCert,'Certified')+pBox(pLMS,'LMS Complete')+pBox(pIP,'In Progress')+pBox(pRate+'%','Completion Rate');
-  // Charts as numbers
-  function pSection(title,rows){
-    var h='<div style="min-width:150px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#666;margin-bottom:10px">'+title+'</div>';
-    rows.forEach(function(r){
-      h+='<div style="display:flex;justify-content:space-between;gap:32px;padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span>'+r[0]+'</span><strong>'+r[1]+'</strong></div>';
-    });
-    return h+'</div>';
-  }
-  function pFiscalQtr(d){
-    if(!d) return null;
-    var pts=d.split('-'),yr=+pts[0],mo=+pts[1];
-    var fy=mo>=4?yr+1:yr,q=mo>=10?3:mo>=7?2:mo>=4?1:4;
-    return 'Q'+q+' FY'+String(fy).slice(2);
-  }
-  var qMap={};
-  filtered.filter(p=>p[certField]==='Yes'&&p.Date).forEach(p=>{
-    var q=pFiscalQtr(p.Date); if(q) qMap[q]=(qMap[q]||0)+1;
-  });
-  var qRows=Object.entries(qMap).sort((a,b)=>a[0].localeCompare(b[0]));
-  if(!qRows.length) qRows=[['No data','—']];
-  var pAcute=filtered.filter(p=>p.AcuteCare==='Yes').length;
-  var pAmb=filtered.filter(p=>p.Ambulatory==='Yes').length;
-  var pExt=filtered.filter(p=>p.Extended==='Yes').length;
-  sel('print-charts').innerHTML=
-    pSection('Certification Pipeline',[['In Progress',pIP],['LMS Complete',pLMS],['Certified',pCert]])
-    +pSection('Certifications by Quarter',qRows)
-    +pSection('Secondary Curriculum',[['Acute Care',pAcute],['Ambulatory',pAmb],['Extended Care',pExt]]);
-  const wasLight = document.body.classList.contains('light-mode');
+  sel('ph-filters').textContent=parts.join('  |  ');
+}
+function doPrint(noSummary) {
+  if(noSummary) document.body.classList.add('print-no-summary');
+  const wasLight=document.body.classList.contains('light-mode');
   if(!wasLight) document.body.classList.add('light-mode');
-  window.onafterprint = function() {
+  window.onafterprint=function() {
+    document.body.classList.remove('print-no-summary');
+    sel('print-s1-label').style.display='none';
+    sel('print-s2').style.display='none';
     if(!wasLight) document.body.classList.remove('light-mode');
-    window.onafterprint = null;
+    window.onafterprint=null;
   };
-  setTimeout(() => window.print(), 150);
+  setTimeout(()=>window.print(),150);
+}
+function tds(cells) { return '<tr>'+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>'; }
+function thRow(labels) { return '<tr>'+labels.map(l=>`<th>${l}</th>`).join('')+'</tr>'; }
+function pBox(n,l) {
+  return '<div style="min-width:90px"><div style="font-size:30px;font-weight:700;color:#1a3a5c;line-height:1">'+n+'</div>'
+        +'<div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:5px">'+l+'</div></div>';
+}
+function pSection(title,rows) {
+  var h='<div style="min-width:150px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#666;margin-bottom:10px">'+title+'</div>';
+  rows.forEach(function(r){h+='<div style="display:flex;justify-content:space-between;gap:32px;padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span>'+r[0]+'</span><strong>'+r[1]+'</strong></div>';});
+  return h+'</div>';
+}
+function pFiscalQtr(d) {
+  if(!d) return null;
+  var pts=d.split('-'),yr=+pts[0],mo=+pts[1];
+  var fy=mo>=4?yr+1:yr,q=mo>=10?3:mo>=7?2:mo>=4?1:4;
+  return 'Q'+q+' FY'+String(fy).slice(2);
+}
+function runExport(type) {
+  sel('export-menu').classList.remove('open');
+  const certField=sel('f-cert').value||'Healthcare';
+  const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  sel('print-s1-label').style.display='none';
+  sel('print-s2').style.display='none';
+
+  if(type==='full') {
+    setupPrintHeader('Healthcare Certification Report',`Generated: ${now}  |  ${filtered.length} People`);
+    var pTotal=filtered.length,pCert=filtered.filter(p=>p[certField]==='Yes').length;
+    var pLMS=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes').length;
+    var pIP=filtered.filter(p=>p.Complete!=='Yes'&&p[certField]!=='Yes').length;
+    var pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
+    sel('print-stats').innerHTML=pBox(pTotal,'Total Assigned')+pBox(pCert,'Certified')+pBox(pLMS,'LMS Complete')+pBox(pIP,'In Progress')+pBox(pRate+'%','Completion Rate');
+    var qMap={};
+    filtered.filter(p=>p[certField]==='Yes'&&p.Date).forEach(p=>{var q=pFiscalQtr(p.Date);if(q)qMap[q]=(qMap[q]||0)+1;});
+    var qRows=Object.entries(qMap).sort((a,b)=>a[0].localeCompare(b[0]));
+    if(!qRows.length) qRows=[['No data','—']];
+    var pAcute=filtered.filter(p=>p.AcuteCare==='Yes').length,pAmb=filtered.filter(p=>p.Ambulatory==='Yes').length,pExt=filtered.filter(p=>p.Extended==='Yes').length;
+    sel('print-charts').innerHTML=pSection('Certification Pipeline',[['In Progress',pIP],['LMS Complete',pLMS],['Certified',pCert]])+pSection('Certifications by Quarter',qRows)+pSection('Secondary Curriculum',[['Acute Care',pAcute],['Ambulatory',pAmb],['Extended Care',pExt]]);
+    sel('print-roster-head').innerHTML=thRow(['#','Name','Market','Job Title','Curriculum Status','Cert Date','Acute Care','Ambulatory','Extended Care','Manager','Email']);
+    sel('print-roster-body').innerHTML=filtered.map((p,i)=>{
+      const status=p[certField]==='Yes'?'Certified':p.Complete==='Yes'?'LMS Complete':'In Progress';
+      const acute=p.AcuteCare==='Yes'?`Yes (${p.AcuteDate||''})`:'No';
+      const amb=p.Ambulatory==='Yes'?`Yes (${p.AmbDate||''})`:'No';
+      const ext=p.Extended==='Yes'?`Yes (${p.ExtDate||''})`:'No';
+      return tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Market||'—',p.JobTitle||'—',status,p.Date||'—',acute,amb,ext,p.Manager||'—',`<small>${p.Email||'—'}</small>`]);
+    }).join('');
+    doPrint(false);
+
+  } else if(type==='not-certified') {
+    const notCert=filtered.filter(p=>p[certField]!=='Yes');
+    setupPrintHeader('Not Certified — Healthcare',`Generated: ${now}  |  ${notCert.length} Employees`);
+    sel('print-roster-head').innerHTML=thRow(['#','Name','Job Title','Market','Email','Manager','Manager Email']);
+    sel('print-roster-body').innerHTML=notCert.length
+      ? notCert.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
+          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.JobTitle||'—',p.Market||'—',p.Email||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
+      : '<tr><td colspan="7" style="color:#999;font-style:italic;padding:10px 8px">All employees are certified</td></tr>';
+    doPrint(true);
+
+  } else if(type==='manager-summary') {
+    const mgrMap={};
+    filtered.forEach(p=>{
+      const k=p.Manager||'(No Manager)';
+      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||'—',total:0,cert:0,lms:0,ip:0};
+      mgrMap[k].total++;
+      if(p[certField]==='Yes') mgrMap[k].cert++;
+      else if(p.Complete==='Yes') mgrMap[k].lms++;
+      else mgrMap[k].ip++;
+    });
+    const mgrs=Object.values(mgrMap).sort((a,b)=>(b.cert/b.total)-(a.cert/a.total));
+    setupPrintHeader('Manager Summary — Healthcare',`Generated: ${now}  |  ${mgrs.length} Managers`);
+    sel('print-roster-head').innerHTML=thRow(['Manager','Manager Email','Team Size','Certified','LMS Complete','In Progress','Completion %']);
+    sel('print-roster-body').innerHTML=mgrs.map(m=>tds([
+      `<b>${m.name}</b>`,m.email,m.total,m.cert,m.lms,m.ip,`<b>${Math.round(m.cert/m.total*100)}%</b>`
+    ])).join('');
+    doPrint(true);
+
+  } else if(type==='action-required') {
+    const almostThere=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes');
+    const secGaps=filtered.filter(p=>p[certField]==='Yes'&&(p.AcuteCare!=='Yes'||p.Ambulatory!=='Yes'||p.Extended!=='Yes'));
+    setupPrintHeader('Action Required — Healthcare',`Generated: ${now}  |  ${almostThere.length+secGaps.length} Employees Need Follow-Up`);
+    sel('print-s1-label').textContent=`LMS COMPLETE — AWAITING CERTIFICATION (${almostThere.length})`;
+    sel('print-s1-label').style.display='block';
+    sel('print-roster-head').innerHTML=thRow(['#','Name','Email','Market','Manager','Manager Email']);
+    sel('print-roster-body').innerHTML=almostThere.length
+      ? almostThere.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||''))
+          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
+      : '<tr><td colspan="6" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
+    sel('print-s2').style.display='block';
+    sel('print-s2-label').textContent=`CERTIFIED — MISSING SECONDARY CURRICULUM (${secGaps.length})`;
+    sel('print-roster-head2').innerHTML=thRow(['#','Name','Email','Market','Manager','Missing Curriculum']);
+    sel('print-roster-body2').innerHTML=secGaps.length
+      ? secGaps.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||''))
+          .map((p,i)=>{
+            const missing=[p.AcuteCare!=='Yes'?'Acute Care':null,p.Ambulatory!=='Yes'?'Ambulatory':null,p.Extended!=='Yes'?'Extended Care':null].filter(Boolean).join(', ');
+            return tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',missing]);
+          }).join('')
+      : '<tr><td colspan="6" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
+    doPrint(true);
+  }
 }
 
 // Populate filter dropdowns from data
@@ -815,7 +875,7 @@ function filterRoster(){
 applyFilters();
 </script>
 <div class="info-popover" id="info-popover"></div>
-<!-- Print-only elements (hidden until exportPDF()) -->
+<!-- Print-only elements (hidden until runExport()) -->
 <div id="print-header" style="display:none;margin-bottom:20px;">
   <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title"></div>
   <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
@@ -824,8 +884,9 @@ applyFilters();
 <div id="print-stats" style="display:none;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
 <div id="print-charts" style="display:none;gap:48px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
 <div id="print-roster-wrap" style="display:none;">
-  <table id="print-roster-table">
-    <thead><tr>
+  <div id="print-s1-label" style="display:none;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#555;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1a73e8;"></div>
+  <table class="ptable" id="print-roster-table">
+    <thead id="print-roster-head"><tr>
       <th>#</th><th>Name</th><th>Market</th><th>Job Title</th>
       <th>Curriculum Status</th><th>Cert Date</th>
       <th>Acute Care</th><th>Ambulatory</th><th>Extended Care</th>
@@ -833,6 +894,13 @@ applyFilters();
     </tr></thead>
     <tbody id="print-roster-body"></tbody>
   </table>
+  <div id="print-s2" style="display:none;margin-top:28px;">
+    <div id="print-s2-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#555;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1a73e8;"></div>
+    <table class="ptable">
+      <thead id="print-roster-head2"><tr></tr></thead>
+      <tbody id="print-roster-body2"></tbody>
+    </table>
+  </div>
 </div>
 </body>
 </html>
