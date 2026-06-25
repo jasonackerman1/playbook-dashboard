@@ -116,7 +116,7 @@
   @page{size:landscape;margin:.65in;}
   @media print{
     body{background:#fff!important;color:#111!important;}
-    .header,.filters,.stat-cards,.chart-section,.roster-section,.print-hide{display:none!important;}
+    .header,.filters,.stats,.charts,.section,.print-hide{display:none!important;}
     #print-header{display:block!important;}
     #print-stats{display:flex!important;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}
     #print-charts{display:flex!important;gap:48px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}
@@ -319,7 +319,7 @@ function exportPDF() {
     const acute = p.AcuteCare==='Yes'  ? `Yes (${p.AcuteDate||''})` : 'No';
     const amb   = p.Ambulatory==='Yes' ? `Yes (${p.AmbDate  ||''})` : 'No';
     const ext   = p.Extended==='Yes'   ? `Yes (${p.ExtDate  ||''})` : 'No';
-    const mgr   = p.MgrFirst ? `${p.MgrFirst} ${p.MgrLast}` : '—';
+    const mgr   = p.Manager || '—';
     return `<tr>
       <td>${i+1}</td>
       <td style="font-weight:600">${p.FirstName} ${p.LastName}</td>
