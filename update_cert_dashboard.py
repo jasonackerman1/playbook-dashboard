@@ -623,31 +623,41 @@ function pipelineSteps(p) {{
   const bothDone = p.Healthcare==='Yes';
   const lmsOnly  = !bothDone && p.Complete==='Yes';
   const amber    = '#f59e0b';
-  const blue     = cv('--accent');
   function dot(color, tip, check) {{
-    const bg = check ? color+'33' : 'var(--surface2)';
+    const bg     = check ? color+'33' : 'var(--surface2)';
     const border = check ? color : 'var(--border)';
     const txt    = check ? color : 'var(--muted)';
     return `<div title="${{tip}}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${{bg}};border:1.5px solid ${{border}};color:${{txt}}">${{check?'&#10003;':''}}</div>`;
   }}
-  function miniDot(done, tip) {{
-    return `<div title="${{tip}}" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${{done?blue+'33':'var(--surface2)'}};border:1.5px solid ${{done?blue:'var(--border)'}}"></div>`;
+  function pie(a, b, c, la, lb, lc) {{
+    const blue = cv('--accent');
+    const sep  = cv('--bg');
+    const s2   = cv('--surface2');
+    const bd   = cv('--border');
+    function seg(done) {{
+      return done
+        ? `fill="${{blue}}33" stroke="${{blue}}" stroke-width="1"`
+        : `fill="${{s2}}" stroke="${{bd}}" stroke-width="1"`;
+    }}
+    return `<svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;overflow:visible">
+      <path d="M8,8 L8,1 A7,7,0,0,1,14.06,11.5 Z" ${{seg(a)}}><title>${{la}}</title></path>
+      <path d="M8,8 L14.06,11.5 A7,7,0,0,1,1.94,11.5 Z" ${{seg(b)}}><title>${{lb}}</title></path>
+      <path d="M8,8 L1.94,11.5 A7,7,0,0,1,8,1 Z" ${{seg(c)}}><title>${{lc}}</title></path>
+      <line x1="8" y1="1" x2="8" y2="8" stroke="${{sep}}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="14.06" y1="11.5" x2="8" y2="8" stroke="${{sep}}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="1.94" y1="11.5" x2="8" y2="8" stroke="${{sep}}" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`;
   }}
   const lmsColor = bothDone ? cv('--green') : lmsOnly ? amber : 'var(--border)';
   const lmsCheck = p.Complete==='Yes';
   const hcColor  = cv('--green');
   const hcCheck  = p.Healthcare==='Yes';
-  const secDots  = [
-    miniDot(p.AcuteCare==='Yes',  'Acute Care'),
-    miniDot(p.Ambulatory==='Yes', 'Ambulatory'),
-    miniDot(p.Extended==='Yes',   'Extended Care'),
-  ].join('');
   return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
     ${{dot(lmsColor,'LMS Complete',lmsCheck)}}
     <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
     ${{dot(hcColor,'HC Certified',hcCheck)}}
     <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
-    <div style="display:flex;align-items:center;gap:2px;">${{secDots}}</div>
+    ${{pie(p.AcuteCare==='Yes',p.Ambulatory==='Yes',p.Extended==='Yes','Acute Care','Ambulatory','Extended Care')}}
   </div>`;
 }}
 
