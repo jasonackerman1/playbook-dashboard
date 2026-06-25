@@ -41,6 +41,8 @@
   .header h1 span{color:var(--muted);font-weight:400;}
   .btn-theme{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}
   .btn-theme:hover{border-color:var(--accent);color:var(--text);}
+  .btn-export{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}
+  .btn-export:hover{opacity:0.88;}
 
   .filters{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}
   .filter-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}
@@ -111,6 +113,17 @@
   .badge-status{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}
   .badge-status.certified{background:var(--green-subtle);color:var(--green);}
   .badge-status.not-certified{background:var(--red-subtle);color:var(--red);}
+  @page{size:landscape;margin:.65in;}
+  @media print{
+    body{background:#fff!important;color:#111!important;}
+    .header,.filters,.stat-cards,.chart-section,.roster-section,.print-hide{display:none!important;}
+    #print-header{display:block!important;}
+    #print-roster-wrap{display:block!important;}
+    #print-roster-table{width:100%;border-collapse:collapse;font-size:11px;}
+    #print-roster-table th{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}
+    #print-roster-table td{padding:5px 8px;border:1px solid #ddd;vertical-align:middle;}
+    #print-roster-table tr:nth-child(even) td{background:#fafafa;}
+  }
 </style>
 </head>
 <body>
@@ -126,7 +139,10 @@
     </div>
     <h1>Healthcare <span>Certification Dashboard</span></h1>
   </div>
-  <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn-export print-hide" onclick="exportPDF()">&#128438; Export Report</button>
+    <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
+  </div>
 </div>
 
 <div class="filters">
@@ -277,6 +293,52 @@ function toggleTheme(){
   localStorage.setItem('pb-theme', light ? 'light' : 'dark');
   sel('btn-theme').textContent = light ? '🌙 Dark' : '☀ Light';
   applyFilters();
+}
+function exportPDF() {
+  const certField = sel('f-cert').value || 'Healthcare';
+  const certLabel = sel('f-cert').options[sel('f-cert').selectedIndex].text;
+  const statusLabel = sel('f-status').options[sel('f-status').selectedIndex].text;
+  const market = sel('f-market').value || 'All Markets';
+  const from = sel('f-date-from').value || '';
+  const to   = sel('f-date-to').value   || '';
+  const parts = [];
+  parts.push(`Curriculum: ${certLabel}`);
+  parts.push(`Status: ${statusLabel}`);
+  parts.push(`Market: ${market}`);
+  if(from || to) parts.push(`Dates: ${from||'—'} to ${to||'—'}`);
+  if(hideTLG) parts.push('TLG hidden');
+  sel('ph-title').textContent = 'Healthcare Certification Report';
+  sel('ph-date').textContent = `Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}  |  ${filtered.length} People`;
+  sel('ph-filters').textContent = parts.join('  |  ');
+  const tbody = sel('print-roster-body');
+  tbody.innerHTML = filtered.map((p,i) => {
+    const status = p[certField]==='Yes' ? 'Certified' : p.Complete==='Yes' ? 'LMS Complete' : 'In Progress';
+    const certDate = p.Date || '—';
+    const acute = p.AcuteCare==='Yes'  ? `Yes (${p.AcuteDate||''})` : 'No';
+    const amb   = p.Ambulatory==='Yes' ? `Yes (${p.AmbDate  ||''})` : 'No';
+    const ext   = p.Extended==='Yes'   ? `Yes (${p.ExtDate  ||''})` : 'No';
+    const mgr   = p.MgrFirst ? `${p.MgrFirst} ${p.MgrLast}` : '—';
+    return `<tr>
+      <td>${i+1}</td>
+      <td style="font-weight:600">${p.FirstName} ${p.LastName}</td>
+      <td>${p.Market||'—'}</td>
+      <td>${p.JobTitle||'—'}</td>
+      <td>${status}</td>
+      <td>${certDate}</td>
+      <td>${acute}</td>
+      <td>${amb}</td>
+      <td>${ext}</td>
+      <td>${mgr}</td>
+      <td style="font-size:10px">${p.Email||'—'}</td>
+    </tr>`;
+  }).join('');
+  const wasLight = document.body.classList.contains('light-mode');
+  if(!wasLight) document.body.classList.add('light-mode');
+  window.onafterprint = function() {
+    if(!wasLight) document.body.classList.remove('light-mode');
+    window.onafterprint = null;
+  };
+  setTimeout(() => window.print(), 150);
 }
 
 // Populate filter dropdowns from data
@@ -713,5 +775,22 @@ function filterRoster(){
 applyFilters();
 </script>
 <div class="info-popover" id="info-popover"></div>
+<!-- Print-only elements (hidden until exportPDF()) -->
+<div id="print-header" style="display:none;margin-bottom:20px;">
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title"></div>
+  <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
+  <div style="font-size:12px;color:#555;" id="ph-filters"></div>
+</div>
+<div id="print-roster-wrap" style="display:none;">
+  <table id="print-roster-table">
+    <thead><tr>
+      <th>#</th><th>Name</th><th>Market</th><th>Job Title</th>
+      <th>Curriculum Status</th><th>Cert Date</th>
+      <th>Acute Care</th><th>Ambulatory</th><th>Extended Care</th>
+      <th>Manager</th><th>Email</th>
+    </tr></thead>
+    <tbody id="print-roster-body"></tbody>
+  </table>
+</div>
 </body>
 </html>
