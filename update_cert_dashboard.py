@@ -474,7 +474,7 @@ function applyFilters(){{
     if(to   && r.Date && r.Date > to)   return false;
     return true;
   }});
-  sel('result-count').textContent = `${{filtered.length}} people`;
+  sel('result-count').textContent = `${{filtered.length}} People`;
   render();
 }}
 
@@ -526,7 +526,7 @@ function render(){{
         legend:{{display:false}},
         tooltip:{{
           callbacks:{{
-            label: ctx => ` ${{ctx.raw}} people`
+            label: ctx => ` ${{ctx.raw}} People`
           }}
         }},
         datalabels:{{display:false}}
