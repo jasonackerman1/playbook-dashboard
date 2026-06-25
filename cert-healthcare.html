@@ -127,7 +127,7 @@
   <span class="filter-label">Certification</span>
   <select id="f-cert">
     <option value="">All Certifications</option>
-    <option value="Healthcare">Healthcare</option>
+    <option value="Healthcare">Healthcare Foundational</option>
     <option value="AcuteCare">Acute Care</option>
     <option value="Ambulatory">Ambulatory</option>
     <option value="Extended">Extended Care</option>
@@ -184,7 +184,7 @@
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Sub-Certification Breakdown <span class="info-btn" onclick="showInfo(event,'subcert')">?</span></div>
+    <div class="chart-title">Certification Breakdown <span class="info-btn" onclick="showInfo(event,'subcert')">?</span></div>
     <div class="chart-wrap"><canvas id="subcertChart"></canvas></div>
   </div>
 </div>
@@ -269,7 +269,7 @@ const INFO_MSGS = {
   'completion-rate':     'Percentage of assigned people who have earned manager-confirmed HC certification.',
   'pipeline':            'Where people stand in the certification journey: Not Started (no LMS work), Curriculum Complete (LMS done, awaiting manager sign-off), HC Certified (fully certified).',
   'over-time':           'Sub-certifications earned per fiscal quarter, stacked by type. FY2026 Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar.',
-  'subcert':             'How many people have earned each of the four sub-certifications within this curriculum.',
+  'subcert':             'How many people have earned each certification. Healthcare Foundational is the base — Acute Care, Ambulatory, and Extended Care require it first.',
   'roster':              'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
 };
 function showInfo(e, key){
@@ -373,7 +373,7 @@ function render(){
 
   // Trend chart — stacked bars by sub-cert per fiscal quarter
   const TREND_SUBCERTS = [
-    {key:'Healthcare', qtrKey:'HCQtr',    label:'Healthcare',    color:cv('--green')},
+    {key:'Healthcare', qtrKey:'HCQtr',    label:'Healthcare Foundational', color:cv('--green')},
     {key:'AcuteCare',  qtrKey:'AcuteQtr', label:'Acute Care',    color:cv('--accent3')},
     {key:'Ambulatory', qtrKey:'AmbQtr',   label:'Ambulatory',    color:cv('--accent2')},
     {key:'Extended',   qtrKey:'ExtQtr',   label:'Extended Care', color:cv('--teal')},
@@ -411,7 +411,7 @@ function render(){
   });
 
   // Sub-cert breakdown chart
-  const subLabels = ['Healthcare','Acute Care','Ambulatory','Extended Care'];
+  const subLabels = ['Healthcare Foundational','Acute Care','Ambulatory','Extended Care'];
   const subKeys   = ['Healthcare','AcuteCare','Ambulatory','Extended'];
   const subColors = [cv('--green'),cv('--accent3'),cv('--accent2'),cv('--teal')];
   const subCounts = subKeys.map(k => filtered.filter(r=>r[k]==='Yes').length);
@@ -489,7 +489,7 @@ function renderRosterList(){
     return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${fullName}">
       <div class="cert-dot ${isCert?'yes':'no'}"></div>
       <span class="roster-name">${fullName}</span>
-      <span class="cert-badge ${isCert?'yes':'no'}" title="${count}/4 sub-certs">${isCert?'Certified':'Not Yet'}</span>
+      <span class="cert-badge ${isCert?'yes':'no'}" title="${count}/4 certifications">${isCert?'Certified':'Not Yet'}</span>
     </div>`;
   }).join('') || `<div class="no-data">No people match filters</div>`;
 
@@ -514,7 +514,7 @@ function rosterSelect(el){
     return months[parseInt(mo)-1] + ' ' + parseInt(dy) + ', ' + y;
   }
   const SUBCERT_DEFS = [
-    {key:'Healthcare', dateKey:'HCDate',    qtrKey:'HCQtr',    label:'Healthcare'},
+    {key:'Healthcare', dateKey:'HCDate',    qtrKey:'HCQtr',    label:'Healthcare Foundational'},
     {key:'AcuteCare',  dateKey:'AcuteDate', qtrKey:'AcuteQtr', label:'Acute Care'},
     {key:'Ambulatory', dateKey:'AmbDate',   qtrKey:'AmbQtr',   label:'Ambulatory'},
     {key:'Extended',   dateKey:'ExtDate',   qtrKey:'ExtQtr',   label:'Extended Care'},
@@ -527,12 +527,12 @@ function rosterSelect(el){
     <div class="detail-grid">
       <div><div class="detail-label">Job Title</div><div class="detail-value">${p.JobTitle||'&#8212;'}</div></div>
       <div><div class="detail-label">Market</div><div class="detail-value">${p.Market||'&#8212;'}</div></div>
-      <div><div class="detail-label">LMS Curriculum</div><div class="detail-value">${p.Complete==='Yes' ? '&#10003; Complete' : 'Not Complete'}</div></div>
+      <div><div class="detail-label">Healthcare Foundational</div><div class="detail-value">${p.Complete==='Yes' ? '&#10003; LMS Complete' : 'Not Complete'}</div></div>
       <div><div class="detail-label">Hire Date</div><div class="detail-value">${fmtDate(p.HireDate)}</div></div>
       <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${p.Email}" style="color:var(--accent);text-decoration:none">${p.Email||'&#8212;'}</a></div></div>
     </div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Sub-Certifications</div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Certifications</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${SUBCERT_DEFS.map(sc => {
           const yes = p[sc.key]==='Yes';
