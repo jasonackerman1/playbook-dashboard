@@ -620,14 +620,34 @@ function setRosterSort(field){{
 }}
 
 function pipelineSteps(p) {{
-  function step(done, tip) {{
-    return `<div title="${{tip}}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${{done?cv('--green')+'33':'var(--surface2)'}};border:1.5px solid ${{done?cv('--green'):'var(--border)'}};color:${{done?cv('--green'):'var(--muted)'}}">${{done?'&#10003;':''}}</div>`;
+  const bothDone = p.Healthcare==='Yes';
+  const lmsOnly  = !bothDone && p.Complete==='Yes';
+  const amber    = '#f59e0b';
+  function dot(color, tip, check) {{
+    const bg = check ? color+'33' : 'var(--surface2)';
+    const border = check ? color : 'var(--border)';
+    const txt    = check ? color : 'var(--muted)';
+    return `<div title="${{tip}}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${{bg}};border:1.5px solid ${{border}};color:${{txt}}">${{check?'&#10003;':''}}</div>`;
   }}
+  const lmsColor = bothDone ? cv('--green') : lmsOnly ? amber : 'var(--border)';
+  const lmsCheck = p.Complete==='Yes';
+  const hcColor  = cv('--green');
+  const hcCheck  = p.Healthcare==='Yes';
   return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
-    ${{step(p.Complete==='Yes','LMS Complete')}}
+    ${{dot(lmsColor,'LMS Complete',lmsCheck)}}
     <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
-    ${{step(p.Healthcare==='Yes','HC Certified')}}
+    ${{dot(hcColor,'HC Certified',hcCheck)}}
   </div>`;
+}}
+
+function tierStyle(p, extraIndent) {{
+  extraIndent = extraIndent || 0;
+  const base = 14 + extraIndent;
+  const green = cv('--green');
+  const amber = '#f59e0b';
+  if(p.Healthcare==='Yes') return `border-left:3px solid ${{green}};padding-left:${{base-3}}px;`;
+  if(p.Complete==='Yes')   return `border-left:3px solid ${{amber}};padding-left:${{base-3}}px;`;
+  return extraIndent ? `padding-left:${{base}}px;` : '';
 }}
 
 function setRosterView(v) {{
@@ -663,7 +683,7 @@ function renderRosterList(){{
         .sort((a,b)=>(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
         .map(p => {{
           const fullName = `${{p.FirstName}} ${{p.LastName}}`;
-          return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}" style="padding-left:24px;">
+          return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}" style="${{tierStyle(p,10)}}">
             <span class="roster-name">${{fullName}}</span>
             ${{pipelineSteps(p)}}
           </div>`;
@@ -709,7 +729,7 @@ function renderRosterList(){{
 
   sel('roster-left').innerHTML = sorted.map(p => {{
     const fullName = `${{p.FirstName}} ${{p.LastName}}`;
-    return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}">
+    return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}" style="${{tierStyle(p)}}">
       <span class="roster-name">${{fullName}}</span>
       ${{pipelineSteps(p)}}
     </div>`;
