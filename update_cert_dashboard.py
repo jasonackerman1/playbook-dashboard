@@ -302,6 +302,9 @@ def generate_html(slug, name, rows):
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
   <span class="result-count" id="result-count"></span>
+  <span id="in-progress-box" style="display:none;align-items:center;gap:6px;background:var(--accent)11;border:1px solid var(--accent)44;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--accent);margin-left:4px;">
+    <span id="in-progress-count">0</span> In Progress
+  </span>
 </div>
 
 <div class="stats">
@@ -315,7 +318,7 @@ def generate_html(slug, name, rows):
     <div class="stat-sub" id="s-curriculum-sub"></div>
   </div>
   <div class="stat">
-    <div class="stat-label">HC Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
+    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
     <div class="stat-value green" id="s-certified">&#8212;</div>
   </div>
   <div class="stat">
@@ -426,9 +429,9 @@ const INFO_MSGS = {{
   'total-assigned':      'Total number of people assigned this certification curriculum.',
   'curriculum-complete': 'People who have completed all required LMS coursework. This is the first step — manager-confirmed HC certification is tracked separately.',
   'certified':           'People who have received full Healthcare certification, confirmed by their manager. The final step after completing LMS coursework.',
-  'not-certified':       'People assigned the curriculum who have not yet received manager-confirmed HC certification.',
+  'not-certified':       'People assigned the curriculum who have not yet received manager-confirmed certification.',
   'completion-rate':     'Percentage of assigned people who have earned manager-confirmed HC certification.',
-  'pipeline':            'Where people stand in the certification journey: Not Started (no LMS work), Curriculum Complete (LMS done, awaiting manager sign-off), HC Certified (fully certified).',
+  'pipeline':            'Where people stand in the certification journey: In Progress (enrolled, LMS not yet complete), Curriculum Complete (LMS done, awaiting manager sign-off), Certified (fully certified).',
   'over-time':           'Sub-certifications earned per fiscal quarter, stacked by type. FY2026 Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar.',
   'subcert':             'How many people have completed each curriculum. Healthcare Foundational is required first — Acute Care, Ambulatory, and Extended Care build on top of it.',
   'roster':              'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
@@ -495,16 +498,20 @@ function render(){{
   sel('s-rate').textContent           = rate + '%';
   sel('s-rate-sub').textContent       = total > 0 ? `${{certified}} of ${{total}} assigned` : '';
 
-  // Pipeline chart — three stages of the HC certification journey
+  // Pipeline chart — three stages of the certification journey
   const pipelineNotStarted   = filtered.filter(r=>r.Complete!=='Yes'&&r[certField]!=='Yes').length;
   const pipelineCurrComplete = filtered.filter(r=>r.Complete==='Yes'&&r[certField]!=='Yes').length;
   const pipelineHCCertified  = filtered.filter(r=>r[certField]==='Yes').length;
+
+  const ipBox = sel('in-progress-box');
+  sel('in-progress-count').textContent = pipelineNotStarted;
+  ipBox.style.display = pipelineNotStarted > 0 ? 'inline-flex' : 'none';
 
   if(regionChart) regionChart.destroy();
   regionChart = new Chart(sel('regionChart'), {{
     type: 'bar',
     data: {{
-      labels: ['Not Started','Curriculum Complete','HC Certified'],
+      labels: ['In Progress','Curriculum Complete','Certified'],
       datasets: [{{
         data: [pipelineNotStarted, pipelineCurrComplete, pipelineHCCertified],
         backgroundColor: [cv('--red')+'cc', cv('--accent')+'cc', cv('--green')+'cc'],
@@ -654,7 +661,7 @@ function pipelineSteps(p) {{
   return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
     ${{dot(lmsColor,'LMS Complete',lmsCheck)}}
     <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
-    ${{dot(hcColor,'HC Certified',hcCheck)}}
+    ${{dot(hcColor,'Certified',hcCheck)}}
     <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
     ${{pie(p.AcuteCare==='Yes',p.Ambulatory==='Yes',p.Extended==='Yes','Acute Care','Ambulatory','Extended Care')}}
   </div>`;
@@ -783,7 +790,7 @@ function rosterSelect(el){{
   sel('roster-right').innerHTML = `
     <div class="roster-right-header">
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">${{p.FirstName}} ${{p.LastName}}</div>
-      <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'HC Certified':'Not Yet Certified'}}</span>
+      <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'Certified':'Not Yet Certified'}}</span>
       ${{isCert && p.HCDate ? `<span style="font-size:12px;color:var(--muted);margin-left:8px">${{fmtDate(p.HCDate)}}</span>` : ''}}
     </div>
     <div class="detail-grid">
