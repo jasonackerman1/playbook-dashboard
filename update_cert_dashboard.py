@@ -681,9 +681,9 @@ function rosterSelect(el){{
       <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
     </div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Curriculums</div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Secondary Curriculums</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        ${{SUBCERT_DEFS.map(sc => {{
+        ${{SUBCERT_DEFS.filter(sc=>sc.key!=='Healthcare').map(sc => {{
           const yes = p[sc.key]==='Yes';
           const dateStr = yes && p[sc.dateKey] ? fmtDate(p[sc.dateKey]) + (p[sc.qtrKey] ? ' &middot; ' + p[sc.qtrKey] : '') : '';
           return `<div style="display:flex;align-items:center;gap:12px">
