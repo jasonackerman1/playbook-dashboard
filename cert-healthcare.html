@@ -124,9 +124,9 @@
 </div>
 
 <div class="filters">
-  <span class="filter-label">Certification</span>
+  <span class="filter-label">Curriculum</span>
   <select id="f-cert">
-    <option value="">All Certifications</option>
+    <option value="">All Curriculums</option>
     <option value="Healthcare">Healthcare Foundational</option>
     <option value="AcuteCare">Acute Care</option>
     <option value="Ambulatory">Ambulatory</option>
@@ -184,7 +184,7 @@
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Certification Breakdown <span class="info-btn" onclick="showInfo(event,'subcert')">?</span></div>
+    <div class="chart-title">Curriculum Breakdown <span class="info-btn" onclick="showInfo(event,'subcert')">?</span></div>
     <div class="chart-wrap"><canvas id="subcertChart"></canvas></div>
   </div>
 </div>
@@ -269,7 +269,7 @@ const INFO_MSGS = {
   'completion-rate':     'Percentage of assigned people who have earned manager-confirmed HC certification.',
   'pipeline':            'Where people stand in the certification journey: Not Started (no LMS work), Curriculum Complete (LMS done, awaiting manager sign-off), HC Certified (fully certified).',
   'over-time':           'Sub-certifications earned per fiscal quarter, stacked by type. FY2026 Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar.',
-  'subcert':             'How many people have earned each certification. Healthcare Foundational is the base — Acute Care, Ambulatory, and Extended Care require it first.',
+  'subcert':             'How many people have completed each curriculum. Healthcare Foundational is required first — Acute Care, Ambulatory, and Extended Care build on top of it.',
   'roster':              'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
 };
 function showInfo(e, key){
@@ -532,7 +532,7 @@ function rosterSelect(el){
       <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${p.Email}" style="color:var(--accent);text-decoration:none">${p.Email||'&#8212;'}</a></div></div>
     </div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Certifications</div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Curriculums</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${SUBCERT_DEFS.map(sc => {
           const yes = p[sc.key]==='Yes';
