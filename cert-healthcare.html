@@ -217,6 +217,40 @@
     </div>
     <input type="text" class="roster-search" id="roster-search" placeholder="Search by name&hellip;" oninput="filterRoster()">
   </div>
+  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:10px 18px 4px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);">
+    <span style="font-weight:600;color:var(--text);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Legend</span>
+    <span style="display:flex;align-items:center;gap:5px;">
+      <span style="display:inline-block;width:10px;height:100%;border-left:3px solid var(--green);"></span>Certified
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;">
+      <span style="display:inline-block;width:10px;height:100%;border-left:3px solid #f59e0b;"></span>Curriculum Complete
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;">
+      <span style="display:inline-block;width:10px;height:100%;border-left:3px solid var(--border);"></span>In Progress
+    </span>
+    <span style="margin-left:4px;display:flex;align-items:center;gap:5px;">
+      <svg width="38" height="14" viewBox="0 0 38 14" style="flex-shrink:0;overflow:visible">
+        <circle cx="7" cy="7" r="6" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
+        <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="var(--green)">&#10003;</text>
+        <line x1="13" y1="7" x2="18" y2="7" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="24" cy="7" r="6" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
+        <text x="24" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="var(--green)">&#10003;</text>
+        <line x1="30" y1="7" x2="35" y2="7" stroke="var(--border)" stroke-width="1"/>
+      </svg>
+      LMS &#x2192; Certified
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;">
+      <svg width="16" height="14" viewBox="0 0 16 14">
+        <path d="M8,7 L8,0 A7,7,0,0,1,14.06,10.5 Z" fill="var(--accent)33" stroke="var(--accent)" stroke-width="1"/>
+        <path d="M8,7 L14.06,10.5 A7,7,0,0,1,1.94,10.5 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+        <path d="M8,7 L1.94,10.5 A7,7,0,0,1,8,0 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+        <line x1="8" y1="0" x2="8" y2="7" stroke="var(--bg)" stroke-width="1.5"/>
+        <line x1="14.06" y1="10.5" x2="8" y2="7" stroke="var(--bg)" stroke-width="1.5"/>
+        <line x1="1.94" y1="10.5" x2="8" y2="7" stroke="var(--bg)" stroke-width="1.5"/>
+      </svg>
+      Secondary curriculums (Acute Care / Ambulatory / Extended Care) — each slice fills blue when complete
+    </span>
+  </div>
   <div class="roster-wrap">
     <div class="roster-left" id="roster-left"></div>
     <div class="roster-right" id="roster-right">
@@ -277,15 +311,15 @@ document.addEventListener('click', function(e){
 });
 
 const INFO_MSGS = {
-  'total-assigned':      'Total number of people assigned this certification curriculum.',
-  'curriculum-complete': 'People who have completed all required LMS coursework. This is the first step — manager-confirmed HC certification is tracked separately.',
-  'certified':           'People who have received full Healthcare certification, confirmed by their manager. The final step after completing LMS coursework.',
-  'not-certified':       'People assigned the curriculum who have not yet received manager-confirmed certification.',
-  'completion-rate':     'Percentage of assigned people who have earned manager-confirmed HC certification.',
-  'pipeline':            'Where people stand in the certification journey: In Progress (enrolled, LMS not yet complete), Curriculum Complete (LMS done, awaiting manager sign-off), Certified (fully certified).',
-  'over-time':           'Sub-certifications earned per fiscal quarter, stacked by type. FY2026 Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar.',
-  'subcert':             'How many people have completed each curriculum. Healthcare Foundational is required first — Acute Care, Ambulatory, and Extended Care build on top of it.',
-  'roster':              'All assigned people with their certification status. Click a name to see details, sub-certification badges, and manager contact info.',
+  'total-assigned':      'Total number of people currently assigned this certification track, after any active filters.',
+  'curriculum-complete': 'People who have finished all required LMS coursework (Healthcare Foundational curriculum). Completing the LMS is the first step — manager-confirmed certification is a separate process that follows.',
+  'certified':           'People who have received full certification, confirmed by their manager after completing the LMS curriculum. This is the final step in the primary certification track.',
+  'not-certified':       'People assigned the curriculum who have not yet received manager-confirmed certification. Includes both people still working through the LMS and those who have finished the LMS but are awaiting manager sign-off.',
+  'completion-rate':     'Percentage of assigned people who have earned full manager-confirmed certification. Calculated as Certified ÷ Total Assigned.',
+  'pipeline':            'The three stages of the certification journey: In Progress — enrolled but LMS coursework not yet complete; Curriculum Complete — LMS done, awaiting manager sign-off; Certified — fully certified by manager.',
+  'over-time':           'Certifications earned per KM fiscal quarter, stacked by curriculum type. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
+  'subcert':             'Certification counts broken out by curriculum. Healthcare Foundational must be completed first. Acute Care, Ambulatory, and Extended Care are secondary curriculums that build on top of it. Secondary curriculum data is currently in progress.',
+  'roster':              'Full list of assigned people with their certification status and pipeline position. Click a name to see job title, market, cert date, secondary curriculum progress, and manager info. Use the View toggle to group by manager.',
 };
 function showInfo(e, key){
   const pop = sel('info-popover');
