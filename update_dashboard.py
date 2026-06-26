@@ -507,6 +507,13 @@ html = f"""<!DOCTYPE html>
   .btn-preset.active{{background:#4f8ef722;border-color:var(--accent);color:var(--accent);font-weight:600;}}
   .btn-theme{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
   .btn-theme:hover{{border-color:var(--accent);color:var(--text);}}
+  .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
+  .btn-export:hover{{opacity:0.88;}}
+  .export-drop{{position:relative;}}
+  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:190px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}}
+  .export-menu.open{{display:block;}}
+  .export-item{{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;}}
+  .export-item:hover{{background:var(--surface2);}}
   .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
 
   .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}}
@@ -614,6 +621,19 @@ html = f"""<!DOCTYPE html>
   .intel-page-name {{ flex:1; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px; }}
   .intel-page-bar {{ height:4px; border-radius:2px; min-width:4px; }}
   .intel-page-count {{ color:var(--muted); min-width:28px; text-align:right; }}
+  @page{{size:landscape;margin:.65in;}}
+  @media print{{
+    body{{background:#fff!important;color:#111!important;}}
+    .header,.filters,.stats,.charts-top,.charts-bottom,.table-section,.print-hide{{display:none!important;}}
+    #print-header{{display:block!important;}}
+    #print-stats{{display:block!important;}}
+    #print-charts{{display:block!important;}}
+    #print-roster-wrap{{display:block!important;}}
+    #print-roster-table{{width:100%;border-collapse:collapse;font-size:11px;}}
+    #print-roster-table th{{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}}
+    #print-roster-table td{{padding:5px 8px;border:1px solid #ddd;vertical-align:middle;}}
+    #print-roster-table tr:nth-child(even) td{{background:#fafafa;}}
+  }}
 </style>
 </head>
 <body>
@@ -625,12 +645,21 @@ html = f"""<!DOCTYPE html>
       <div class="hamburger-menu" id="hamburger-menu">
         <div class="hamburger-section-label">Certifications</div>
         <a href="cert-healthcare.html" class="hamburger-item">&#127973; Healthcare Certification Dashboard</a>
+        <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Certification Dashboard</a>
       </div>
     </div>
     <h1>Playbook Traffic Dashboard</h1>
   </div>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <span class="badge" id="badge-asof"></span>
+    <div class="export-drop print-hide" id="export-drop">
+      <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
+      <div class="export-menu" id="export-menu">
+        <button class="export-item" onclick="runExport('full')">Full Report</button>
+        <button class="export-item" onclick="runExport('activity-summary')">Activity Summary</button>
+        <button class="export-item" onclick="runExport('by-person')">By Person</button>
+      </div>
+    </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">☀ Light</button>
   </div>
 </div>
@@ -1313,6 +1342,7 @@ const INFO = {{
   'vertical-filter': 'Filters to only the three vertical market playbooks — Healthcare, Legal, and Public Sector. All other playbooks are hidden while active. Can be combined with Hide TLG.',
   'whos-active':    'Lists every person who accessed a playbook in the selected period, sorted by total page views. The number next to each name is their total page views — not unique pages visited. Clicking a page 5 times counts as 5.',
   'intel':          'Per-playbook content analysis: what is working, what is not, and strategic recommendations with effort and ownership tags. Traffic data responds to date filters. Analysis content is based on a full audit of each playbook.',
+  'export':         'Export a printable report of the data currently on screen. Filter first, then export — the report only includes what passes your active filters. Examples: filter to Healthcare Playbook then export for a healthcare-only report; set a date range then export for a monthly snapshot; hide TLG then export to share results with managers. Full Report lists every individual page visit (name, region, playbook, page, date). Activity Summary rolls up total views and unique visitors per playbook. By Person shows total visits and playbooks accessed for each employee.',
 }};
 
 function showInfo(e, key) {{
@@ -1337,16 +1367,175 @@ function toggleHamburger(){{
   const open = menu.classList.toggle('open');
   btn.classList.toggle('open', open);
 }}
+function toggleExportDrop(){{
+  sel('export-menu').classList.toggle('open');
+}}
+
+function runExport(type){{
+  sel('export-menu').classList.remove('open');
+  const dateStr = new Date().toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}});
+  const parts = [];
+  const pbVal = sel('f-playbook').value;
+  const rgVal = sel('f-region').value;
+  const tyVal = sel('f-type').value;
+  const frVal = sel('f-date-from').value;
+  const toVal = sel('f-date-to').value;
+  if(pbVal) parts.push('Playbook: '+pbVal);
+  if(rgVal) parts.push('Region: '+rgVal);
+  if(tyVal) parts.push('Type: '+tyVal);
+  if(frVal||toVal) parts.push('Dates: '+(frVal||'—')+' to '+(toVal||'—'));
+  if(hideTLG) parts.push('TLG Hidden');
+  sel('ph-title').textContent = 'Playbook Traffic Report';
+  sel('ph-date').textContent = 'Generated: '+dateStr+'  |  '+filtered.length+' records';
+  sel('ph-filters').textContent = parts.length ? parts.join('  |  ') : 'No filters active — showing all data';
+
+  // Compute summary stats from filtered data (used by Full Report)
+  const totalViews = filtered.length;
+  const uniqueSet = new Set(filtered.map(r=>(r.FirstName+' '+r.LastName).trim()));
+  const uniqueUsers = uniqueSet.size;
+  const avgVisits = uniqueUsers ? (totalViews/uniqueUsers).toFixed(1) : '0';
+  const pbCounts={{}};const pbVis={{}};
+  const rgCounts={{}};
+  const pgCounts={{}};const pgVis={{}};
+  filtered.forEach(r=>{{
+    const pb=r.Playbook||'Unknown', rg=r.Region||'Unknown', pg=r.Page||'Unknown';
+    const name=(r.FirstName+' '+r.LastName).trim();
+    pbCounts[pb]=(pbCounts[pb]||0)+1;
+    if(!pbVis[pb]) pbVis[pb]=new Set(); pbVis[pb].add(name);
+    rgCounts[rg]=(rgCounts[rg]||0)+1;
+    pgCounts[pg]=(pgCounts[pg]||0)+1;
+    if(!pgVis[pg]) pgVis[pg]=new Set(); pgVis[pg].add(name);
+  }});
+  const pbRows=Object.entries(pbCounts).sort((a,b)=>b[1]-a[1]);
+  const topPb=pbRows[0]?.[0]||'—';
+  const activePbs=pbRows.length;
+  const rgRows=Object.entries(rgCounts).sort((a,b)=>b[1]-a[1]);
+  const pgRows=Object.entries(pgCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  const thead = sel('print-table-head');
+  const tbody = sel('print-roster-body');
+  const psEl  = sel('print-stats');
+  const pcEl  = sel('print-charts');
+
+  if(type === 'full'){{
+    sel('ph-report-type').textContent = 'Full Report — stat summary, chart breakdowns, and every page visit in the filtered view';
+    // Stat cards
+    psEl.innerHTML = `<div style="display:flex;gap:24px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:2px solid #ddd;margin-bottom:14px;">
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Total Views</div><div style="font-size:26px;font-weight:700;color:#4f8ef7;">${{totalViews}}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Unique Users</div><div style="font-size:26px;font-weight:700;color:#7c5cfc;">${{uniqueUsers}}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Avg Visits / Person</div><div style="font-size:26px;font-weight:700;color:#e0a800;">${{avgVisits}}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Top Playbook</div><div style="font-size:15px;font-weight:700;color:#3ecf8e;max-width:200px;line-height:1.2;padding-top:4px;">${{topPb}}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Active Playbooks</div><div style="font-size:26px;font-weight:700;color:#f7944f;">${{activePbs}}</div></div>
+    </div>`;
+    psEl.style.display = 'block';
+    // Chart breakdowns
+    const miniTh = 'style="text-align:left;padding:3px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#888;border-bottom:1px solid #ddd;"';
+    const miniTd = 'style="padding:3px 6px;font-size:11px;"';
+    const miniTdR = 'style="padding:3px 6px;font-size:11px;text-align:right;"';
+    const miniTdM = 'style="padding:3px 6px;font-size:10px;color:#888;text-align:right;"';
+    pcEl.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:16px;border-bottom:1px solid #ddd;padding-bottom:16px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#555;margin-bottom:6px;">Views by Playbook</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><th ${{miniTh}}>Playbook</th><th ${{miniTh}} style="text-align:right;">Views</th><th ${{miniTh}} style="text-align:right;">%</th></tr>
+          ${{pbRows.map(([pb,cnt])=>`<tr><td ${{miniTd}}>${{pb}}</td><td ${{miniTdR}}>${{cnt}}</td><td ${{miniTdM}}>${{totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—'}}</td></tr>`).join('')}}
+        </table>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#555;margin-bottom:6px;">Views by Region</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><th ${{miniTh}}>Region</th><th ${{miniTh}} style="text-align:right;">Views</th><th ${{miniTh}} style="text-align:right;">%</th></tr>
+          ${{rgRows.map(([rg,cnt])=>`<tr><td ${{miniTd}}>${{rg}}</td><td ${{miniTdR}}>${{cnt}}</td><td ${{miniTdM}}>${{totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—'}}</td></tr>`).join('')}}
+        </table>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#555;margin-bottom:6px;">Top Pages</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><th ${{miniTh}}>Page</th><th ${{miniTh}} style="text-align:right;">Views</th><th ${{miniTh}} style="text-align:right;">Visitors</th></tr>
+          ${{pgRows.map(([pg,cnt])=>`<tr><td style="padding:3px 6px;font-size:10px;word-break:break-all;">${{pg}}</td><td ${{miniTdR}}>${{cnt}}</td><td ${{miniTdR}}>${{pgVis[pg]?.size||0}}</td></tr>`).join('')}}
+        </table>
+      </div>
+    </div>`;
+    pcEl.style.display = 'block';
+    // Activity log table
+    thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Region</th><th>Type</th><th>Playbook</th><th>Page</th><th>Date</th></tr>';
+    tbody.innerHTML = filtered.map((r,i)=>`<tr>
+      <td>${{i+1}}</td>
+      <td style="font-weight:600">${{r.FirstName}} ${{r.LastName}}</td>
+      <td>${{r.Region||'—'}}</td>
+      <td>${{r.Type||'—'}}</td>
+      <td>${{r.Playbook||'—'}}</td>
+      <td style="font-size:10px">${{r.Page||'—'}}</td>
+      <td>${{r.Date||'—'}}</td>
+    </tr>`).join('');
+  }} else if(type === 'activity-summary'){{
+    sel('ph-report-type').textContent = 'Activity Summary — total views and unique visitors per playbook';
+    psEl.style.display='none'; pcEl.style.display='none';
+    thead.innerHTML = '<tr><th>#</th><th>Playbook</th><th>Total Views</th><th>Unique Visitors</th><th>% of Total</th></tr>';
+    const totals={{}};const visitors={{}};
+    filtered.forEach(r=>{{
+      const pb=r.Playbook||'Unknown';
+      totals[pb]=(totals[pb]||0)+1;
+      if(!visitors[pb]) visitors[pb]=new Set();
+      visitors[pb].add((r.FirstName+' '+r.LastName).trim());
+    }});
+    const total=filtered.length;
+    tbody.innerHTML = Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([pb,cnt],i)=>`<tr>
+      <td>${{i+1}}</td>
+      <td style="font-weight:600">${{pb}}</td>
+      <td>${{cnt}}</td>
+      <td>${{visitors[pb].size}}</td>
+      <td>${{total?(cnt/total*100).toFixed(1)+'%':'—'}}</td>
+    </tr>`).join('');
+  }} else if(type === 'by-person'){{
+    sel('ph-report-type').textContent = 'By Person — one row per employee: total views and playbooks accessed';
+    psEl.style.display='none'; pcEl.style.display='none';
+    thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Region</th><th>Type</th><th>Total Views</th><th>Playbooks Accessed</th></tr>';
+    const people={{}};
+    filtered.forEach(r=>{{
+      const key=(r.FirstName+' '+r.LastName).trim();
+      if(!people[key]) people[key]={{name:key,region:r.Region||'—',type:r.Type||'—',views:0,pbs:new Set()}};
+      people[key].views++;
+      if(r.Playbook) people[key].pbs.add(r.Playbook);
+    }});
+    tbody.innerHTML = Object.values(people).sort((a,b)=>b.views-a.views).map((p,i)=>`<tr>
+      <td>${{i+1}}</td>
+      <td style="font-weight:600">${{p.name}}</td>
+      <td>${{p.region}}</td>
+      <td>${{p.type}}</td>
+      <td>${{p.views}}</td>
+      <td style="font-size:11px">${{[...p.pbs].sort().join(', ')}}</td>
+    </tr>`).join('');
+  }}
+  window.print();
+}}
+
 document.addEventListener('click', function(e){{
   const h = sel('hamburger');
   if(h && !h.contains(e.target)){{
     sel('hamburger-menu').classList.remove('open');
     sel('hamburger-btn').classList.remove('open');
   }}
+  const ed = sel('export-drop');
+  if(ed && !ed.contains(e.target)) sel('export-menu').classList.remove('open');
   document.getElementById('info-popover')?.classList.remove('visible');
 }});
 </script>
 <div id="info-popover" class="info-popover"></div>
+<div id="print-header" style="display:none;margin-bottom:16px;">
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title"></div>
+  <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
+  <div style="font-size:12px;color:#555;margin-bottom:4px;" id="ph-filters"></div>
+  <div style="font-size:11px;font-style:italic;color:#777;" id="ph-report-type"></div>
+</div>
+<div id="print-stats" style="display:none;"></div>
+<div id="print-charts" style="display:none;"></div>
+<div id="print-roster-wrap" style="display:none;">
+  <table id="print-roster-table">
+    <thead id="print-table-head"></thead>
+    <tbody id="print-roster-body"></tbody>
+  </table>
+</div>
 </body>
 </html>"""
 

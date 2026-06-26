@@ -156,7 +156,7 @@
         <button class="export-item" onclick="runExport('manager-summary')">Manager Summary</button>
         <button class="export-item" onclick="runExport('action-required')">Action Required</button>
       </div>
-    </div>
+    </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
   </div>
 </div>
@@ -478,6 +478,7 @@ const INFO_MSGS = {
   'over-time':           'Certifications earned per KM fiscal quarter, stacked by curriculum type. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
   'subcert':             'Certification counts broken out by curriculum. Healthcare Foundational must be completed first. Acute Care, Ambulatory, and Extended Care are secondary curriculums that build on top of it. Secondary curriculum data is currently in progress.',
   'roster':              'Full list of assigned people with their certification status and pipeline position. Click a name to see job title, market, cert date, secondary curriculum progress, and manager info. Use the View toggle to group by manager.',
+  'export':              'Export a printable report of the data currently on screen. Filter first, then export — the report only includes what passes your active filters. Examples: set Certification = "Acute Care" then export for an Acute Care–only report; filter to a region then export for a regional snapshot; hide TLG then export to share with managers. Full Report lists everyone with full detail. Not Certified is a contact list for outreach. Manager Summary rolls up team count and completion % per manager. Action Required flags who is close to fully certified and who still needs the main curriculum.',
 };
 function showInfo(e, key){
   const pop = sel('info-popover');
