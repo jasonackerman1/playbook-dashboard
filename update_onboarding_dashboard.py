@@ -164,8 +164,9 @@ def load_lms():
                     'items':    items,
                 }
 
-            all_pcts    = [v['pct'] for v in curricula_data.values()]
-            overall_pct = round(sum(all_pcts) / len(all_pcts)) if all_pcts else 0
+            all_done    = sum(v['done']  for v in curricula_data.values())
+            all_total   = sum(v['total'] for v in curricula_data.values())
+            overall_pct = round(all_done / all_total * 100) if all_total else 0
 
             seen[email] = {
                 'email':       email,
@@ -594,8 +595,23 @@ function pct2color(p) {{
 
 function computeStatus(p) {{
   if (p.overallDone) return 'Completed';
-  if (p.daysRem === null || p.daysRem === undefined) return 'Unknown';
-  return p.daysRem < 0 ? 'Overdue' : 'On Track';
+  const ids = Object.keys(p.curricula);
+  if (!ids.length) return 'Unknown';
+  const anyOverdue = ids.some(cid => {{
+    const c = p.curricula[cid];
+    return c && !c.complete && c.daysRem !== null && c.daysRem < 0;
+  }});
+  return anyOverdue ? 'Overdue' : 'On Track';
+}}
+
+function overdueCount(p) {{
+  return Object.values(p.curricula).filter(c => c && !c.complete && c.daysRem !== null && c.daysRem < 0).length;
+}}
+
+function soonestDaysLeft(p) {{
+  const pending = Object.values(p.curricula).filter(c => c && !c.complete && c.daysRem !== null);
+  if (!pending.length) return null;
+  return Math.min(...pending.map(c => c.daysRem));
 }}
 
 function daysLeft(p) {{
@@ -796,19 +812,22 @@ function renderTable() {{
   }}
   tbody.innerHTML = display.map(p => {{
     const status = computeStatus(p);
-    const dl = daysLeft(p);
     const statusClass = status === 'Completed' ? 'sb-completed' : status === 'On Track' ? 'sb-ontrack' : 'sb-overdue';
+    const od = overdueCount(p);
+    const sdl = soonestDaysLeft(p);
     const daysStr = p.overallDone ? '&mdash;' :
-      dl === null ? '&mdash;' :
-      dl < 0 ? '<span style="color:var(--red);font-weight:700">' + Math.abs(dl) + ' past due</span>' :
-      '<span style="color:var(--green)">' + dl + ' days</span>';
+      od > 0 ? '<span style="color:var(--red);font-weight:700">' + od + ' past due</span>' :
+      sdl === null ? '&mdash;' :
+      '<span style="color:var(--green)">' + sdl + 'd left</span>';
 
     let cells = '';
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
       const pct = c ? c.pct : 0;
       const clr = pct2color(pct);
-      cells += '<td class="pct-cell"><span class="pct-pill" style="background:' + clr.bg + ';color:' + clr.fg + '">' + pct + '%</span></td>';
+      const pastDue = c && !c.complete && c.daysRem !== null && c.daysRem < 0;
+      const ring = pastDue ? ';outline:2px solid var(--red);outline-offset:1px;' : '';
+      cells += '<td class="pct-cell"><span class="pct-pill" style="background:' + clr.bg + ';color:' + clr.fg + ring + '">' + pct + '%</span></td>';
     }});
 
     const oclr = pct2color(p.overallPct);
