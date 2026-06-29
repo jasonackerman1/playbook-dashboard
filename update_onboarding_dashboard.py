@@ -125,6 +125,7 @@ def load_lms():
             parent = next((r for r in prows if r[COL_CURRIC_ID] == 'ACCELERATE'), None)
             assign_date  = parent[COL_ASSIGN_DT]  if parent else None
             overall_done = (parent[COL_CURRIC_CMP] == 'Yes') if parent else False
+            days_rem_lms = int(parent[COL_DAYS_REM]) if parent and parent[COL_DAYS_REM] is not None else None
 
             # Per sub-curriculum data
             curricula_data = {}
@@ -139,8 +140,11 @@ def load_lms():
 
                 items = []
                 for ir in item_rows:
+                    title = str(ir[COL_ITEM_TTL] or '')
+                    if 'coming soon' in title.lower():
+                        continue
                     items.append({
-                        'title': str(ir[COL_ITEM_TTL]),
+                        'title': title,
                         'type':  str(ir[COL_ITEM_TYPE] or 'ONLINE'),
                         'done':  bool(ir[COL_ITEM_STS]),
                         'date':  ir[COL_ITEM_DATE].strftime('%Y-%m-%d') if ir[COL_ITEM_DATE] else None,
@@ -176,6 +180,7 @@ def load_lms():
                 'mgrTitle':    str(prows[0][COL_MGR_TITLE] or ''),
                 'hireDate':    prows[0][COL_HIRE_DATE].strftime('%Y-%m-%d') if prows[0][COL_HIRE_DATE] else None,
                 'assignDate':  assign_date.strftime('%Y-%m-%d') if assign_date else None,
+                'daysRem':     days_rem_lms,
                 'overallDone': overall_done,
                 'overallPct':  overall_pct,
                 'curricula':   curricula_data,
@@ -500,10 +505,6 @@ def generate_html(records):
     <div class="stat-value green" id="s-completed">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Avg Completion <span class="info-btn" onclick="showInfo(event,'avg-completion')">?</span></div>
-    <div class="stat-value" id="s-avg">&#8212;</div>
-  </div>
-  <div class="stat">
     <div class="stat-label">First Sale (Salesforce) <span class="info-btn" onclick="showInfo(event,'first-sale')">?</span></div>
     <div class="stat-value amber" id="s-sales">TBD</div>
     <div class="stat-sub">Integration pending</div>
@@ -590,18 +591,13 @@ function pct2color(p) {{
 
 function computeStatus(p) {{
   if (p.overallDone) return 'Completed';
-  if (!p.assignDate) return 'Unknown';
-  const deadline = new Date(p.assignDate);
-  deadline.setDate(deadline.getDate() + PROGRAM_DAYS);
-  const daysLeft = Math.round((deadline - TODAY) / 86400000);
-  return daysLeft < 0 ? 'Overdue' : 'On Track';
+  if (p.daysRem === null || p.daysRem === undefined) return 'Unknown';
+  return p.daysRem < 0 ? 'Overdue' : 'On Track';
 }}
 
 function daysLeft(p) {{
-  if (!p.assignDate) return null;
-  const deadline = new Date(p.assignDate);
-  deadline.setDate(deadline.getDate() + PROGRAM_DAYS);
-  return Math.round((deadline - TODAY) / 86400000);
+  if (p.daysRem === null || p.daysRem === undefined) return null;
+  return p.daysRem;
 }}
 
 function daysElapsed(p) {{
@@ -735,14 +731,12 @@ function renderStats() {{
   const overdue = filtered.filter(p => computeStatus(p) === 'Overdue').length;
   const ontrack = filtered.filter(p => computeStatus(p) === 'On Track').length;
   const completed = filtered.filter(p => computeStatus(p) === 'Completed').length;
-  const avg = total ? Math.round(filtered.reduce((s,p) => s + p.overallPct, 0) / total) : 0;
 
   document.getElementById('s-total').textContent = total;
   document.getElementById('s-overdue').textContent = overdue;
   document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past their 45-day window' : '';
   document.getElementById('s-ontrack').textContent = ontrack;
   document.getElementById('s-completed').textContent = completed;
-  document.getElementById('s-avg').textContent = total ? avg + '%' : '—';
 }}
 
 /* ── Heatmap table ── */
@@ -756,10 +750,11 @@ function renderTable() {{
     return '<th class="' + cls + '" data-col="' + col + '" onclick="sortByCol(this.dataset.col)">' + label + arrow + '</th>';
   }}
   let hRow = '<tr>' + thS('Learner','name') + thS('Market','market') + thS('Status','status') + thS('Days Left','days');
+  hRow += thS('Overall','overall','overall-col');
   CURRIC_IDS.forEach(cid => {{
     hRow += thS(CURRIC_NAMES[cid], cid, 'curric-col');
   }});
-  hRow += thS('Overall','overall','overall-col') + '</tr>';
+  hRow += '</tr>';
   thead.innerHTML = hRow;
 
   // Body
@@ -810,23 +805,24 @@ function renderTable() {{
       '<td class="market-cell">' + escHtml(p.market) + '</td>' +
       '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
       '<td style="font-size:11px;">' + daysStr + '</td>' +
-      cells +
       '<td class="pct-cell"><span class="pct-pill" style="background:' + oclr.bg + ';color:' + oclr.fg + ';font-weight:700">' + p.overallPct + '%</span></td>' +
+      cells +
     '</tr>';
   }}).join('');
 
   // Footer (averages)
   const tfoot = document.getElementById('heatmap-foot');
   let fRow = '<tr><td colspan="4" style="font-weight:700;font-size:11px;">Averages (' + filtered.length + ' learners)</td>';
+  const oAvg = filtered.length ? Math.round(filtered.reduce((s,p) => s+p.overallPct,0)/filtered.length) : 0;
+  const oclr = pct2color(oAvg);
+  fRow += '<td class="pct-cell"><span class="pct-pill" style="background:' + oclr.bg + ';color:' + oclr.fg + ';font-weight:700">' + oAvg + '%</span></td>';
   CURRIC_IDS.forEach(cid => {{
     const vals = filtered.map(p => p.curricula[cid] ? p.curricula[cid].pct : 0);
     const avg = vals.length ? Math.round(vals.reduce((s,v) => s+v,0) / vals.length) : 0;
     const clr = pct2color(avg);
     fRow += '<td class="pct-cell"><span class="pct-pill" style="background:' + clr.bg + ';color:' + clr.fg + '">' + avg + '%</span></td>';
   }});
-  const oAvg = filtered.length ? Math.round(filtered.reduce((s,p) => s+p.overallPct,0)/filtered.length) : 0;
-  const oclr = pct2color(oAvg);
-  fRow += '<td class="pct-cell"><span class="pct-pill" style="background:' + oclr.bg + ';color:' + oclr.fg + ';font-weight:700">' + oAvg + '%</span></td></tr>';
+  fRow += '</tr>';
   tfoot.innerHTML = fRow;
 }}
 
