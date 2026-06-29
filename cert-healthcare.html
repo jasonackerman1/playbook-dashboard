@@ -70,8 +70,7 @@
   .stat-value.blue{color:var(--accent);}
   .stat-sub{font-size:11px;color:var(--muted);margin-top:4px;}
 
-  .charts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:0 28px 16px;}
-  @media(max-width:1100px){.charts{grid-template-columns:1fr 1fr;}}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}
   @media(max-width:680px){.charts{grid-template-columns:1fr;}}
   .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}
   .chart-title{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
@@ -166,14 +165,6 @@
 </div>
 
 <div class="filters">
-  <span class="filter-label">Curriculum</span>
-  <select id="f-cert">
-    <option value="">All Curriculums</option>
-    <option value="Healthcare">Healthcare Foundational</option>
-    <option value="AcuteCare">Acute Care</option>
-    <option value="Ambulatory">Ambulatory</option>
-    <option value="Extended">Extended Care</option>
-  </select>
   <span class="filter-label">Status</span>
   <select id="f-status">
     <option value="">All</option>
@@ -228,10 +219,6 @@
     <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'over-time')">?</span></div>
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
-  <div class="chart-card">
-    <div class="chart-title">Curriculum Breakdown <span class="info-btn" onclick="showInfo(event,'subcert')">?</span></div>
-    <div class="chart-wrap"><canvas id="subcertChart"></canvas></div>
-  </div>
 </div>
 
 <div class="section">
@@ -253,34 +240,6 @@
     </div>
     <input type="text" class="roster-search" id="roster-search" placeholder="Search by name&hellip;" oninput="filterRoster()">
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 18px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);">
-    <span style="font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-right:4px;">Legend</span>
-    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
-      <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;">
-        <circle cx="7" cy="7" r="6" fill="#f59e0b33" stroke="#f59e0b" stroke-width="1.5"/>
-        <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#f59e0b">&#10003;</text>
-      </svg>
-      LMS Complete
-    </span>
-    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
-      <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;">
-        <circle cx="7" cy="7" r="6" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
-        <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="var(--green)">&#10003;</text>
-      </svg>
-      Certified
-    </span>
-    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
-      <svg width="14" height="14" viewBox="0 0 16 16" style="flex-shrink:0;">
-        <path d="M8,8 L8,1 A7,7,0,0,1,14.06,11.5 Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1"/>
-        <path d="M8,8 L14.06,11.5 A7,7,0,0,1,1.94,11.5 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
-        <path d="M8,8 L1.94,11.5 A7,7,0,0,1,8,1 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
-        <line x1="8" y1="1" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
-        <line x1="14.06" y1="11.5" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
-        <line x1="1.94" y1="11.5" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
-      </svg>
-      Secondary Curriculum Complete
-    </span>
-  </div>
   <div class="roster-wrap">
     <div class="roster-left" id="roster-left"></div>
     <div class="roster-right" id="roster-right">
@@ -290,12 +249,12 @@
 </div>
 
 <script>
-const RAW = [{"FirstName": "Gerri", "LastName": "Major", "Email": "Gerri.Hadley@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Central Sls", "Manager": "Daniel Eldridge", "MgrEmail": "Daniel.Eldridge@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2008-06-02", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Philip", "LastName": "White", "Email": "PWhite@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Central Sls", "Manager": "Jason Keene", "MgrEmail": "JKeene@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2006-04-01", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Shayla", "LastName": "Metz", "Email": "SMetz@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Central Sls", "Manager": "Robert Venturella", "MgrEmail": "RVenturella@kmbs.konicaminolta.us", "MgrTitle": "Major Acct Sales Manager", "HireDate": "2025-02-18", "Complete": "Yes", "Date": "2025-02-18", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Anna", "LastName": "Harbort", "Email": "aharbort@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Dapack", "Manager": "Clayton Crane", "MgrEmail": "ecrane@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-07-15", "Complete": "Yes", "Date": "2024-07-15", "HCDate": "2026-02-03", "HCQtr": "FY2025 Q4", "Healthcare": "Yes", "AcuteDate": "2026-05-15", "AcuteQtr": "FY2026 Q1", "AcuteCare": "Yes", "AmbDate": "2026-05-20", "AmbQtr": "FY2026 Q1", "Ambulatory": "Yes", "ExtDate": "2026-06-01", "ExtQtr": "FY2026 Q1", "Extended": "Yes"}, {"FirstName": "Daniel", "LastName": "Chavarria", "Email": "DChavarria@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Dapack", "Manager": "Clayton Crane", "MgrEmail": "ecrane@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-12-16", "Complete": "Yes", "Date": "2024-12-16", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Alexis", "LastName": "Hollie", "Email": "AHollie@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Florida", "Manager": "Jonathan Walters", "MgrEmail": "jwalters@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2025-09-15", "Complete": "Yes", "Date": "2025-09-16", "HCDate": "2026-04-25", "HCQtr": "FY2026 Q1", "Healthcare": "Yes", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "2026-04-10", "AmbQtr": "FY2026 Q1", "Ambulatory": "Yes", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Susan", "LastName": "Bindas", "Email": "SBindas@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - GES", "Market": "Florida", "Manager": "Wesley Hardin", "MgrEmail": "WHardin@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2019-05-06", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Gina", "LastName": "Vertullo", "Email": "GVertullo@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Great Lakes", "Manager": "Bryan Davis", "MgrEmail": "bryan.davis@KMBS.konicaminolta.us", "MgrTitle": "Major Acct Sales Manager", "HireDate": "2025-12-08", "Complete": "Yes", "Date": "2025-12-09", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Mark", "LastName": "Brown", "Email": "Mark.Brown@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Great Lakes", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2013-03-29", "Complete": "Yes", "Date": "2021-05-24", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Tyler", "LastName": "Watling", "Email": "TWatling@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Great Lakes", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2022-03-07", "Complete": "Yes", "Date": "2022-03-16", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jack", "LastName": "Sammons", "Email": "JSammons@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2023-07-10", "Complete": "Yes", "Date": "2023-09-25", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Ryan", "LastName": "Hamilton", "Email": "RHamilton@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2017-03-27", "Complete": "Yes", "Date": "2021-05-07", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Sean", "LastName": "Marshall", "Email": "Smarshall@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michelle Ashby", "MgrEmail": "MAshby@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2015-04-06", "Complete": "Yes", "Date": "2021-06-25", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Cory", "LastName": "Coleman", "Email": "ccoleman@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-09-09", "Complete": "Yes", "Date": "2024-09-09", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Dillon", "LastName": "Basnight", "Email": "DBasnight@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2026-04-20", "Complete": "Yes", "Date": "2026-04-20", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Erik", "LastName": "Goetzke", "Email": "egoetzke@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2022-09-21", "Complete": "Yes", "Date": "2023-10-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Matthew", "LastName": "Doan", "Email": "mdoan@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-04-11", "Complete": "Yes", "Date": "2024-04-11", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Sandeep", "LastName": "Satija", "Email": "SSatija@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-12-15", "Complete": "Yes", "Date": "2025-12-15", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Sean", "LastName": "Hur", "Email": "SHur@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-05-19", "Complete": "Yes", "Date": "2025-05-19", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Stephen", "LastName": "Farrell", "Email": "SFarrell@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-01-07", "Complete": "Yes", "Date": "2025-01-07", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Terrance", "LastName": "O'Leary", "Email": "toleary@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-07-08", "Complete": "Yes", "Date": "2024-07-08", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Andrea", "LastName": "Adkins", "Email": "AAdkins@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1993-07-19", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "2026-02-02", "HCQtr": "FY2025 Q4", "Healthcare": "Yes", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Dee", "LastName": "Gilbert", "Email": "DGilbert@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1997-03-03", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Heather", "LastName": "Yeager", "Email": "HYeager@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2023-04-19", "Complete": "Yes", "Date": "2023-05-05", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Leigh", "LastName": "Whitaker", "Email": "TWhitaker@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2019-04-02", "Complete": "Yes", "Date": "2021-05-11", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Mark", "LastName": "Caldarera", "Email": "caldarer@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Charles Wollfarth", "MgrEmail": "BWollfarth@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1984-03-28", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Donald", "LastName": "Dempsey", "Email": "DDempsey@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-09-22", "Complete": "Yes", "Date": "2025-09-22", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Francis", "LastName": "McBride", "Email": "fmcbride@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2023-08-21", "Complete": "Yes", "Date": "2023-09-01", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Robert", "LastName": "Maloney", "Email": "bmaloney@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-06-24", "Complete": "Yes", "Date": "2024-06-24", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Dominic", "LastName": "Donato", "Email": "ddonato@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2021-07-19", "Complete": "Yes", "Date": "2022-08-23", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Isabella", "LastName": "Delgado", "Email": "IDelgado@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Richard Bortner", "MgrEmail": "RBortner@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2022-12-05", "Complete": "Yes", "Date": "2022-12-13", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jerry", "LastName": "Jelinek", "Email": "JJelinek@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Abigail Adams", "MgrEmail": "AAdams@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2025-12-08", "Complete": "Yes", "Date": "2025-12-08", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Olivia", "LastName": "Gilmore", "Email": "ogilmore@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2013-07-01", "Complete": "Yes", "Date": "2021-05-07", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Ty", "LastName": "Foster", "Email": "Ty.Foster@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Richard Bortner", "MgrEmail": "RBortner@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2026-04-01", "Complete": "Yes", "Date": "2026-04-01", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Whitney", "LastName": "Hicks", "Email": "WHicks@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2023-05-23", "Complete": "Yes", "Date": "2023-05-24", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Anne", "LastName": "Davis", "Email": "ADavis@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2019-10-15", "Complete": "Yes", "Date": "2021-05-14", "HCDate": "2026-02-04", "HCQtr": "FY2025 Q4", "Healthcare": "Yes", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Brian", "LastName": "Steen", "Email": "BSteen@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2024-11-11", "Complete": "Yes", "Date": "2024-11-11", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Danielle", "LastName": "Masella", "Email": "DMasella@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2007-09-10", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jeremy", "LastName": "Figueroa", "Email": "jfigueroa@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "West Sls", "Manager": "Benjamin Cervantez Ramos", "MgrEmail": "BRamos@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2024-05-28", "Complete": "Yes", "Date": "2024-05-28", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Kevin", "LastName": "Durant", "Email": "kdurant@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "West Sls", "Manager": "Jaime Ibon", "MgrEmail": "JIbon@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2024-09-03", "Complete": "Yes", "Date": "2024-09-18", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jason", "LastName": "Keene", "Email": "JKeene@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Eric Montgomery", "MgrEmail": "EMontgomery@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Robert", "LastName": "Venturella", "Email": "RVenturella@kmbs.konicaminolta.us", "JobTitle": "Major Acct Sales Manager", "Market": "Central Sls", "Manager": "Eric Montgomery", "MgrEmail": "EMontgomery@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Clayton", "LastName": "Crane", "Email": "ecrane@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Central Sls", "Manager": "Heath Kidd", "MgrEmail": "HKidd@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jonathan", "LastName": "Walters", "Email": "jwalters@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Southeast Sls", "Manager": "Jason Allen", "MgrEmail": "Jason.Allen@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Wesley", "LastName": "Hardin", "Email": "WHardin@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Southeast Sls", "Manager": "Mark Messner", "MgrEmail": "mmessner@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Bryan", "LastName": "Davis", "Email": "bryan.davis@KMBS.konicaminolta.us", "JobTitle": "Major Acct Sales Manager", "Market": "Mid-Atlantic Sls", "Manager": "Vickie Lewis", "MgrEmail": "VLewis@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Michael", "LastName": "Mattson", "Email": "MMattson@kmbs.konicaminolta.us", "JobTitle": "Area VP Sales - Central", "Market": "Heartland Sls", "Manager": "Dana Drury", "MgrEmail": "Dana.Drury@kmbs.konicaminolta.us", "MgrTitle": "Market VP - Central", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Michelle", "LastName": "Ashby", "Email": "MAshby@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Kenneth", "LastName": "Scheuer", "Email": "KScheuer@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Mid-Atlantic Sls", "Manager": "Vickie Lewis", "MgrEmail": "VLewis@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Brian", "LastName": "Bullock", "Email": "BBullock@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Mid-Atlantic Sls", "Manager": "Franklin Frayser", "MgrEmail": "RFrayser@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Karie", "LastName": "Lee", "Email": "Karie.Lee@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Southeast Sls", "Manager": "Jeffrey Lee", "MgrEmail": "JLee@kmbs.konicaminolta.us", "MgrTitle": "Market VP - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Charles", "LastName": "Wollfarth", "Email": "BWollfarth@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Southeast Sls", "Manager": "Donal McDonagh", "MgrEmail": "DMcDonagh@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Roger", "LastName": "DiGregorio", "Email": "RDigregorio@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Northeast Sls", "Manager": "Jason Dexter", "MgrEmail": "JDexter@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Emmanuel", "LastName": "Torres", "Email": "ETorres@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Central Sls", "Manager": "Brad Windham", "MgrEmail": "windhamb@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Richard", "LastName": "Bortner", "Email": "RBortner@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Harrison Harpole", "MgrEmail": "HHarpole@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Abigail", "LastName": "Adams", "Email": "AAdams@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Harrison Harpole", "MgrEmail": "HHarpole@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Bill", "LastName": "Slater", "Email": "bslater@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Benjamin", "LastName": "Cervantez Ramos", "Email": "BRamos@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jaime", "LastName": "Ibon", "Email": "JIbon@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}];
+const RAW = [{"FirstName": "Gerri", "LastName": "Major", "Email": "Gerri.Hadley@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Central Sls", "Manager": "Daniel Eldridge", "MgrEmail": "Daniel.Eldridge@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2008-06-02", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Philip", "LastName": "White", "Email": "PWhite@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Central Sls", "Manager": "Jason Keene", "MgrEmail": "JKeene@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2006-04-01", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Shayla", "LastName": "Metz", "Email": "SMetz@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Central Sls", "Manager": "Robert Venturella", "MgrEmail": "RVenturella@kmbs.konicaminolta.us", "MgrTitle": "Major Acct Sales Manager", "HireDate": "2025-02-18", "Complete": "Yes", "Date": "2025-02-18", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Anna", "LastName": "Harbort", "Email": "aharbort@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Dapack", "Manager": "Clayton Crane", "MgrEmail": "ecrane@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-07-15", "Complete": "Yes", "Date": "2024-07-15", "HCDate": "2026-02-03", "HCQtr": "FY2025 Q4", "Healthcare": "Yes"}, {"FirstName": "Daniel", "LastName": "Chavarria", "Email": "DChavarria@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Dapack", "Manager": "Clayton Crane", "MgrEmail": "ecrane@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-12-16", "Complete": "Yes", "Date": "2024-12-16", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Alexis", "LastName": "Hollie", "Email": "AHollie@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Florida", "Manager": "Jonathan Walters", "MgrEmail": "jwalters@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2025-09-15", "Complete": "Yes", "Date": "2025-09-16", "HCDate": "2026-04-25", "HCQtr": "FY2026 Q1", "Healthcare": "No"}, {"FirstName": "Susan", "LastName": "Bindas", "Email": "SBindas@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - GES", "Market": "Florida", "Manager": "Wesley Hardin", "MgrEmail": "WHardin@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2019-05-06", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Gina", "LastName": "Vertullo", "Email": "GVertullo@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Great Lakes", "Manager": "Bryan Davis", "MgrEmail": "bryan.davis@KMBS.konicaminolta.us", "MgrTitle": "Major Acct Sales Manager", "HireDate": "2025-12-08", "Complete": "Yes", "Date": "2025-12-09", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Mark", "LastName": "Brown", "Email": "Mark.Brown@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Great Lakes", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2013-03-29", "Complete": "Yes", "Date": "2021-05-24", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Tyler", "LastName": "Watling", "Email": "TWatling@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Great Lakes", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2022-03-07", "Complete": "Yes", "Date": "2022-03-16", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Jack", "LastName": "Sammons", "Email": "JSammons@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2023-07-10", "Complete": "Yes", "Date": "2023-09-25", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Ryan", "LastName": "Hamilton", "Email": "RHamilton@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2017-03-27", "Complete": "Yes", "Date": "2021-05-07", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Sean", "LastName": "Marshall", "Email": "Smarshall@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michelle Ashby", "MgrEmail": "MAshby@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2015-04-06", "Complete": "Yes", "Date": "2021-06-25", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Cory", "LastName": "Coleman", "Email": "ccoleman@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-09-09", "Complete": "Yes", "Date": "2024-09-09", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Dillon", "LastName": "Basnight", "Email": "DBasnight@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2026-04-20", "Complete": "Yes", "Date": "2026-04-20", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Erik", "LastName": "Goetzke", "Email": "egoetzke@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2022-09-21", "Complete": "Yes", "Date": "2023-10-27", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Matthew", "LastName": "Doan", "Email": "mdoan@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-04-11", "Complete": "Yes", "Date": "2024-04-11", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Sandeep", "LastName": "Satija", "Email": "SSatija@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-12-15", "Complete": "Yes", "Date": "2025-12-15", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Sean", "LastName": "Hur", "Email": "SHur@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-05-19", "Complete": "Yes", "Date": "2025-05-19", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Stephen", "LastName": "Farrell", "Email": "SFarrell@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-01-07", "Complete": "Yes", "Date": "2025-01-07", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Terrance", "LastName": "O'Leary", "Email": "toleary@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-07-08", "Complete": "Yes", "Date": "2024-07-08", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Andrea", "LastName": "Adkins", "Email": "AAdkins@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1993-07-19", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "2026-02-02", "HCQtr": "FY2025 Q4", "Healthcare": "Yes"}, {"FirstName": "Dee", "LastName": "Gilbert", "Email": "DGilbert@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1997-03-03", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Heather", "LastName": "Yeager", "Email": "HYeager@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2023-04-19", "Complete": "Yes", "Date": "2023-05-05", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Leigh", "LastName": "Whitaker", "Email": "TWhitaker@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2019-04-02", "Complete": "Yes", "Date": "2021-05-11", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Mark", "LastName": "Caldarera", "Email": "caldarer@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Charles Wollfarth", "MgrEmail": "BWollfarth@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1984-03-28", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Donald", "LastName": "Dempsey", "Email": "DDempsey@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-09-22", "Complete": "Yes", "Date": "2025-09-22", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Francis", "LastName": "McBride", "Email": "fmcbride@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2023-08-21", "Complete": "Yes", "Date": "2023-09-01", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Robert", "LastName": "Maloney", "Email": "bmaloney@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-06-24", "Complete": "Yes", "Date": "2024-06-24", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Dominic", "LastName": "Donato", "Email": "ddonato@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2021-07-19", "Complete": "Yes", "Date": "2022-08-23", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Isabella", "LastName": "Delgado", "Email": "IDelgado@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Richard Bortner", "MgrEmail": "RBortner@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2022-12-05", "Complete": "Yes", "Date": "2022-12-13", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Jerry", "LastName": "Jelinek", "Email": "JJelinek@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Abigail Adams", "MgrEmail": "AAdams@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2025-12-08", "Complete": "Yes", "Date": "2025-12-08", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Olivia", "LastName": "Gilmore", "Email": "ogilmore@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2013-07-01", "Complete": "Yes", "Date": "2021-05-07", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Ty", "LastName": "Foster", "Email": "Ty.Foster@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Richard Bortner", "MgrEmail": "RBortner@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2026-04-01", "Complete": "Yes", "Date": "2026-04-01", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Whitney", "LastName": "Hicks", "Email": "WHicks@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2023-05-23", "Complete": "Yes", "Date": "2023-05-24", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Anne", "LastName": "Davis", "Email": "ADavis@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2019-10-15", "Complete": "Yes", "Date": "2021-05-14", "HCDate": "2026-02-04", "HCQtr": "FY2025 Q4", "Healthcare": "Yes"}, {"FirstName": "Brian", "LastName": "Steen", "Email": "BSteen@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2024-11-11", "Complete": "Yes", "Date": "2024-11-11", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Danielle", "LastName": "Masella", "Email": "DMasella@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2007-09-10", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Jeremy", "LastName": "Figueroa", "Email": "jfigueroa@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "West Sls", "Manager": "Benjamin Cervantez Ramos", "MgrEmail": "BRamos@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2024-05-28", "Complete": "Yes", "Date": "2024-05-28", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Kevin", "LastName": "Durant", "Email": "kdurant@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "West Sls", "Manager": "Jaime Ibon", "MgrEmail": "JIbon@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2024-09-03", "Complete": "Yes", "Date": "2024-09-18", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Jason", "LastName": "Keene", "Email": "JKeene@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Eric Montgomery", "MgrEmail": "EMontgomery@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Robert", "LastName": "Venturella", "Email": "RVenturella@kmbs.konicaminolta.us", "JobTitle": "Major Acct Sales Manager", "Market": "Central Sls", "Manager": "Eric Montgomery", "MgrEmail": "EMontgomery@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Clayton", "LastName": "Crane", "Email": "ecrane@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Central Sls", "Manager": "Heath Kidd", "MgrEmail": "HKidd@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Jonathan", "LastName": "Walters", "Email": "jwalters@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Southeast Sls", "Manager": "Jason Allen", "MgrEmail": "Jason.Allen@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Wesley", "LastName": "Hardin", "Email": "WHardin@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Southeast Sls", "Manager": "Mark Messner", "MgrEmail": "mmessner@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Bryan", "LastName": "Davis", "Email": "bryan.davis@KMBS.konicaminolta.us", "JobTitle": "Major Acct Sales Manager", "Market": "Mid-Atlantic Sls", "Manager": "Vickie Lewis", "MgrEmail": "VLewis@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Michael", "LastName": "Mattson", "Email": "MMattson@kmbs.konicaminolta.us", "JobTitle": "Area VP Sales - Central", "Market": "Heartland Sls", "Manager": "Dana Drury", "MgrEmail": "Dana.Drury@kmbs.konicaminolta.us", "MgrTitle": "Market VP - Central", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Michelle", "LastName": "Ashby", "Email": "MAshby@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Kenneth", "LastName": "Scheuer", "Email": "KScheuer@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Mid-Atlantic Sls", "Manager": "Vickie Lewis", "MgrEmail": "VLewis@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Brian", "LastName": "Bullock", "Email": "BBullock@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Mid-Atlantic Sls", "Manager": "Franklin Frayser", "MgrEmail": "RFrayser@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Karie", "LastName": "Lee", "Email": "Karie.Lee@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Southeast Sls", "Manager": "Jeffrey Lee", "MgrEmail": "JLee@kmbs.konicaminolta.us", "MgrTitle": "Market VP - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Charles", "LastName": "Wollfarth", "Email": "BWollfarth@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Southeast Sls", "Manager": "Donal McDonagh", "MgrEmail": "DMcDonagh@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Roger", "LastName": "DiGregorio", "Email": "RDigregorio@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Northeast Sls", "Manager": "Jason Dexter", "MgrEmail": "JDexter@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Emmanuel", "LastName": "Torres", "Email": "ETorres@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Central Sls", "Manager": "Brad Windham", "MgrEmail": "windhamb@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Richard", "LastName": "Bortner", "Email": "RBortner@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Harrison Harpole", "MgrEmail": "HHarpole@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Abigail", "LastName": "Adams", "Email": "AAdams@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Harrison Harpole", "MgrEmail": "HHarpole@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Bill", "LastName": "Slater", "Email": "bslater@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Benjamin", "LastName": "Cervantez Ramos", "Email": "BRamos@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}, {"FirstName": "Jaime", "LastName": "Ibon", "Email": "JIbon@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No"}];
 const TLG_SET = new Set(["Bianca Davis", "Bradley Pierce", "CJ Homer", "Chris Curtis", "Dale Kinsey", "James Parker", "Jason Ackerman", "Jeremy MacBean", "Laura Sefcik", "Resmie Biba", "Rich Moore", "Samantha Maresca", "Sara Thompson", "Staci Musco"]);
 
 let filtered = [];
 let hideTLG = false;
-let regionChart, trendChart, subcertChart;
+let regionChart, trendChart;
 let rosterSortField = 'status';
 let rosterSortDir   = 'desc';
 let rosterView      = 'individual';
@@ -323,11 +282,10 @@ document.addEventListener('click', function(e) {
 function setupPrintHeader(title,subtitle) {
   sel('ph-title').textContent=title;
   sel('ph-date').textContent=subtitle;
-  const certLabel=sel('f-cert').options[sel('f-cert').selectedIndex].text;
   const statusLabel=sel('f-status').options[sel('f-status').selectedIndex].text;
   const market=sel('f-market').value||'All Markets';
   const from=sel('f-date-from').value||'',to=sel('f-date-to').value||'';
-  const parts=[`Curriculum: ${certLabel}`,`Status: ${statusLabel}`,`Market: ${market}`];
+  const parts=[`Status: ${statusLabel}`,`Market: ${market}`];
   if(from||to) parts.push(`Dates: ${from||'—'} to ${to||'—'}`);
   if(hideTLG) parts.push('TLG hidden');
   sel('ph-filters').textContent=parts.join('  |  ');
@@ -362,43 +320,39 @@ function pFiscalQtr(d) {
 }
 function runExport(type) {
   sel('export-menu').classList.remove('open');
-  const certField=sel('f-cert').value||'Healthcare';
+  const certField='Healthcare';
   const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   sel('print-s1-label').style.display='none';
   sel('print-s2').style.display='none';
 
   if(type==='full') {
     setupPrintHeader('Healthcare Certification Report',`Generated: ${now}  |  ${filtered.length} People`);
-    var pTotal=filtered.length,pCert=filtered.filter(p=>p[certField]==='Yes').length;
-    var pLMS=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes').length;
-    var pIP=filtered.filter(p=>p.Complete!=='Yes'&&p[certField]!=='Yes').length;
+    var pTotal=filtered.length,pCert=filtered.filter(p=>p.Healthcare==='Yes').length;
+    var pLMS=filtered.filter(p=>p.Complete==='Yes'&&p.Healthcare!=='Yes').length;
+    var pIP=filtered.filter(p=>p.Complete!=='Yes'&&p.Healthcare!=='Yes').length;
     var pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
     sel('print-stats').innerHTML=pBox(pTotal,'Total Assigned')+pBox(pCert,'Certified')+pBox(pLMS,'LMS Complete')+pBox(pIP,'In Progress')+pBox(pRate+'%','Completion Rate');
     var qMap={};
-    filtered.filter(p=>p[certField]==='Yes'&&p.Date).forEach(p=>{var q=pFiscalQtr(p.Date);if(q)qMap[q]=(qMap[q]||0)+1;});
+    filtered.filter(p=>p.Healthcare==='Yes'&&p.HCDate).forEach(p=>{var q=pFiscalQtr(p.HCDate);if(q)qMap[q]=(qMap[q]||0)+1;});
     var qRows=Object.entries(qMap).sort((a,b)=>a[0].localeCompare(b[0]));
     if(!qRows.length) qRows=[['No data','—']];
-    var pAcute=filtered.filter(p=>p.AcuteCare==='Yes').length,pAmb=filtered.filter(p=>p.Ambulatory==='Yes').length,pExt=filtered.filter(p=>p.Extended==='Yes').length;
-    sel('print-charts').innerHTML=pSection('Certification Pipeline',[['In Progress',pIP],['LMS Complete',pLMS],['Certified',pCert]])+pSection('Certifications by Quarter',qRows)+pSection('Secondary Curriculum',[['Acute Care',pAcute],['Ambulatory',pAmb],['Extended Care',pExt]]);
-    sel('print-roster-head').innerHTML=thRow(['#','Name','Market','Job Title','Curriculum Status','Cert Date','Acute Care','Ambulatory','Extended Care','Manager','Email']);
+    sel('print-charts').innerHTML=pSection('Certification Pipeline',[['In Progress',pIP],['LMS Complete',pLMS],['Certified',pCert]])+pSection('Certifications by Quarter',qRows);
+    sel('print-roster-head').innerHTML=thRow(['#','Name','Market','Job Title','Status','Cert Date','Manager','Email']);
     sel('print-roster-body').innerHTML=filtered.map((p,i)=>{
-      const status=p[certField]==='Yes'?'Certified':p.Complete==='Yes'?'LMS Complete':'In Progress';
-      const acute=p.AcuteCare==='Yes'?`Yes (${p.AcuteDate||''})`:'No';
-      const amb=p.Ambulatory==='Yes'?`Yes (${p.AmbDate||''})`:'No';
-      const ext=p.Extended==='Yes'?`Yes (${p.ExtDate||''})`:'No';
-      return tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Market||'—',p.JobTitle||'—',status,p.Date||'—',acute,amb,ext,p.Manager||'—',`<small>${p.Email||'—'}</small>`]);
+      const status=p.Healthcare==='Yes'?'Certified':p.Complete==='Yes'?'LMS Complete':'In Progress';
+      return tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Market||'—',p.JobTitle||'—',status,p.HCDate||'—',p.Manager||'—',`<small>${p.Email||'—'}</small>`]);
     }).join('');
     doPrint(false);
 
   } else if(type==='not-certified') {
-    const notCert=filtered.filter(p=>p[certField]!=='Yes');
+    const notCert=filtered.filter(p=>p.Healthcare!=='Yes');
     setupPrintHeader('Not Certified — Healthcare',`Generated: ${now}  |  ${notCert.length} Employees`);
     sel('print-roster-head').innerHTML=thRow(['#','Name','Job Title','Market','Email','Manager','Manager Email']);
     sel('print-roster-body').innerHTML=notCert.length
       ? notCert.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
           .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.JobTitle||'—',p.Market||'—',p.Email||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
       : '<tr><td colspan="7" style="color:#999;font-style:italic;padding:10px 8px">All employees are certified</td></tr>';
-    sel('ph-desc').textContent=`Employees who have not yet earned ${sel('f-cert').options[sel('f-cert').selectedIndex].text} certification, sorted by manager. Use this list to contact employees and their managers to drive completion.`;
+    sel('ph-desc').textContent='Employees who have not yet earned Healthcare foundational certification, sorted by manager. Use this list to contact employees and their managers to drive completion.';
     sel('ph-desc').style.display='block';
     doPrint(true);
 
@@ -408,7 +362,7 @@ function runExport(type) {
       const k=p.Manager||'(No Manager)';
       if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||'—',total:0,cert:0,lms:0,ip:0};
       mgrMap[k].total++;
-      if(p[certField]==='Yes') mgrMap[k].cert++;
+      if(p.Healthcare==='Yes') mgrMap[k].cert++;
       else if(p.Complete==='Yes') mgrMap[k].lms++;
       else mgrMap[k].ip++;
     });
@@ -423,26 +377,17 @@ function runExport(type) {
     doPrint(true);
 
   } else if(type==='action-required') {
-    const almostThere=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes');
-    const secGaps=filtered.filter(p=>p[certField]==='Yes'&&(p.AcuteCare!=='Yes'||p.Ambulatory!=='Yes'||p.Extended!=='Yes'));
-    setupPrintHeader('Action Required — Healthcare',`Generated: ${now}  |  ${almostThere.length+secGaps.length} Employees Need Follow-Up`);
-    sel('ph-desc').textContent='Employees who have started but not yet completed their certification journey. Each section identifies a different gap and the managers responsible for follow-up.';
+    const almostThere=filtered.filter(p=>p.Complete==='Yes'&&p.Healthcare!=='Yes');
+    setupPrintHeader('Action Required — Healthcare',`Generated: ${now}  |  ${almostThere.length} Employees Need Follow-Up`);
+    sel('ph-desc').textContent='Employees who have completed the LMS curriculum but have not yet received manager-confirmed certification. Follow up to confirm status or escalate to completion.';
     sel('ph-desc').style.display='block';
-    sel('print-s1-label').innerHTML=`LMS COMPLETE — AWAITING CERTIFICATION (${almostThere.length})<div style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:#555;font-style:italic;margin-top:4px">These employees have completed the LMS curriculum but have not yet been certified. Follow up to confirm exam status or escalate to completion.</div>`;
+    sel('print-s1-label').innerHTML=`LMS COMPLETE — AWAITING CERTIFICATION (${almostThere.length})<div style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:#555;font-style:italic;margin-top:4px">These employees have completed the LMS curriculum but have not yet been certified. Follow up to confirm status or escalate to completion.</div>`;
     sel('print-s1-label').style.display='block';
     sel('print-roster-head').innerHTML=thRow(['#','Name','Email','Market','Manager','Manager Email']);
     sel('print-roster-body').innerHTML=almostThere.length
       ? almostThere.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||''))
           .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
       : '<tr><td colspan="6" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
-    sel('print-s2').style.display='block';
-    sel('print-s2-label').innerHTML=`CERTIFIED — MISSING SECONDARY CURRICULUM (${secGaps.length})<div style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:#555;font-style:italic;margin-top:4px">These employees hold their certification but have not completed all secondary curriculums. Follow up to encourage enrollment in outstanding courses.</div>`;
-    sel('print-roster-head2').innerHTML=thRow(['#','Name','Email','Market','Manager','Acute Care','Ambulatory','Extended Care']);
-    sel('print-roster-body2').innerHTML=secGaps.length
-      ? secGaps.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||''))
-          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',
-            p.AcuteCare==='Yes'?'&#10003;':'&#10007;',p.Ambulatory==='Yes'?'&#10003;':'&#10007;',p.Extended==='Yes'?'&#10003;':'&#10007;'])).join('')
-      : '<tr><td colspan="8" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
     doPrint(true);
   }
 }
@@ -451,7 +396,7 @@ function runExport(type) {
 const allMarkets = [...new Set(RAW.map(r=>r.Market).filter(Boolean))].sort();
 allMarkets.forEach(m => sel('f-market').innerHTML += `<option value="${m}">${m}</option>`);
 
-['f-cert','f-status','f-market','f-date-from','f-date-to'].forEach(id => {
+['f-status','f-market','f-date-from','f-date-to'].forEach(id => {
   sel(id).addEventListener('change', applyFilters);
 });
 
@@ -474,15 +419,14 @@ document.addEventListener('click', function(e){
 
 const INFO_MSGS = {
   'total-assigned':      'Total number of people currently assigned this certification track, after any active filters.',
-  'curriculum-complete': 'People who have finished all required LMS coursework (Healthcare Foundational curriculum). Completing the LMS is the first step — manager-confirmed certification is a separate process that follows.',
+  'curriculum-complete': 'People who have finished all required LMS coursework (Healthcare foundational curriculum). Completing the LMS is the first step — manager-confirmed certification is a separate process that follows.',
   'certified':           'People who have received full certification, confirmed by their manager after completing the LMS curriculum. This is the final step in the primary certification track.',
   'not-certified':       'People assigned the curriculum who have not yet received manager-confirmed certification. Includes both people still working through the LMS and those who have finished the LMS but are awaiting manager sign-off.',
   'completion-rate':     'Percentage of assigned people who have earned full manager-confirmed certification. Calculated as Certified ÷ Total Assigned.',
   'pipeline':            'The three stages of the certification journey: In Progress — enrolled but LMS coursework not yet complete; Curriculum Complete — LMS done, awaiting manager sign-off; Certified — fully certified by manager.',
   'over-time':           'Certifications earned per KM fiscal quarter, stacked by curriculum type. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
-  'subcert':             'Certification counts broken out by curriculum. Healthcare Foundational must be completed first. Acute Care, Ambulatory, and Extended Care are secondary curriculums that build on top of it. Secondary curriculum data is currently in progress.',
-  'roster':              'Full list of assigned people with their certification status and pipeline position. Click a name to see job title, market, cert date, secondary curriculum progress, and manager info. Use the View toggle to group by manager.',
-  'export':              'Export a printable report of the data currently on screen. Filter first, then export — the report only includes what passes your active filters. Examples: set Certification = "Acute Care" then export for an Acute Care–only report; filter to a region then export for a regional snapshot; hide TLG then export to share with managers. Full Report lists everyone with full detail. Not Certified is a contact list for outreach. Manager Summary rolls up team count and completion % per manager. Action Required flags who is close to fully certified and who still needs the main curriculum.',
+  'roster':              'Full list of assigned people with their certification status. Click a name to see job title, market, LMS status, cert date, and manager info. Use the View toggle to group by manager.',
+  'export':              'Export a printable report of the data currently on screen. Filter first, then export — the report only includes what passes your active filters. Full Report lists everyone with full detail. Not Certified is a contact list for outreach sorted by manager. Manager Summary rolls up team count and completion % per manager. Action Required lists people who have finished the LMS but are still awaiting certification.',
 };
 function showInfo(e, key){
   const pop = sel('info-popover');
@@ -502,21 +446,19 @@ function toggleTLG(){
 }
 
 function resetFilters(){
-  ['f-cert','f-status','f-market','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
+  ['f-status','f-market','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
   if(hideTLG){ hideTLG=false; sel('btn-tlg').classList.remove('active'); sel('btn-tlg').textContent='Hide TLG'; }
   applyFilters();
 }
 
 function applyFilters(){
-  const cert   = sel('f-cert').value;
-  const certField = cert || 'Healthcare';
   const status = sel('f-status').value;
   const market = sel('f-market').value;
   const from   = sel('f-date-from').value;
   const to     = sel('f-date-to').value;
   filtered = RAW.filter(r => {
     if(hideTLG && TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
-    if(status && r[certField] !== status) return false;
+    if(status && r.Healthcare !== status) return false;
     if(market && r.Market !== market) return false;
     if(from && r.Date && r.Date < from) return false;
     if(to   && r.Date && r.Date > to)   return false;
@@ -529,12 +471,11 @@ function applyFilters(){
 function render(){
   const isLight    = document.body.classList.contains('light-mode');
   const chartLabel = isLight ? cv('--text') : cv('--muted');
-  const certField  = sel('f-cert').value || 'Healthcare';
 
   // Stat cards
   const total          = filtered.length;
   const curriculumDone = filtered.filter(r=>r.Complete==='Yes').length;
-  const certified      = filtered.filter(r=>r[certField]==='Yes').length;
+  const certified      = filtered.filter(r=>r.Healthcare==='Yes').length;
   const notCert        = total - certified;
   const rate           = total > 0 ? Math.round(certified/total*100) : 0;
 
@@ -547,9 +488,9 @@ function render(){
   sel('s-rate-sub').textContent       = total > 0 ? `${certified} of ${total} assigned` : '';
 
   // Pipeline chart — three stages of the certification journey
-  const pipelineNotStarted   = filtered.filter(r=>r.Complete!=='Yes'&&r[certField]!=='Yes').length;
-  const pipelineCurrComplete = filtered.filter(r=>r.Complete==='Yes'&&r[certField]!=='Yes').length;
-  const pipelineHCCertified  = filtered.filter(r=>r[certField]==='Yes').length;
+  const pipelineNotStarted   = filtered.filter(r=>r.Complete!=='Yes'&&r.Healthcare!=='Yes').length;
+  const pipelineCurrComplete = filtered.filter(r=>r.Complete==='Yes'&&r.Healthcare!=='Yes').length;
+  const pipelineHCCertified  = filtered.filter(r=>r.Healthcare==='Yes').length;
 
   const ipBox = sel('in-progress-box');
   sel('in-progress-count').textContent = pipelineNotStarted;
@@ -586,81 +527,40 @@ function render(){
     }
   });
 
-  // Trend chart — stacked bars by sub-cert per fiscal quarter
-  const TREND_SUBCERTS = [
-    {key:'Healthcare', qtrKey:'HCQtr',    label:'Healthcare Foundational', color:cv('--green')},
-    {key:'AcuteCare',  qtrKey:'AcuteQtr', label:'Acute Care',    color:cv('--accent3')},
-    {key:'Ambulatory', qtrKey:'AmbQtr',   label:'Ambulatory',    color:cv('--accent2')},
-    {key:'Extended',   qtrKey:'ExtQtr',   label:'Extended Care', color:cv('--teal')},
-  ];
+  // Trend chart — certifications per fiscal quarter
   const parseQtr = s => { const m=s.match(/FY(\d+)\s+Q(\d)/); return m ? parseInt(m[1])*10+parseInt(m[2]) : 0; };
   const allTrendQtrs = new Set();
-  TREND_SUBCERTS.forEach(sc => {
-    filtered.forEach(r => { if(r[sc.key]==='Yes' && r[sc.qtrKey]) allTrendQtrs.add(r[sc.qtrKey]); });
-  });
+  filtered.forEach(r => { if(r.Healthcare==='Yes' && r.HCQtr) allTrendQtrs.add(r.HCQtr); });
   const trendQtrs = [...allTrendQtrs].sort((a,b)=>parseQtr(a)-parseQtr(b));
-  const trendDatasets = TREND_SUBCERTS.map(sc => ({
-    label: sc.label,
-    data:  trendQtrs.map(q => filtered.filter(r=>r[sc.key]==='Yes'&&r[sc.qtrKey]===q).length),
-    backgroundColor: sc.color+'bb',
-    borderRadius: 3,
-    borderSkipped: false,
-  }));
 
   if(trendChart) trendChart.destroy();
   trendChart = new Chart(sel('trendChart'), {
     type: 'bar',
-    data: { labels:trendQtrs, datasets:trendDatasets },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{position:'bottom',labels:{color:chartLabel,font:{size:10},boxWidth:8,padding:6}},
-        tooltip:{mode:'index',intersect:false},
-        datalabels:{display:false}
-      },
-      scales:{
-        x:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:10},maxRotation:45},stacked:true},
-        y:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11},stepSize:1},stacked:true}
-      }
-    }
-  });
-
-  // Sub-cert breakdown chart
-  const subLabels = ['Healthcare Foundational','Acute Care','Ambulatory','Extended Care'];
-  const subKeys   = ['Healthcare','AcuteCare','Ambulatory','Extended'];
-  const subColors = [cv('--green'),cv('--accent3'),cv('--accent2'),cv('--teal')];
-  const subCounts = subKeys.map(k => filtered.filter(r=>r[k]==='Yes').length);
-  const subNotCounts = subKeys.map(k => filtered.filter(r=>r[k]==='No').length);
-
-  if(subcertChart) subcertChart.destroy();
-  subcertChart = new Chart(sel('subcertChart'), {
-    type: 'bar',
     data: {
-      labels: subLabels,
-      datasets: [
-        { label:'Certified',     data:subCounts,    backgroundColor:subColors.map(c=>c+'cc'), borderRadius:4, borderSkipped:false },
-        { label:'Not Certified', data:subNotCounts, backgroundColor:cv('--surface2'), borderRadius:4, borderSkipped:false, borderWidth:1, borderColor:cv('--border') },
-      ]
+      labels: trendQtrs,
+      datasets: [{
+        label: 'Healthcare foundational',
+        data:  trendQtrs.map(q => filtered.filter(r=>r.Healthcare==='Yes'&&r.HCQtr===q).length),
+        backgroundColor: cv('--green')+'bb',
+        borderRadius: 3,
+        borderSkipped: false,
+      }]
     },
     options: {
       responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{position:'bottom',labels:{color:chartLabel,font:{size:11},boxWidth:10,padding:8}},
-        tooltip:{mode:'index',intersect:false},
+        legend:{display:false},
+        tooltip:{callbacks:{label: ctx => ` ${ctx.raw} Certified`}},
         datalabels:{display:false}
       },
       scales:{
-        x:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:10}},stacked:true},
-        y:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11},stepSize:1},stacked:true}
+        x:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:10},maxRotation:45}},
+        y:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11},stepSize:1}}
       }
     }
   });
 
   renderRosterList();
-}
-
-function subCertCount(r){
-  return ['Healthcare','AcuteCare','Ambulatory','Extended'].filter(k=>r[k]==='Yes').length;
 }
 
 function setRosterSort(field){
@@ -674,57 +574,27 @@ function setRosterSort(field){
 }
 
 function pipelineSteps(p) {
-  const bothDone = p.Healthcare==='Yes';
-  const lmsOnly  = !bothDone && p.Complete==='Yes';
-  const amber    = '#f59e0b';
+  const amber = '#f59e0b';
   function dot(color, tip, check) {
     const bg     = check ? color+'33' : 'var(--surface2)';
     const border = check ? color : 'var(--border)';
     const txt    = check ? color : 'var(--muted)';
     return `<div title="${tip}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${bg};border:1.5px solid ${border};color:${txt}">${check?'&#10003;':''}</div>`;
   }
-  function pie(a, b, c, la, lb, lc) {
-    const blue = cv('--accent');
-    const sep  = cv('--bg');
-    const s2   = cv('--surface2');
-    const bd   = cv('--border');
-    function seg(done) {
-      return done
-        ? `fill="${blue}" stroke="${blue}" stroke-width="1"`
-        : `fill="${s2}" stroke="${bd}" stroke-width="1"`;
-    }
-    return `<svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;overflow:visible">
-      <path d="M8,8 L8,1 A7,7,0,0,1,14.06,11.5 Z" ${seg(a)}><title>${la}</title></path>
-      <path d="M8,8 L14.06,11.5 A7,7,0,0,1,1.94,11.5 Z" ${seg(b)}><title>${lb}</title></path>
-      <path d="M8,8 L1.94,11.5 A7,7,0,0,1,8,1 Z" ${seg(c)}><title>${lc}</title></path>
-      <line x1="8" y1="1" x2="8" y2="8" stroke="${sep}" stroke-width="1.5" stroke-linecap="round"/>
-      <line x1="14.06" y1="11.5" x2="8" y2="8" stroke="${sep}" stroke-width="1.5" stroke-linecap="round"/>
-      <line x1="1.94" y1="11.5" x2="8" y2="8" stroke="${sep}" stroke-width="1.5" stroke-linecap="round"/>
-    </svg>`;
-  }
-  const lmsColor = bothDone ? cv('--green') : lmsOnly ? amber : 'var(--border)';
-  const lmsCheck = p.Complete==='Yes';
-  const hcColor  = cv('--green');
-  const hcCheck  = p.Healthcare==='Yes';
+  const certified = p.Healthcare==='Yes';
+  const lmsColor  = certified ? cv('--green') : p.Complete==='Yes' ? amber : 'var(--border)';
   return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
-    ${dot(lmsColor,'LMS Complete',lmsCheck)}
+    ${dot(lmsColor,'LMS Complete',p.Complete==='Yes')}
     <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
-    ${dot(hcColor,'Certified',hcCheck)}
-    <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
-    ${pie(p.AcuteCare==='Yes',p.Ambulatory==='Yes',p.Extended==='Yes','Acute Care','Ambulatory','Extended Care')}
+    ${dot(cv('--green'),'Certified',certified)}
   </div>`;
 }
 
 function tierStyle(p, extraIndent) {
   extraIndent = extraIndent || 0;
   const base = 14 + extraIndent;
-  const green = cv('--green');
-  const amber = '#f59e0b';
-  const blue  = cv('--accent');
-  const allSec = p.AcuteCare==='Yes' && p.Ambulatory==='Yes' && p.Extended==='Yes';
-  if(p.Healthcare==='Yes' && allSec) return `border-left:3px solid ${blue};padding-left:${base-3}px;`;
-  if(p.Healthcare==='Yes') return `border-left:3px solid ${green};padding-left:${base-3}px;`;
-  if(p.Complete==='Yes')   return `border-left:3px solid ${amber};padding-left:${base-3}px;`;
+  if(p.Healthcare==='Yes') return `border-left:3px solid ${cv('--green')};padding-left:${base-3}px;`;
+  if(p.Complete==='Yes')   return `border-left:3px solid #f59e0b;padding-left:${base-3}px;`;
   return extraIndent ? `padding-left:${base}px;` : '';
 }
 
@@ -743,7 +613,7 @@ function toggleMgrGroup(el) {
 }
 
 function renderRosterList(){
-  const certField = sel('f-cert').value || 'Healthcare';
+  const certField = 'Healthcare';
 
   if(rosterView === 'manager') {
     const groups = {};
@@ -790,10 +660,10 @@ function renderRosterList(){
       const rc = d * (a.Market||'').localeCompare(b.Market||'');
       return rc !== 0 ? rc : (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     } else {
-      function score(p) { const allSec=p.AcuteCare==='Yes'&&p.Ambulatory==='Yes'&&p.Extended==='Yes'; return (p[certField]==='Yes'&&allSec)?3:p[certField]==='Yes'?2:p.Complete==='Yes'?1:0; }
+      function score(p) { return p.Healthcare==='Yes'?2:p.Complete==='Yes'?1:0; }
       const diff = score(a) - score(b);
       if(diff !== 0) return d * diff;
-      return subCertCount(b) - subCertCount(a);
+      return (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     }
   });
 
@@ -832,12 +702,6 @@ function rosterSelect(el){
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return months[parseInt(mo)-1] + ' ' + parseInt(dy) + ', ' + y;
   }
-  const SUBCERT_DEFS = [
-    {key:'Healthcare', dateKey:'HCDate',    qtrKey:'HCQtr',    label:'Healthcare Foundational'},
-    {key:'AcuteCare',  dateKey:'AcuteDate', qtrKey:'AcuteQtr', label:'Acute Care'},
-    {key:'Ambulatory', dateKey:'AmbDate',   qtrKey:'AmbQtr',   label:'Ambulatory'},
-    {key:'Extended',   dateKey:'ExtDate',   qtrKey:'ExtQtr',   label:'Extended Care'},
-  ];
   sel('roster-right').innerHTML = `
     <div class="roster-right-header">
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">${p.FirstName} ${p.LastName}</div>
@@ -850,19 +714,6 @@ function rosterSelect(el){
       <div><div class="detail-label">Healthcare Foundational</div><div class="detail-value">${p.Complete==='Yes' ? '&#10003; LMS Complete' : 'Not Complete'}</div></div>
       <div><div class="detail-label">Hire Date</div><div class="detail-value">${fmtDate(p.HireDate)}</div></div>
       <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${p.Email}" style="color:var(--accent);text-decoration:none">${p.Email||'&#8212;'}</a></div></div>
-    </div>
-    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Secondary Curriculums</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${SUBCERT_DEFS.filter(sc=>sc.key!=='Healthcare').map(sc => {
-          const yes = p[sc.key]==='Yes';
-          const dateStr = yes && p[sc.dateKey] ? fmtDate(p[sc.dateKey]) + (p[sc.qtrKey] ? ' &middot; ' + p[sc.qtrKey] : '') : '';
-          return `<div style="display:flex;align-items:center;gap:12px">
-            <span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;min-width:140px;text-align:center;background:${yes?'var(--green-subtle)':'var(--surface2)'};color:${yes?'var(--green)':'var(--muted)'};border:1px solid ${yes?'var(--green)':'var(--border)'}">${yes?'&#10003;':'&#8212;'} ${sc.label}</span>
-            ${dateStr ? `<span style="font-size:12px;color:var(--muted)">${dateStr}</span>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
     </div>
     ${p.Manager ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Manager</div>
@@ -899,19 +750,10 @@ applyFilters();
   <table class="ptable" id="print-roster-table">
     <thead id="print-roster-head"><tr>
       <th>#</th><th>Name</th><th>Market</th><th>Job Title</th>
-      <th>Curriculum Status</th><th>Cert Date</th>
-      <th>Acute Care</th><th>Ambulatory</th><th>Extended Care</th>
-      <th>Manager</th><th>Email</th>
+      <th>Status</th><th>Cert Date</th><th>Manager</th><th>Email</th>
     </tr></thead>
     <tbody id="print-roster-body"></tbody>
   </table>
-  <div id="print-s2" style="display:none;margin-top:28px;">
-    <div id="print-s2-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#555;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1a73e8;"></div>
-    <table class="ptable">
-      <thead id="print-roster-head2"><tr></tr></thead>
-      <tbody id="print-roster-body2"></tbody>
-    </table>
-  </div>
 </div>
 </body>
 </html>

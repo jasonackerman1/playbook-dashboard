@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Healthcare Certification Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+    --accent:#4f8ef7; --accent2:#7c5cfc; --accent3:#f7c94f;
+    --text:#e8ecf4; --muted:#7b82a0; --green:#3ecf8e; --red:#f76f6f;
+    --teal:#2dd4bf; --green-subtle:#3ecf8e22; --red-subtle:#f76f6f22;
+    --font:'Segoe UI',system-ui,sans-serif;
+  }
+  body.light-mode {
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#eef1f7; --border:#d0d7e8;
+    --accent:#2563eb; --accent2:#6d28d9; --accent3:#d97706;
+    --text:#1a1d27; --muted:#475569; --green:#059669; --red:#dc2626;
+    --teal:#0f766e; --green-subtle:#05966922; --red-subtle:#dc262622;
+  }
+  body.light-mode select,body.light-mode input[type=date]{color-scheme:light;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}
+
+  .header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .header-left{display:flex;align-items:center;gap:16px;}
+  .hamburger{position:relative;}
+  .hamburger-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}
+  .hamburger-btn:hover,.hamburger-btn.open{border-color:var(--accent);color:var(--text);}
+  .hamburger-menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:220px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}
+  .hamburger-menu.open{display:block;}
+  .hamburger-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}
+  .hamburger-item{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}
+  .hamburger-item:hover{background:var(--surface2);}
+  .info-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}
+  .info-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .info-popover{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}
+  .info-popover.visible{display:block;}
+  .header h1{font-size:18px;font-weight:700;letter-spacing:.3px;}
+  .header h1 span{color:var(--muted);font-weight:400;}
+  .btn-theme{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}
+  .btn-theme:hover{border-color:var(--accent);color:var(--text);}
+  .btn-export{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}
+  .btn-export:hover{opacity:0.88;}
+  .export-drop{position:relative;}
+  .export-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:hidden;}
+  .export-menu.open{display:block;}
+  .export-item{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}
+  .export-item:hover{background:var(--surface2);}
+
+  .filters{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}
+  .filter-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}
+  select,input[type=date],input[type=text]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;color-scheme:dark;}
+  select:focus,input:focus{border-color:var(--accent);}
+  .btn-reset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}
+  .btn-reset:hover{border-color:var(--accent);color:var(--text);}
+  .btn-tlg{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}
+  .btn-tlg:hover{border-color:var(--red);color:var(--red);}
+  .btn-tlg.active{background:var(--red-subtle);border-color:var(--red);color:var(--red);}
+  .result-count{margin-left:auto;font-size:12px;color:var(--muted);}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px;}
+  .stat-value{font-size:28px;font-weight:700;line-height:1;}
+  .stat-value.green{color:var(--green);}
+  .stat-value.red{color:var(--red);}
+  .stat-value.teal{color:var(--teal);}
+  .stat-value.blue{color:var(--accent);}
+  .stat-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  .charts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:0 28px 16px;}
+  @media(max-width:1100px){.charts{grid-template-columns:1fr 1fr;}}
+  @media(max-width:680px){.charts{grid-template-columns:1fr;}}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}
+  .chart-title{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  body.light-mode .chart-title{color:var(--text);}
+  .chart-wrap{position:relative;height:260px;}
+
+  .section{padding:0 28px 32px;}
+  .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+  .section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  body.light-mode .section-title{color:var(--text);}
+  .section-hint{font-size:11px;color:var(--muted);margin-top:3px;}
+
+  .roster-search{width:180px;}
+  .roster-wrap{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .roster-left{width:300px;flex-shrink:0;overflow-y:auto;max-height:820px;border-right:1px solid var(--border);}
+  .roster-person{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+  .roster-person:last-child{border-bottom:none;}
+  .roster-person:hover{background:var(--surface2);}
+  .roster-person.active{background:#4f8ef711;border-left:3px solid var(--accent);padding-left:11px;}
+  .roster-name{flex:1;font-size:13px;}
+  .cert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .cert-dot.yes{background:var(--green);}
+  .cert-dot.no{background:var(--red);}
+  .cert-badge{font-size:11px;font-weight:700;border-radius:10px;padding:2px 8px;white-space:nowrap;}
+  .cert-badge.yes{color:var(--green);background:var(--green-subtle);}
+  .cert-badge.no{color:var(--red);background:var(--red-subtle);}
+  .roster-right{flex:1;overflow-y:auto;max-height:820px;padding:16px 20px;}
+  .roster-right-header{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .no-data{text-align:center;color:var(--muted);padding:40px;font-size:13px;}
+  @media(max-width:680px){.roster-wrap{flex-direction:column;}.roster-left{width:100%;max-height:220px;border-right:none;border-bottom:1px solid var(--border);}}
+
+  .sort-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .sort-btn:hover{border-color:var(--accent);color:var(--text);}
+  .sort-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}
+  .mgr-group-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--surface2);border-bottom:1px solid var(--border);user-select:none;}
+  .mgr-group-hdr:hover{background:var(--border);}
+  .mgr-group-hdr.open .mgr-chevron{transform:rotate(180deg);}
+  .mgr-chevron{transition:transform .15s;font-size:10px;color:var(--muted);flex-shrink:0;}
+  .mgr-team{display:none;}
+  .mgr-team.open{display:block;}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;margin-top:14px;}
+  .detail-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+  .detail-value{font-size:14px;font-weight:500;}
+  .badge-status{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+  .badge-status.certified{background:var(--green-subtle);color:var(--green);}
+  .badge-status.not-certified{background:var(--red-subtle);color:var(--red);}
+  @page{size:landscape;margin:.65in;}
+  @media print{
+    body{background:#fff!important;color:#111!important;}
+    .header,.filters,.stats,.charts,.section,.print-hide{display:none!important;}
+    #print-header{display:block!important;}
+    #print-stats{display:flex!important;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}
+    #print-charts{display:flex!important;gap:48px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}
+    #print-roster-wrap{display:block!important;}
+    body.print-no-summary #print-stats,body.print-no-summary #print-charts{display:none!important;}
+    .ptable{width:100%;border-collapse:collapse;font-size:11px;}
+    .ptable th{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}
+    .ptable td{padding:5px 8px;border:1px solid #ddd;vertical-align:middle;}
+    .ptable tr:nth-child(even) td{background:#fafafa;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="hamburger" id="hamburger">
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
+      <div class="hamburger-menu" id="hamburger-menu">
+        <div class="hamburger-section-label">Dashboards</div>
+        <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
+        <div class="hamburger-section-label">Certifications</div>
+        <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Certifications</a>
+        <div class="hamburger-section-label">Programs</div>
+        <a href="onboarding.html" class="hamburger-item">&#127919; Accelerate Onboarding</a>
+      </div>
+    </div>
+    <h1>Healthcare <span>Certification Dashboard</span></h1>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <div class="export-drop print-hide" id="export-drop">
+      <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
+      <div class="export-menu" id="export-menu">
+        <button class="export-item" onclick="runExport('full')">Full Report</button>
+        <button class="export-item" onclick="runExport('not-certified')">Not Certified</button>
+        <button class="export-item" onclick="runExport('manager-summary')">Manager Summary</button>
+        <button class="export-item" onclick="runExport('action-required')">Action Required</button>
+      </div>
+    </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
+    <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="filter-label">Curriculum</span>
+  <select id="f-cert">
+    <option value="">All Curriculums</option>
+    <option value="Healthcare">Healthcare Foundational</option>
+    <option value="AcuteCare">Acute Care</option>
+    <option value="Ambulatory">Ambulatory</option>
+    <option value="Extended">Extended Care</option>
+  </select>
+  <span class="filter-label">Status</span>
+  <select id="f-status">
+    <option value="">All</option>
+    <option value="Yes">Certified</option>
+    <option value="No">Not Certified</option>
+  </select>
+  <span class="filter-label">Market</span>
+  <select id="f-market"><option value="">All Markets</option></select>
+  <span class="filter-label" style="margin-right:2px">From</span>
+  <input type="date" id="f-date-from">
+  <span class="filter-label" style="margin:0 2px">To</span>
+  <input type="date" id="f-date-to">
+  <button class="btn-reset" onclick="resetFilters()">Reset</button>
+  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <span class="result-count" id="result-count"></span>
+  <span id="in-progress-box" style="display:none;align-items:center;gap:6px;background:var(--accent)11;border:1px solid var(--accent)44;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--accent);margin-left:4px;">
+    <span id="in-progress-count">0</span> In Progress
+  </span>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Total Assigned <span class="info-btn" onclick="showInfo(event,'total-assigned')">?</span></div>
+    <div class="stat-value" id="s-total">&#8212;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Curriculum Complete <span class="info-btn" onclick="showInfo(event,'curriculum-complete')">?</span></div>
+    <div class="stat-value blue" id="s-curriculum">&#8212;</div>
+    <div class="stat-sub" id="s-curriculum-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
+    <div class="stat-value green" id="s-certified">&#8212;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Not Yet Certified <span class="info-btn" onclick="showInfo(event,'not-certified')">?</span></div>
+    <div class="stat-value red" id="s-not">&#8212;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
+    <div class="stat-value teal" id="s-rate">&#8212;</div>
+    <div class="stat-sub" id="s-rate-sub"></div>
+  </div>
+</div>
+
+<div class="charts">
+  <div class="chart-card">
+    <div class="chart-title">Certification Pipeline <span class="info-btn" onclick="showInfo(event,'pipeline')">?</span></div>
+    <div class="chart-wrap"><canvas id="regionChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'over-time')">?</span></div>
+    <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Curriculum Breakdown <span class="info-btn" onclick="showInfo(event,'subcert')">?</span></div>
+    <div class="chart-wrap"><canvas id="subcertChart"></canvas></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Certification Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
+      <div class="section-hint">Click a person to see their details &mdash; sorted by status then name</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--muted);margin-right:2px;">View:</span>
+      <button class="sort-btn active" id="view-individual" onclick="setRosterView('individual')">Individual</button>
+      <button class="sort-btn" id="view-manager" onclick="setRosterView('manager')">By Manager</button>
+      <span id="sort-controls" style="display:flex;align-items:center;gap:6px;margin-left:6px;">
+        <span style="font-size:11px;color:var(--muted);margin-right:2px;">Sort:</span>
+        <button class="sort-btn active" data-sort="status" data-label="Status" onclick="setRosterSort('status')">Status ↓</button>
+        <button class="sort-btn" data-sort="name"   data-label="Name"   onclick="setRosterSort('name')">Name</button>
+        <button class="sort-btn" data-sort="market" data-label="Market" onclick="setRosterSort('market')">Market</button>
+      </span>
+    </div>
+    <input type="text" class="roster-search" id="roster-search" placeholder="Search by name&hellip;" oninput="filterRoster()">
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 18px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);">
+    <span style="font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-right:4px;">Legend</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;">
+        <circle cx="7" cy="7" r="6" fill="#f59e0b33" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#f59e0b">&#10003;</text>
+      </svg>
+      LMS Complete
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;">
+        <circle cx="7" cy="7" r="6" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
+        <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="var(--green)">&#10003;</text>
+      </svg>
+      Certified
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:4px;padding:3px 8px;">
+      <svg width="14" height="14" viewBox="0 0 16 16" style="flex-shrink:0;">
+        <path d="M8,8 L8,1 A7,7,0,0,1,14.06,11.5 Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1"/>
+        <path d="M8,8 L14.06,11.5 A7,7,0,0,1,1.94,11.5 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+        <path d="M8,8 L1.94,11.5 A7,7,0,0,1,8,1 Z" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+        <line x1="8" y1="1" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
+        <line x1="14.06" y1="11.5" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
+        <line x1="1.94" y1="11.5" x2="8" y2="8" stroke="var(--bg)" stroke-width="1.5"/>
+      </svg>
+      Secondary Curriculum Complete
+    </span>
+  </div>
+  <div class="roster-wrap">
+    <div class="roster-left" id="roster-left"></div>
+    <div class="roster-right" id="roster-right">
+      <div class="no-data">Select a person to see their details</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RAW = [{"FirstName": "Gerri", "LastName": "Major", "Email": "Gerri.Hadley@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Central Sls", "Manager": "Daniel Eldridge", "MgrEmail": "Daniel.Eldridge@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2008-06-02", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Philip", "LastName": "White", "Email": "PWhite@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Central Sls", "Manager": "Jason Keene", "MgrEmail": "JKeene@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2006-04-01", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Shayla", "LastName": "Metz", "Email": "SMetz@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Central Sls", "Manager": "Robert Venturella", "MgrEmail": "RVenturella@kmbs.konicaminolta.us", "MgrTitle": "Major Acct Sales Manager", "HireDate": "2025-02-18", "Complete": "Yes", "Date": "2025-02-18", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Anna", "LastName": "Harbort", "Email": "aharbort@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Dapack", "Manager": "Clayton Crane", "MgrEmail": "ecrane@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-07-15", "Complete": "Yes", "Date": "2024-07-15", "HCDate": "2026-02-03", "HCQtr": "FY2025 Q4", "Healthcare": "Yes", "AcuteDate": "2026-05-15", "AcuteQtr": "FY2026 Q1", "AcuteCare": "Yes", "AmbDate": "2026-05-20", "AmbQtr": "FY2026 Q1", "Ambulatory": "Yes", "ExtDate": "2026-06-01", "ExtQtr": "FY2026 Q1", "Extended": "Yes"}, {"FirstName": "Daniel", "LastName": "Chavarria", "Email": "DChavarria@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Dapack", "Manager": "Clayton Crane", "MgrEmail": "ecrane@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-12-16", "Complete": "Yes", "Date": "2024-12-16", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Alexis", "LastName": "Hollie", "Email": "AHollie@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Florida", "Manager": "Jonathan Walters", "MgrEmail": "jwalters@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2025-09-15", "Complete": "Yes", "Date": "2025-09-16", "HCDate": "2026-04-25", "HCQtr": "FY2026 Q1", "Healthcare": "Yes", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "2026-04-10", "AmbQtr": "FY2026 Q1", "Ambulatory": "Yes", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Susan", "LastName": "Bindas", "Email": "SBindas@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - GES", "Market": "Florida", "Manager": "Wesley Hardin", "MgrEmail": "WHardin@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2019-05-06", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Gina", "LastName": "Vertullo", "Email": "GVertullo@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Great Lakes", "Manager": "Bryan Davis", "MgrEmail": "bryan.davis@KMBS.konicaminolta.us", "MgrTitle": "Major Acct Sales Manager", "HireDate": "2025-12-08", "Complete": "Yes", "Date": "2025-12-09", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Mark", "LastName": "Brown", "Email": "Mark.Brown@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Great Lakes", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2013-03-29", "Complete": "Yes", "Date": "2021-05-24", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Tyler", "LastName": "Watling", "Email": "TWatling@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Great Lakes", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2022-03-07", "Complete": "Yes", "Date": "2022-03-16", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jack", "LastName": "Sammons", "Email": "JSammons@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2023-07-10", "Complete": "Yes", "Date": "2023-09-25", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Ryan", "LastName": "Hamilton", "Email": "RHamilton@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "2017-03-27", "Complete": "Yes", "Date": "2021-05-07", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Sean", "LastName": "Marshall", "Email": "Smarshall@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Heartland Sls", "Manager": "Michelle Ashby", "MgrEmail": "MAshby@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2015-04-06", "Complete": "Yes", "Date": "2021-06-25", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Cory", "LastName": "Coleman", "Email": "ccoleman@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-09-09", "Complete": "Yes", "Date": "2024-09-09", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Dillon", "LastName": "Basnight", "Email": "DBasnight@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2026-04-20", "Complete": "Yes", "Date": "2026-04-20", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Erik", "LastName": "Goetzke", "Email": "egoetzke@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2022-09-21", "Complete": "Yes", "Date": "2023-10-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Matthew", "LastName": "Doan", "Email": "mdoan@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-04-11", "Complete": "Yes", "Date": "2024-04-11", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Sandeep", "LastName": "Satija", "Email": "SSatija@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Brian Bullock", "MgrEmail": "BBullock@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-12-15", "Complete": "Yes", "Date": "2025-12-15", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Sean", "LastName": "Hur", "Email": "SHur@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-05-19", "Complete": "Yes", "Date": "2025-05-19", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Stephen", "LastName": "Farrell", "Email": "SFarrell@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-01-07", "Complete": "Yes", "Date": "2025-01-07", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Terrance", "LastName": "O'Leary", "Email": "toleary@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-Atlantic", "Manager": "Kenneth Scheuer", "MgrEmail": "KScheuer@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-07-08", "Complete": "Yes", "Date": "2024-07-08", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Andrea", "LastName": "Adkins", "Email": "AAdkins@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1993-07-19", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "2026-02-02", "HCQtr": "FY2025 Q4", "Healthcare": "Yes", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Dee", "LastName": "Gilbert", "Email": "DGilbert@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1997-03-03", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Heather", "LastName": "Yeager", "Email": "HYeager@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2023-04-19", "Complete": "Yes", "Date": "2023-05-05", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Leigh", "LastName": "Whitaker", "Email": "TWhitaker@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Mid-South", "Manager": "Karie Lee", "MgrEmail": "Karie.Lee@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2019-04-02", "Complete": "Yes", "Date": "2021-05-11", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Mark", "LastName": "Caldarera", "Email": "caldarer@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Mid-South", "Manager": "Charles Wollfarth", "MgrEmail": "BWollfarth@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "1984-03-28", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Donald", "LastName": "Dempsey", "Email": "DDempsey@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2025-09-22", "Complete": "Yes", "Date": "2025-09-22", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Francis", "LastName": "McBride", "Email": "fmcbride@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2023-08-21", "Complete": "Yes", "Date": "2023-09-01", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Robert", "LastName": "Maloney", "Email": "bmaloney@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Northeast Sls", "Manager": "Roger DiGregorio", "MgrEmail": "RDigregorio@kmbs.konicaminolta.us", "MgrTitle": "Dir, Strategic Sales", "HireDate": "2024-06-24", "Complete": "Yes", "Date": "2024-06-24", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Dominic", "LastName": "Donato", "Email": "ddonato@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2021-07-19", "Complete": "Yes", "Date": "2022-08-23", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Isabella", "LastName": "Delgado", "Email": "IDelgado@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Richard Bortner", "MgrEmail": "RBortner@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2022-12-05", "Complete": "Yes", "Date": "2022-12-13", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jerry", "LastName": "Jelinek", "Email": "JJelinek@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Abigail Adams", "MgrEmail": "AAdams@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2025-12-08", "Complete": "Yes", "Date": "2025-12-08", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Olivia", "LastName": "Gilmore", "Email": "ogilmore@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2013-07-01", "Complete": "Yes", "Date": "2021-05-07", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Ty", "LastName": "Foster", "Email": "Ty.Foster@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Richard Bortner", "MgrEmail": "RBortner@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2026-04-01", "Complete": "Yes", "Date": "2026-04-01", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Whitney", "LastName": "Hicks", "Email": "WHicks@kmbs.konicaminolta.us", "JobTitle": "Senior Account Executive - HS", "Market": "Texas", "Manager": "Emmanuel Torres", "MgrEmail": "ETorres@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2023-05-23", "Complete": "Yes", "Date": "2023-05-24", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Anne", "LastName": "Davis", "Email": "ADavis@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2019-10-15", "Complete": "Yes", "Date": "2021-05-14", "HCDate": "2026-02-04", "HCQtr": "FY2025 Q4", "Healthcare": "Yes", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Brian", "LastName": "Steen", "Email": "BSteen@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2024-11-11", "Complete": "Yes", "Date": "2024-11-11", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Danielle", "LastName": "Masella", "Email": "DMasella@kmbs.konicaminolta.us", "JobTitle": "Major Account Executive - HS", "Market": "West Sls", "Manager": "Bill Slater", "MgrEmail": "bslater@kmbs.konicaminolta.us", "MgrTitle": "Sr. Sales Manager", "HireDate": "2007-09-10", "Complete": "Yes", "Date": "2021-05-27", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jeremy", "LastName": "Figueroa", "Email": "jfigueroa@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "West Sls", "Manager": "Benjamin Cervantez Ramos", "MgrEmail": "BRamos@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2024-05-28", "Complete": "Yes", "Date": "2024-05-28", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Kevin", "LastName": "Durant", "Email": "kdurant@kmbs.konicaminolta.us", "JobTitle": "Named Account Executive - HS", "Market": "West Sls", "Manager": "Jaime Ibon", "MgrEmail": "JIbon@kmbs.konicaminolta.us", "MgrTitle": "Sales Manager", "HireDate": "2024-09-03", "Complete": "Yes", "Date": "2024-09-18", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jason", "LastName": "Keene", "Email": "JKeene@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Eric Montgomery", "MgrEmail": "EMontgomery@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Robert", "LastName": "Venturella", "Email": "RVenturella@kmbs.konicaminolta.us", "JobTitle": "Major Acct Sales Manager", "Market": "Central Sls", "Manager": "Eric Montgomery", "MgrEmail": "EMontgomery@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Clayton", "LastName": "Crane", "Email": "ecrane@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Central Sls", "Manager": "Heath Kidd", "MgrEmail": "HKidd@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jonathan", "LastName": "Walters", "Email": "jwalters@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Southeast Sls", "Manager": "Jason Allen", "MgrEmail": "Jason.Allen@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Wesley", "LastName": "Hardin", "Email": "WHardin@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Southeast Sls", "Manager": "Mark Messner", "MgrEmail": "mmessner@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Bryan", "LastName": "Davis", "Email": "bryan.davis@KMBS.konicaminolta.us", "JobTitle": "Major Acct Sales Manager", "Market": "Mid-Atlantic Sls", "Manager": "Vickie Lewis", "MgrEmail": "VLewis@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Michael", "LastName": "Mattson", "Email": "MMattson@kmbs.konicaminolta.us", "JobTitle": "Area VP Sales - Central", "Market": "Heartland Sls", "Manager": "Dana Drury", "MgrEmail": "Dana.Drury@kmbs.konicaminolta.us", "MgrTitle": "Market VP - Central", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Michelle", "LastName": "Ashby", "Email": "MAshby@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Heartland Sls", "Manager": "Michael Mattson", "MgrEmail": "MMattson@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - Central", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Kenneth", "LastName": "Scheuer", "Email": "KScheuer@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Mid-Atlantic Sls", "Manager": "Vickie Lewis", "MgrEmail": "VLewis@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Brian", "LastName": "Bullock", "Email": "BBullock@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Mid-Atlantic Sls", "Manager": "Franklin Frayser", "MgrEmail": "RFrayser@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Karie", "LastName": "Lee", "Email": "Karie.Lee@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Southeast Sls", "Manager": "Jeffrey Lee", "MgrEmail": "JLee@kmbs.konicaminolta.us", "MgrTitle": "Market VP - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Charles", "LastName": "Wollfarth", "Email": "BWollfarth@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Southeast Sls", "Manager": "Donal McDonagh", "MgrEmail": "DMcDonagh@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Roger", "LastName": "DiGregorio", "Email": "RDigregorio@kmbs.konicaminolta.us", "JobTitle": "Dir, Strategic Sales", "Market": "Northeast Sls", "Manager": "Jason Dexter", "MgrEmail": "JDexter@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - East", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Emmanuel", "LastName": "Torres", "Email": "ETorres@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "Central Sls", "Manager": "Brad Windham", "MgrEmail": "windhamb@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - South", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Richard", "LastName": "Bortner", "Email": "RBortner@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Harrison Harpole", "MgrEmail": "HHarpole@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Abigail", "LastName": "Adams", "Email": "AAdams@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "Central Sls", "Manager": "Harrison Harpole", "MgrEmail": "HHarpole@kmbs.konicaminolta.us", "MgrTitle": "Area Vice President", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Bill", "LastName": "Slater", "Email": "bslater@kmbs.konicaminolta.us", "JobTitle": "Sr. Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Benjamin", "LastName": "Cervantez Ramos", "Email": "BRamos@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}, {"FirstName": "Jaime", "LastName": "Ibon", "Email": "JIbon@kmbs.konicaminolta.us", "JobTitle": "Sales Manager", "Market": "West Sls", "Manager": "Inbo Lee", "MgrEmail": "ilee@kmbs.konicaminolta.us", "MgrTitle": "Area VP Sales - West", "HireDate": "", "Complete": "No", "Date": "", "HCDate": "", "HCQtr": "", "Healthcare": "No", "AcuteDate": "", "AcuteQtr": "", "AcuteCare": "No", "AmbDate": "", "AmbQtr": "", "Ambulatory": "No", "ExtDate": "", "ExtQtr": "", "Extended": "No"}];
+const TLG_SET = new Set(["Bianca Davis", "Bradley Pierce", "CJ Homer", "Chris Curtis", "Dale Kinsey", "James Parker", "Jason Ackerman", "Jeremy MacBean", "Laura Sefcik", "Resmie Biba", "Rich Moore", "Samantha Maresca", "Sara Thompson", "Staci Musco"]);
+
+let filtered = [];
+let hideTLG = false;
+let regionChart, trendChart, subcertChart;
+let rosterSortField = 'status';
+let rosterSortDir   = 'desc';
+let rosterView      = 'individual';
+
+function sel(id){ return document.getElementById(id); }
+function cv(v){ return getComputedStyle(document.body).getPropertyValue(v).trim(); }
+
+// Theme
+(function(){
+  if(localStorage.getItem('pb-theme')==='light') document.body.classList.add('light-mode');
+  sel('btn-theme').textContent = document.body.classList.contains('light-mode') ? '🌙 Dark' : '☀ Light';
+})();
+function toggleTheme(){
+  const light = document.body.classList.toggle('light-mode');
+  localStorage.setItem('pb-theme', light ? 'light' : 'dark');
+  sel('btn-theme').textContent = light ? '🌙 Dark' : '☀ Light';
+  applyFilters();
+}
+function toggleExportDrop() {
+  sel('export-menu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  const d=sel('export-drop'); if(d&&!d.contains(e.target)) sel('export-menu').classList.remove('open');
+});
+function setupPrintHeader(title,subtitle) {
+  sel('ph-title').textContent=title;
+  sel('ph-date').textContent=subtitle;
+  const certLabel=sel('f-cert').options[sel('f-cert').selectedIndex].text;
+  const statusLabel=sel('f-status').options[sel('f-status').selectedIndex].text;
+  const market=sel('f-market').value||'All Markets';
+  const from=sel('f-date-from').value||'',to=sel('f-date-to').value||'';
+  const parts=[`Curriculum: ${certLabel}`,`Status: ${statusLabel}`,`Market: ${market}`];
+  if(from||to) parts.push(`Dates: ${from||'—'} to ${to||'—'}`);
+  if(hideTLG) parts.push('TLG hidden');
+  sel('ph-filters').textContent=parts.join('  |  ');
+}
+function doPrint(noSummary) {
+  if(noSummary) document.body.classList.add('print-no-summary');
+  window.onafterprint=function() {
+    document.body.classList.remove('print-no-summary');
+    sel('print-s1-label').style.display='none';
+    sel('print-s2').style.display='none';
+    sel('ph-desc').style.display='none';
+    window.onafterprint=null;
+  };
+  window.print();
+}
+function tds(cells) { return '<tr>'+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>'; }
+function thRow(labels) { return '<tr>'+labels.map(l=>`<th>${l}</th>`).join('')+'</tr>'; }
+function pBox(n,l) {
+  return '<div style="min-width:90px"><div style="font-size:30px;font-weight:700;color:#1a3a5c;line-height:1">'+n+'</div>'
+        +'<div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:5px">'+l+'</div></div>';
+}
+function pSection(title,rows) {
+  var h='<div style="min-width:150px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#666;margin-bottom:10px">'+title+'</div>';
+  rows.forEach(function(r){h+='<div style="display:flex;justify-content:space-between;gap:32px;padding:4px 0;border-bottom:1px solid #eee;font-size:12px"><span>'+r[0]+'</span><strong>'+r[1]+'</strong></div>';});
+  return h+'</div>';
+}
+function pFiscalQtr(d) {
+  if(!d) return null;
+  var pts=d.split('-'),yr=+pts[0],mo=+pts[1];
+  var fy=mo>=4?yr+1:yr,q=mo>=10?3:mo>=7?2:mo>=4?1:4;
+  return 'Q'+q+' FY'+String(fy).slice(2);
+}
+function runExport(type) {
+  sel('export-menu').classList.remove('open');
+  const certField=sel('f-cert').value||'Healthcare';
+  const now=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  sel('print-s1-label').style.display='none';
+  sel('print-s2').style.display='none';
+
+  if(type==='full') {
+    setupPrintHeader('Healthcare Certification Report',`Generated: ${now}  |  ${filtered.length} People`);
+    var pTotal=filtered.length,pCert=filtered.filter(p=>p[certField]==='Yes').length;
+    var pLMS=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes').length;
+    var pIP=filtered.filter(p=>p.Complete!=='Yes'&&p[certField]!=='Yes').length;
+    var pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
+    sel('print-stats').innerHTML=pBox(pTotal,'Total Assigned')+pBox(pCert,'Certified')+pBox(pLMS,'LMS Complete')+pBox(pIP,'In Progress')+pBox(pRate+'%','Completion Rate');
+    var qMap={};
+    filtered.filter(p=>p[certField]==='Yes'&&p.Date).forEach(p=>{var q=pFiscalQtr(p.Date);if(q)qMap[q]=(qMap[q]||0)+1;});
+    var qRows=Object.entries(qMap).sort((a,b)=>a[0].localeCompare(b[0]));
+    if(!qRows.length) qRows=[['No data','—']];
+    var pAcute=filtered.filter(p=>p.AcuteCare==='Yes').length,pAmb=filtered.filter(p=>p.Ambulatory==='Yes').length,pExt=filtered.filter(p=>p.Extended==='Yes').length;
+    sel('print-charts').innerHTML=pSection('Certification Pipeline',[['In Progress',pIP],['LMS Complete',pLMS],['Certified',pCert]])+pSection('Certifications by Quarter',qRows)+pSection('Secondary Curriculum',[['Acute Care',pAcute],['Ambulatory',pAmb],['Extended Care',pExt]]);
+    sel('print-roster-head').innerHTML=thRow(['#','Name','Market','Job Title','Curriculum Status','Cert Date','Acute Care','Ambulatory','Extended Care','Manager','Email']);
+    sel('print-roster-body').innerHTML=filtered.map((p,i)=>{
+      const status=p[certField]==='Yes'?'Certified':p.Complete==='Yes'?'LMS Complete':'In Progress';
+      const acute=p.AcuteCare==='Yes'?`Yes (${p.AcuteDate||''})`:'No';
+      const amb=p.Ambulatory==='Yes'?`Yes (${p.AmbDate||''})`:'No';
+      const ext=p.Extended==='Yes'?`Yes (${p.ExtDate||''})`:'No';
+      return tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Market||'—',p.JobTitle||'—',status,p.Date||'—',acute,amb,ext,p.Manager||'—',`<small>${p.Email||'—'}</small>`]);
+    }).join('');
+    doPrint(false);
+
+  } else if(type==='not-certified') {
+    const notCert=filtered.filter(p=>p[certField]!=='Yes');
+    setupPrintHeader('Not Certified — Healthcare',`Generated: ${now}  |  ${notCert.length} Employees`);
+    sel('print-roster-head').innerHTML=thRow(['#','Name','Job Title','Market','Email','Manager','Manager Email']);
+    sel('print-roster-body').innerHTML=notCert.length
+      ? notCert.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
+          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.JobTitle||'—',p.Market||'—',p.Email||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
+      : '<tr><td colspan="7" style="color:#999;font-style:italic;padding:10px 8px">All employees are certified</td></tr>';
+    sel('ph-desc').textContent=`Employees who have not yet earned ${sel('f-cert').options[sel('f-cert').selectedIndex].text} certification, sorted by manager. Use this list to contact employees and their managers to drive completion.`;
+    sel('ph-desc').style.display='block';
+    doPrint(true);
+
+  } else if(type==='manager-summary') {
+    const mgrMap={};
+    filtered.forEach(p=>{
+      const k=p.Manager||'(No Manager)';
+      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||'—',total:0,cert:0,lms:0,ip:0};
+      mgrMap[k].total++;
+      if(p[certField]==='Yes') mgrMap[k].cert++;
+      else if(p.Complete==='Yes') mgrMap[k].lms++;
+      else mgrMap[k].ip++;
+    });
+    const mgrs=Object.values(mgrMap).sort((a,b)=>(b.cert/b.total)-(a.cert/a.total));
+    setupPrintHeader('Manager Summary — Healthcare',`Generated: ${now}  |  ${mgrs.length} Managers`);
+    sel('print-roster-head').innerHTML=thRow(['Manager','Manager Email','Team Size','Certified','LMS Complete','In Progress','Completion %']);
+    sel('print-roster-body').innerHTML=mgrs.map(m=>tds([
+      `<b>${m.name}</b>`,m.email,m.total,m.cert,m.lms,m.ip,`<b>${Math.round(m.cert/m.total*100)}%</b>`
+    ])).join('');
+    sel('ph-desc').textContent='Certification completion rates by manager, sorted from lowest to highest. Managers at the top of the list have the most employees still in progress and need the most follow-up.';
+    sel('ph-desc').style.display='block';
+    doPrint(true);
+
+  } else if(type==='action-required') {
+    const almostThere=filtered.filter(p=>p.Complete==='Yes'&&p[certField]!=='Yes');
+    const secGaps=filtered.filter(p=>p[certField]==='Yes'&&(p.AcuteCare!=='Yes'||p.Ambulatory!=='Yes'||p.Extended!=='Yes'));
+    setupPrintHeader('Action Required — Healthcare',`Generated: ${now}  |  ${almostThere.length+secGaps.length} Employees Need Follow-Up`);
+    sel('ph-desc').textContent='Employees who have started but not yet completed their certification journey. Each section identifies a different gap and the managers responsible for follow-up.';
+    sel('ph-desc').style.display='block';
+    sel('print-s1-label').innerHTML=`LMS COMPLETE — AWAITING CERTIFICATION (${almostThere.length})<div style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:#555;font-style:italic;margin-top:4px">These employees have completed the LMS curriculum but have not yet been certified. Follow up to confirm exam status or escalate to completion.</div>`;
+    sel('print-s1-label').style.display='block';
+    sel('print-roster-head').innerHTML=thRow(['#','Name','Email','Market','Manager','Manager Email']);
+    sel('print-roster-body').innerHTML=almostThere.length
+      ? almostThere.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||''))
+          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
+      : '<tr><td colspan="6" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
+    sel('print-s2').style.display='block';
+    sel('print-s2-label').innerHTML=`CERTIFIED — MISSING SECONDARY CURRICULUM (${secGaps.length})<div style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:#555;font-style:italic;margin-top:4px">These employees hold their certification but have not completed all secondary curriculums. Follow up to encourage enrollment in outstanding courses.</div>`;
+    sel('print-roster-head2').innerHTML=thRow(['#','Name','Email','Market','Manager','Acute Care','Ambulatory','Extended Care']);
+    sel('print-roster-body2').innerHTML=secGaps.length
+      ? secGaps.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||''))
+          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Email||'—',p.Market||'—',p.Manager||'—',
+            p.AcuteCare==='Yes'?'&#10003;':'&#10007;',p.Ambulatory==='Yes'?'&#10003;':'&#10007;',p.Extended==='Yes'?'&#10003;':'&#10007;'])).join('')
+      : '<tr><td colspan="8" style="color:#999;font-style:italic;padding:10px 8px">No employees in this category</td></tr>';
+    doPrint(true);
+  }
+}
+
+// Populate filter dropdowns from data
+const allMarkets = [...new Set(RAW.map(r=>r.Market).filter(Boolean))].sort();
+allMarkets.forEach(m => sel('f-market').innerHTML += `<option value="${m}">${m}</option>`);
+
+['f-cert','f-status','f-market','f-date-from','f-date-to'].forEach(id => {
+  sel(id).addEventListener('change', applyFilters);
+});
+
+function toggleHamburger(){
+  const menu = sel('hamburger-menu');
+  const btn  = sel('hamburger-btn');
+  const open = menu.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+document.addEventListener('click', function(e){
+  const h = sel('hamburger');
+  if(h && !h.contains(e.target)){
+    sel('hamburger-menu').classList.remove('open');
+    sel('hamburger-btn').classList.remove('open');
+  }
+  if(!e.target.classList.contains('info-btn')){
+    sel('info-popover').classList.remove('visible');
+  }
+});
+
+const INFO_MSGS = {
+  'total-assigned':      'Total number of people currently assigned this certification track, after any active filters.',
+  'curriculum-complete': 'People who have finished all required LMS coursework (Healthcare Foundational curriculum). Completing the LMS is the first step — manager-confirmed certification is a separate process that follows.',
+  'certified':           'People who have received full certification, confirmed by their manager after completing the LMS curriculum. This is the final step in the primary certification track.',
+  'not-certified':       'People assigned the curriculum who have not yet received manager-confirmed certification. Includes both people still working through the LMS and those who have finished the LMS but are awaiting manager sign-off.',
+  'completion-rate':     'Percentage of assigned people who have earned full manager-confirmed certification. Calculated as Certified ÷ Total Assigned.',
+  'pipeline':            'The three stages of the certification journey: In Progress — enrolled but LMS coursework not yet complete; Curriculum Complete — LMS done, awaiting manager sign-off; Certified — fully certified by manager.',
+  'over-time':           'Certifications earned per KM fiscal quarter, stacked by curriculum type. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
+  'subcert':             'Certification counts broken out by curriculum. Healthcare Foundational must be completed first. Acute Care, Ambulatory, and Extended Care are secondary curriculums that build on top of it. Secondary curriculum data is currently in progress.',
+  'roster':              'Full list of assigned people with their certification status and pipeline position. Click a name to see job title, market, cert date, secondary curriculum progress, and manager info. Use the View toggle to group by manager.',
+  'export':              'Export a printable report of the data currently on screen. Filter first, then export — the report only includes what passes your active filters. Examples: set Certification = "Acute Care" then export for an Acute Care–only report; filter to a region then export for a regional snapshot; hide TLG then export to share with managers. Full Report lists everyone with full detail. Not Certified is a contact list for outreach. Manager Summary rolls up team count and completion % per manager. Action Required flags who is close to fully certified and who still needs the main curriculum.',
+};
+function showInfo(e, key){
+  const pop = sel('info-popover');
+  pop.textContent = INFO_MSGS[key] || '';
+  pop.classList.add('visible');
+  const r = e.target.getBoundingClientRect();
+  pop.style.top  = (r.bottom + 6) + 'px';
+  pop.style.left = Math.min(r.left, window.innerWidth - 280) + 'px';
+  e.stopPropagation();
+}
+
+function toggleTLG(){
+  hideTLG = !hideTLG;
+  sel('btn-tlg').classList.toggle('active', hideTLG);
+  sel('btn-tlg').textContent = hideTLG ? 'Show TLG' : 'Hide TLG';
+  applyFilters();
+}
+
+function resetFilters(){
+  ['f-cert','f-status','f-market','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
+  if(hideTLG){ hideTLG=false; sel('btn-tlg').classList.remove('active'); sel('btn-tlg').textContent='Hide TLG'; }
+  applyFilters();
+}
+
+function applyFilters(){
+  const cert   = sel('f-cert').value;
+  const certField = cert || 'Healthcare';
+  const status = sel('f-status').value;
+  const market = sel('f-market').value;
+  const from   = sel('f-date-from').value;
+  const to     = sel('f-date-to').value;
+  filtered = RAW.filter(r => {
+    if(hideTLG && TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
+    if(status && r[certField] !== status) return false;
+    if(market && r.Market !== market) return false;
+    if(from && r.Date && r.Date < from) return false;
+    if(to   && r.Date && r.Date > to)   return false;
+    return true;
+  });
+  sel('result-count').textContent = `${filtered.length} People`;
+  render();
+}
+
+function render(){
+  const isLight    = document.body.classList.contains('light-mode');
+  const chartLabel = isLight ? cv('--text') : cv('--muted');
+  const certField  = sel('f-cert').value || 'Healthcare';
+
+  // Stat cards
+  const total          = filtered.length;
+  const curriculumDone = filtered.filter(r=>r.Complete==='Yes').length;
+  const certified      = filtered.filter(r=>r[certField]==='Yes').length;
+  const notCert        = total - certified;
+  const rate           = total > 0 ? Math.round(certified/total*100) : 0;
+
+  sel('s-total').textContent          = total;
+  sel('s-curriculum').textContent     = curriculumDone;
+  sel('s-curriculum-sub').textContent = total > 0 ? `${curriculumDone} of ${total} assigned` : '';
+  sel('s-certified').textContent      = certified;
+  sel('s-not').textContent            = notCert;
+  sel('s-rate').textContent           = rate + '%';
+  sel('s-rate-sub').textContent       = total > 0 ? `${certified} of ${total} assigned` : '';
+
+  // Pipeline chart — three stages of the certification journey
+  const pipelineNotStarted   = filtered.filter(r=>r.Complete!=='Yes'&&r[certField]!=='Yes').length;
+  const pipelineCurrComplete = filtered.filter(r=>r.Complete==='Yes'&&r[certField]!=='Yes').length;
+  const pipelineHCCertified  = filtered.filter(r=>r[certField]==='Yes').length;
+
+  const ipBox = sel('in-progress-box');
+  sel('in-progress-count').textContent = pipelineNotStarted;
+  ipBox.style.display = pipelineNotStarted > 0 ? 'inline-flex' : 'none';
+
+  if(regionChart) regionChart.destroy();
+  regionChart = new Chart(sel('regionChart'), {
+    type: 'bar',
+    data: {
+      labels: ['In Progress','Curriculum Complete','Certified'],
+      datasets: [{
+        data: [pipelineNotStarted, pipelineCurrComplete, pipelineHCCertified],
+        backgroundColor: [cv('--red')+'cc', cv('--accent')+'cc', cv('--green')+'cc'],
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label: ctx => ` ${ctx.raw} People`
+          }
+        },
+        datalabels:{display:false}
+      },
+      scales:{
+        x:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11},stepSize:1}},
+        y:{grid:{display:false},ticks:{color:chartLabel,font:{size:12}}}
+      }
+    }
+  });
+
+  // Trend chart — stacked bars by sub-cert per fiscal quarter
+  const TREND_SUBCERTS = [
+    {key:'Healthcare', qtrKey:'HCQtr',    label:'Healthcare Foundational', color:cv('--green')},
+    {key:'AcuteCare',  qtrKey:'AcuteQtr', label:'Acute Care',    color:cv('--accent3')},
+    {key:'Ambulatory', qtrKey:'AmbQtr',   label:'Ambulatory',    color:cv('--accent2')},
+    {key:'Extended',   qtrKey:'ExtQtr',   label:'Extended Care', color:cv('--teal')},
+  ];
+  const parseQtr = s => { const m=s.match(/FY(\d+)\s+Q(\d)/); return m ? parseInt(m[1])*10+parseInt(m[2]) : 0; };
+  const allTrendQtrs = new Set();
+  TREND_SUBCERTS.forEach(sc => {
+    filtered.forEach(r => { if(r[sc.key]==='Yes' && r[sc.qtrKey]) allTrendQtrs.add(r[sc.qtrKey]); });
+  });
+  const trendQtrs = [...allTrendQtrs].sort((a,b)=>parseQtr(a)-parseQtr(b));
+  const trendDatasets = TREND_SUBCERTS.map(sc => ({
+    label: sc.label,
+    data:  trendQtrs.map(q => filtered.filter(r=>r[sc.key]==='Yes'&&r[sc.qtrKey]===q).length),
+    backgroundColor: sc.color+'bb',
+    borderRadius: 3,
+    borderSkipped: false,
+  }));
+
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(sel('trendChart'), {
+    type: 'bar',
+    data: { labels:trendQtrs, datasets:trendDatasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom',labels:{color:chartLabel,font:{size:10},boxWidth:8,padding:6}},
+        tooltip:{mode:'index',intersect:false},
+        datalabels:{display:false}
+      },
+      scales:{
+        x:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:10},maxRotation:45},stacked:true},
+        y:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11},stepSize:1},stacked:true}
+      }
+    }
+  });
+
+  // Sub-cert breakdown chart
+  const subLabels = ['Healthcare Foundational','Acute Care','Ambulatory','Extended Care'];
+  const subKeys   = ['Healthcare','AcuteCare','Ambulatory','Extended'];
+  const subColors = [cv('--green'),cv('--accent3'),cv('--accent2'),cv('--teal')];
+  const subCounts = subKeys.map(k => filtered.filter(r=>r[k]==='Yes').length);
+  const subNotCounts = subKeys.map(k => filtered.filter(r=>r[k]==='No').length);
+
+  if(subcertChart) subcertChart.destroy();
+  subcertChart = new Chart(sel('subcertChart'), {
+    type: 'bar',
+    data: {
+      labels: subLabels,
+      datasets: [
+        { label:'Certified',     data:subCounts,    backgroundColor:subColors.map(c=>c+'cc'), borderRadius:4, borderSkipped:false },
+        { label:'Not Certified', data:subNotCounts, backgroundColor:cv('--surface2'), borderRadius:4, borderSkipped:false, borderWidth:1, borderColor:cv('--border') },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom',labels:{color:chartLabel,font:{size:11},boxWidth:10,padding:8}},
+        tooltip:{mode:'index',intersect:false},
+        datalabels:{display:false}
+      },
+      scales:{
+        x:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:10}},stacked:true},
+        y:{grid:{color:cv('--border')},ticks:{color:chartLabel,font:{size:11},stepSize:1},stacked:true}
+      }
+    }
+  });
+
+  renderRosterList();
+}
+
+function subCertCount(r){
+  return ['Healthcare','AcuteCare','Ambulatory','Extended'].filter(k=>r[k]==='Yes').length;
+}
+
+function setRosterSort(field){
+  if(rosterSortField === field) {
+    rosterSortDir = rosterSortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    rosterSortField = field;
+    rosterSortDir   = 'desc';
+  }
+  renderRosterList();
+}
+
+function pipelineSteps(p) {
+  const bothDone = p.Healthcare==='Yes';
+  const lmsOnly  = !bothDone && p.Complete==='Yes';
+  const amber    = '#f59e0b';
+  function dot(color, tip, check) {
+    const bg     = check ? color+'33' : 'var(--surface2)';
+    const border = check ? color : 'var(--border)';
+    const txt    = check ? color : 'var(--muted)';
+    return `<div title="${tip}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${bg};border:1.5px solid ${border};color:${txt}">${check?'&#10003;':''}</div>`;
+  }
+  function pie(a, b, c, la, lb, lc) {
+    const blue = cv('--accent');
+    const sep  = cv('--bg');
+    const s2   = cv('--surface2');
+    const bd   = cv('--border');
+    function seg(done) {
+      return done
+        ? `fill="${blue}" stroke="${blue}" stroke-width="1"`
+        : `fill="${s2}" stroke="${bd}" stroke-width="1"`;
+    }
+    return `<svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;overflow:visible">
+      <path d="M8,8 L8,1 A7,7,0,0,1,14.06,11.5 Z" ${seg(a)}><title>${la}</title></path>
+      <path d="M8,8 L14.06,11.5 A7,7,0,0,1,1.94,11.5 Z" ${seg(b)}><title>${lb}</title></path>
+      <path d="M8,8 L1.94,11.5 A7,7,0,0,1,8,1 Z" ${seg(c)}><title>${lc}</title></path>
+      <line x1="8" y1="1" x2="8" y2="8" stroke="${sep}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="14.06" y1="11.5" x2="8" y2="8" stroke="${sep}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="1.94" y1="11.5" x2="8" y2="8" stroke="${sep}" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>`;
+  }
+  const lmsColor = bothDone ? cv('--green') : lmsOnly ? amber : 'var(--border)';
+  const lmsCheck = p.Complete==='Yes';
+  const hcColor  = cv('--green');
+  const hcCheck  = p.Healthcare==='Yes';
+  return `<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
+    ${dot(lmsColor,'LMS Complete',lmsCheck)}
+    <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
+    ${dot(hcColor,'Certified',hcCheck)}
+    <div style="width:8px;height:1px;background:var(--border);flex-shrink:0;"></div>
+    ${pie(p.AcuteCare==='Yes',p.Ambulatory==='Yes',p.Extended==='Yes','Acute Care','Ambulatory','Extended Care')}
+  </div>`;
+}
+
+function tierStyle(p, extraIndent) {
+  extraIndent = extraIndent || 0;
+  const base = 14 + extraIndent;
+  const green = cv('--green');
+  const amber = '#f59e0b';
+  const blue  = cv('--accent');
+  const allSec = p.AcuteCare==='Yes' && p.Ambulatory==='Yes' && p.Extended==='Yes';
+  if(p.Healthcare==='Yes' && allSec) return `border-left:3px solid ${blue};padding-left:${base-3}px;`;
+  if(p.Healthcare==='Yes') return `border-left:3px solid ${green};padding-left:${base-3}px;`;
+  if(p.Complete==='Yes')   return `border-left:3px solid ${amber};padding-left:${base-3}px;`;
+  return extraIndent ? `padding-left:${base}px;` : '';
+}
+
+function setRosterView(v) {
+  rosterView = v;
+  sel('view-individual').classList.toggle('active', v==='individual');
+  sel('view-manager').classList.toggle('active', v==='manager');
+  sel('sort-controls').style.display = v==='individual' ? 'flex' : 'none';
+  sel('roster-right').innerHTML = '<div class="no-data">Select a person to see their details</div>';
+  renderRosterList();
+}
+
+function toggleMgrGroup(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
+function renderRosterList(){
+  const certField = sel('f-cert').value || 'Healthcare';
+
+  if(rosterView === 'manager') {
+    const groups = {};
+    filtered.forEach(p => {
+      const mgr = p.Manager || 'No Manager';
+      if(!groups[mgr]) groups[mgr] = [];
+      groups[mgr].push(p);
+    });
+    const mgrsSorted = Object.keys(groups).sort((a,b) => groups[b].length - groups[a].length);
+    sel('roster-left').innerHTML = mgrsSorted.map(mgr => {
+      const team = groups[mgr];
+      const cert = team.filter(p=>p[certField]==='Yes').length;
+      const lms  = team.filter(p=>p.Complete==='Yes').length;
+      const peopleHtml = team
+        .sort((a,b)=>(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
+        .map(p => {
+          const fullName = `${p.FirstName} ${p.LastName}`;
+          return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${fullName}" style="${tierStyle(p,10)}">
+            <span class="roster-name">${fullName}</span>
+            ${pipelineSteps(p)}
+          </div>`;
+        }).join('');
+      return `<div>
+        <div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text)">${mgr}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${team.length} rep${team.length!==1?'s':''} &middot; ${lms} LMS &middot; ${cert} certified</div>
+          </div>
+          <span class="mgr-chevron">&#9660;</span>
+        </div>
+        <div class="mgr-team open">${peopleHtml}</div>
+      </div>`;
+    }).join('') || `<div class="no-data">No people match filters</div>`;
+    filterRoster();
+    return;
+  }
+
+  // Individual view
+  const d = rosterSortDir === 'desc' ? -1 : 1;
+  const sorted = [...filtered].sort((a,b) => {
+    if(rosterSortField === 'name') {
+      return d * (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
+    } else if(rosterSortField === 'market') {
+      const rc = d * (a.Market||'').localeCompare(b.Market||'');
+      return rc !== 0 ? rc : (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
+    } else {
+      function score(p) { const allSec=p.AcuteCare==='Yes'&&p.Ambulatory==='Yes'&&p.Extended==='Yes'; return (p[certField]==='Yes'&&allSec)?3:p[certField]==='Yes'?2:p.Complete==='Yes'?1:0; }
+      const diff = score(a) - score(b);
+      if(diff !== 0) return d * diff;
+      return subCertCount(b) - subCertCount(a);
+    }
+  });
+
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    if(!btn.dataset.sort) return;
+    const active = btn.dataset.sort === rosterSortField;
+    btn.classList.toggle('active', active);
+    const arrow = active ? (rosterSortDir === 'desc' ? ' ↓' : ' ↑') : '';
+    btn.textContent = btn.dataset.label + arrow;
+  });
+
+  sel('roster-left').innerHTML = sorted.map(p => {
+    const fullName = `${p.FirstName} ${p.LastName}`;
+    return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${fullName}" style="${tierStyle(p)}">
+      <span class="roster-name">${fullName}</span>
+      ${pipelineSteps(p)}
+    </div>`;
+  }).join('') || `<div class="no-data">No people match filters</div>`;
+
+  filterRoster();
+  const first = sel('roster-left').querySelector('.roster-person:not([style*="none"])') ||
+                sel('roster-left').querySelector('.roster-person');
+  if(first) rosterSelect(first);
+}
+
+function rosterSelect(el){
+  document.querySelectorAll('.roster-person').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  const name = el.dataset.name;
+  const p = filtered.find(r=>`${r.FirstName} ${r.LastName}`===name);
+  if(!p) return;
+  const isCert = p.Healthcare==='Yes';
+  function fmtDate(d) {
+    if (!d) return '&#8212;';
+    const [y,mo,dy] = d.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[parseInt(mo)-1] + ' ' + parseInt(dy) + ', ' + y;
+  }
+  const SUBCERT_DEFS = [
+    {key:'Healthcare', dateKey:'HCDate',    qtrKey:'HCQtr',    label:'Healthcare Foundational'},
+    {key:'AcuteCare',  dateKey:'AcuteDate', qtrKey:'AcuteQtr', label:'Acute Care'},
+    {key:'Ambulatory', dateKey:'AmbDate',   qtrKey:'AmbQtr',   label:'Ambulatory'},
+    {key:'Extended',   dateKey:'ExtDate',   qtrKey:'ExtQtr',   label:'Extended Care'},
+  ];
+  sel('roster-right').innerHTML = `
+    <div class="roster-right-header">
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px">${p.FirstName} ${p.LastName}</div>
+      <span class="badge-status ${isCert?'certified':'not-certified'}">${isCert?'Certified':'Not Yet Certified'}</span>
+      ${isCert && p.HCDate ? `<span style="font-size:12px;color:var(--muted);margin-left:8px">${fmtDate(p.HCDate)}</span>` : ''}
+    </div>
+    <div class="detail-grid">
+      <div><div class="detail-label">Job Title</div><div class="detail-value">${p.JobTitle||'&#8212;'}</div></div>
+      <div><div class="detail-label">Market</div><div class="detail-value">${p.Market||'&#8212;'}</div></div>
+      <div><div class="detail-label">Healthcare Foundational</div><div class="detail-value">${p.Complete==='Yes' ? '&#10003; LMS Complete' : 'Not Complete'}</div></div>
+      <div><div class="detail-label">Hire Date</div><div class="detail-value">${fmtDate(p.HireDate)}</div></div>
+      <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${p.Email}" style="color:var(--accent);text-decoration:none">${p.Email||'&#8212;'}</a></div></div>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Secondary Curriculums</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${SUBCERT_DEFS.filter(sc=>sc.key!=='Healthcare').map(sc => {
+          const yes = p[sc.key]==='Yes';
+          const dateStr = yes && p[sc.dateKey] ? fmtDate(p[sc.dateKey]) + (p[sc.qtrKey] ? ' &middot; ' + p[sc.qtrKey] : '') : '';
+          return `<div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;min-width:140px;text-align:center;background:${yes?'var(--green-subtle)':'var(--surface2)'};color:${yes?'var(--green)':'var(--muted)'};border:1px solid ${yes?'var(--green)':'var(--border)'}">${yes?'&#10003;':'&#8212;'} ${sc.label}</span>
+            ${dateStr ? `<span style="font-size:12px;color:var(--muted)">${dateStr}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ${p.Manager ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Manager</div>
+      <div class="detail-grid">
+        <div><div class="detail-label">Name</div><div class="detail-value">${p.Manager}</div></div>
+        <div><div class="detail-label">Title</div><div class="detail-value">${p.MgrTitle||'&#8212;'}</div></div>
+        <div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${p.MgrEmail}" style="color:var(--accent);text-decoration:none">${p.MgrEmail||'&#8212;'}</a></div></div>
+      </div>
+    </div>` : ''}
+  `;
+}
+
+function filterRoster(){
+  const q = (sel('roster-search')?.value||'').toLowerCase();
+  document.querySelectorAll('.roster-person').forEach(el=>{
+    el.style.display = (!q||el.dataset.name.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+
+applyFilters();
+</script>
+<div class="info-popover" id="info-popover"></div>
+<!-- Print-only elements (hidden until runExport()) -->
+<div id="print-header" style="display:none;margin-bottom:20px;">
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title"></div>
+  <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
+  <div style="font-size:12px;color:#555;" id="ph-filters"></div>
+  <div id="ph-desc" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #dde4f0;font-size:12px;color:#444;font-style:italic;"></div>
+</div>
+<div id="print-stats" style="display:none;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
+<div id="print-charts" style="display:none;gap:48px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
+<div id="print-roster-wrap" style="display:none;">
+  <div id="print-s1-label" style="display:none;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#555;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1a73e8;"></div>
+  <table class="ptable" id="print-roster-table">
+    <thead id="print-roster-head"><tr>
+      <th>#</th><th>Name</th><th>Market</th><th>Job Title</th>
+      <th>Curriculum Status</th><th>Cert Date</th>
+      <th>Acute Care</th><th>Ambulatory</th><th>Extended Care</th>
+      <th>Manager</th><th>Email</th>
+    </tr></thead>
+    <tbody id="print-roster-body"></tbody>
+  </table>
+  <div id="print-s2" style="display:none;margin-top:28px;">
+    <div id="print-s2-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#555;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1a73e8;"></div>
+    <table class="ptable">
+      <thead id="print-roster-head2"><tr></tr></thead>
+      <tbody id="print-roster-body2"></tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>
