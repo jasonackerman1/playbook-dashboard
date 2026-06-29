@@ -530,11 +530,14 @@ def generate_html(records):
       <div class="section-title">Learner Progress <span class="info-btn" onclick="showInfo(event,'heatmap')">?</span></div>
       <div class="section-hint">Click any row to see full detail &mdash; curriculum breakdown, course checklist &amp; playbook activity</div>
     </div>
-    <div class="legend">
-      <span class="leg"><span class="leg-dot" style="background:#1baf7a"></span>75&ndash;100%</span>
-      <span class="leg"><span class="leg-dot" style="background:#eda100"></span>40&ndash;74%</span>
-      <span class="leg"><span class="leg-dot" style="background:#e34948"></span>1&ndash;39%</span>
-      <span class="leg"><span class="leg-dot" style="background:#888780"></span>0%</span>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div class="legend">
+        <span class="leg"><span class="leg-dot" style="background:#1baf7a"></span>75&ndash;100%</span>
+        <span class="leg"><span class="leg-dot" style="background:#eda100"></span>40&ndash;74%</span>
+        <span class="leg"><span class="leg-dot" style="background:#e34948"></span>1&ndash;39%</span>
+        <span class="leg"><span class="leg-dot" style="background:#888780"></span>0%</span>
+      </div>
+      <input type="text" id="table-search" oninput="filterTableRows()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
     </div>
   </div>
   <div class="table-wrap">
@@ -579,7 +582,7 @@ let hideTLG = false;
 let filtered = [];
 let marketChartObj = null;
 let curricChartObj = null;
-let tableSort = {{col: null, dir: 'asc'}};
+let tableSort = {{col: 'overall', dir: 'asc'}};
 
 /* ── Utilities ── */
 function pct2color(p) {{
@@ -669,6 +672,14 @@ function toggleExportDrop() {{
   document.getElementById('export-menu').classList.toggle('open');
 }}
 
+/* ── Table search ── */
+function filterTableRows() {{
+  const q = (document.getElementById('table-search').value || '').toLowerCase();
+  document.querySelectorAll('#heatmap-body tr').forEach(row => {{
+    row.style.display = (!q || row.dataset.name.includes(q)) ? '' : 'none';
+  }});
+}}
+
 /* ── Column sort ── */
 function sortByCol(col) {{
   if (tableSort.col === col) {{
@@ -693,6 +704,8 @@ function resetFilters() {{
   document.getElementById('f-status').value = '';
   document.getElementById('f-sort').value = 'name';
   document.getElementById('f-search').value = '';
+  document.getElementById('table-search').value = '';
+  filterTableRows();
   applyFilters();
 }}
 
@@ -800,7 +813,7 @@ function renderTable() {{
 
     const oclr = pct2color(p.overallPct);
 
-    return '<tr data-email="' + escHtml(p.email) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
+    return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
       '<td class="name-cell">' + escHtml(p.name) + '</td>' +
       '<td class="market-cell">' + escHtml(p.market) + '</td>' +
       '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
