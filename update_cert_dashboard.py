@@ -329,6 +329,10 @@ def generate_html(slug, name, rows):
       <div class="hamburger-menu" id="hamburger-menu">
         <div class="hamburger-section-label">Dashboards</div>
         <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
+        <div class="hamburger-section-label">Certifications</div>
+        <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Certifications</a>
+        <div class="hamburger-section-label">Programs</div>
+        <a href="onboarding.html" class="hamburger-item">&#127919; Accelerate Onboarding</a>
       </div>
     </div>
     <h1>{name} <span>Certification Dashboard</span></h1>
@@ -1237,6 +1241,8 @@ def generate_html_publicsector(slug, name, rows):
         <div class="hamburger-section-label">Dashboards</div>
         <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
         <a href="cert-healthcare.html" class="hamburger-item">&#127973; Healthcare Certifications</a>
+        <div class="hamburger-section-label">Programs</div>
+        <a href="onboarding.html" class="hamburger-item">&#127919; Accelerate Onboarding</a>
       </div>
     </div>
     <h1>{name} <span>Certification Dashboard</span></h1>

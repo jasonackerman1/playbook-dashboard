@@ -646,6 +646,8 @@ html = f"""<!DOCTYPE html>
         <div class="hamburger-section-label">Certifications</div>
         <a href="cert-healthcare.html" class="hamburger-item">&#127973; Healthcare Certification Dashboard</a>
         <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Certification Dashboard</a>
+        <div class="hamburger-section-label">Programs</div>
+        <a href="onboarding.html" class="hamburger-item">&#127919; Accelerate Onboarding</a>
       </div>
     </div>
     <h1>Playbook Traffic Dashboard</h1>
