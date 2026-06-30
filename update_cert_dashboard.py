@@ -1966,14 +1966,16 @@ def generate_html_healthcare_v2(slug, name, rows):
   .roster-person.stripe-green{{border-left-color:var(--green);}}
   .roster-person.stripe-blue{{border-left-color:var(--accent);}}
   .roster-name-block{{flex:1;min-width:0;}}
-  .roster-name{{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+  .roster-name{{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px;}}
   .roster-title{{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-  .roster-pills{{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}}
+  .roster-pills{{display:flex;gap:5px;margin-bottom:0;flex-wrap:wrap;}}
   .pill{{font-size:8px;font-weight:700;border-radius:10px;padding:2px 7px;white-space:nowrap;letter-spacing:.03em;}}
   .pill.green{{color:var(--green);background:var(--green-subtle);border:1px solid var(--green)44;}}
   .pill.blue{{color:var(--accent);background:var(--accent)18;border:1px solid var(--accent)44;}}
   .pill.gray{{color:var(--muted);background:var(--surface2);border:1px solid var(--border);}}
-  .cert-check{{font-size:10px;font-weight:700;color:var(--green);white-space:nowrap;padding-top:2px;flex-shrink:0;}}
+  .roster-bottom{{display:flex;justify-content:flex-end;margin-top:4px;}}
+  .roster-pct{{font-size:12px;font-weight:700;color:var(--accent);}}
+  .roster-pct.pct-done{{color:var(--green);}}
 
   /* Sort buttons */
   .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
@@ -2447,16 +2449,17 @@ function renderRoster(){{
     var lsPct    = p.ls.pct;
     var hcfClass = pillClass(hcfPct, p.hcf.total);
     var lsClass  = pillClass(lsPct,  p.ls.total);
-    var certBadge = status === "Certified" ? '<span class="cert-check">✓ Certified</span>' : "";
+    var pctClass = p.overallPct === 100 ? " pct-done" : "";
     html += '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
     html += '<div class="roster-name-block">';
-    html += '<div class="roster-name">' + fullName + "</div>";
-    html += '<div class="roster-title">' + (p.JobTitle || "") + "</div>";
     html += '<div class="roster-pills">';
     html += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
     html += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/11</span>";
-    html += "</div></div>";
-    html += certBadge;
+    html += "</div>";
+    html += '<div class="roster-name">' + fullName + "</div>";
+    html += '<div class="roster-title">' + (p.JobTitle || "") + "</div>";
+    html += '<div class="roster-bottom"><span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span></div>";
+    html += "</div>";
     html += "</div>";
   }});
 
