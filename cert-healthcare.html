@@ -61,7 +61,7 @@
   /* ── Filters ───────────────────────────────────────────────────────── */
   .filters{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}
   .filter-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}
-  select,input[type=text]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;color-scheme:dark;}
+  select,input[type=date],input[type=text]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;color-scheme:dark;}
   select:focus,input:focus{border-color:var(--accent);}
   .btn-reset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}
   .btn-reset:hover{border-color:var(--accent);color:var(--text);}
@@ -230,17 +230,21 @@
 
 <!-- ── Filters ─────────────────────────────────────────────────────────── -->
 <div class="filters">
-  <span class="filter-label">Market</span>
-  <select id="f-market"><option value="">All Markets</option></select>
   <span class="filter-label">Status</span>
-  <select id="f-status">
-    <option value="">All Status</option>
+  <select id="f-status" onchange="applyFilters()">
+    <option value="">All</option>
     <option value="Certified">Certified</option>
     <option value="In Progress">In Progress</option>
     <option value="Not Started">Not Started</option>
   </select>
-  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <span class="filter-label">Market</span>
+  <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
+  <span class="filter-label" style="margin-right:2px">From</span>
+  <input type="date" id="f-date-from" onchange="applyFilters()">
+  <span class="filter-label" style="margin:0 2px">To</span>
+  <input type="date" id="f-date-to" onchange="applyFilters()">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
+  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -447,6 +451,8 @@ function toggleTLG(){
 function resetFilters(){
   sel("f-market").value = "";
   sel("f-status").value = "";
+  sel("f-date-from").value = "";
+  sel("f-date-to").value = "";
   sel("f-search").value = "";
   if(hideTLG){ hideTLG = false; sel("btn-tlg").classList.remove("active"); sel("btn-tlg").textContent = "Hide TLG"; }
   applyFilters();
@@ -488,11 +494,15 @@ function setSort(field){
 function applyFilters(){
   var market = sel("f-market").value;
   var status = sel("f-status").value;
+  var from   = sel("f-date-from").value;
+  var to     = sel("f-date-to").value;
   var q      = (sel("f-search").value || "").toLowerCase();
   filtered = PEOPLE.filter(function(p){
     if(hideTLG && TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
     if(market && p.Market !== market) return false;
     if(status && personStatus(p) !== status) return false;
+    if(from && p.HireDate && p.HireDate < from) return false;
+    if(to && p.HireDate && p.HireDate > to) return false;
     if(q && !(p.FirstName + " " + p.LastName).toLowerCase().includes(q)) return false;
     return true;
   });
