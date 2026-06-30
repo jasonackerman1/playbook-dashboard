@@ -854,18 +854,16 @@ function openModal(email) {
   }
 
   const content = `
-    <div class="modal-header">
-      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-        <div style="flex:1">
-          <div class="modal-name">${escHtml(p.name)}</div>
-          <div class="modal-meta">
-            <span>${escHtml(p.jobTitle)}</span>
-            <span>&middot; ${escHtml(p.market)}</span>
-            ${p.hireDate ? '<span>&middot; Hired ' + fmtDate(p.hireDate) + '</span>' : ''}
-            ${p.assignDate ? '<span>&middot; Enrolled ' + fmtDate(p.assignDate) + '</span>' : ''}
-          </div>
-        </div>
+    <div class="modal-header" style="padding-right:52px;">
+      <div class="modal-name">${escHtml(p.name)}</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;">
         ${statusBadge}
+        <div class="modal-meta" style="gap:8px;">
+          <span>${escHtml(p.jobTitle)}</span>
+          <span>&middot; ${escHtml(p.market)}</span>
+          ${p.hireDate ? '<span>&middot; Hired ' + fmtDate(p.hireDate) + '</span>' : ''}
+          ${p.assignDate ? '<span>&middot; Enrolled ' + fmtDate(p.assignDate) + '</span>' : ''}
+        </div>
       </div>
     </div>
     <div class="modal-body">
