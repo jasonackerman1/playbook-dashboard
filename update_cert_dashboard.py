@@ -1990,7 +1990,7 @@ def generate_html_healthcare_v2(slug, name, rows):
   .detail-value{{font-size:14px;font-weight:500;}}
   .badge-status{{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}}
   .badge-status.certified{{background:var(--green-subtle);color:var(--green);}}
-  .badge-status.in-progress{{background:var(--accent)18;color:var(--accent);border:1px solid var(--accent)44;}}
+  .badge-status.in-progress{{background:rgba(79,142,247,0.10);color:var(--accent);border:1px solid rgba(79,142,247,0.27);}}
   .badge-status.not-certified{{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}}
   .roster-bottom .badge-status{{font-size:10px;padding:2px 8px;}}
 
