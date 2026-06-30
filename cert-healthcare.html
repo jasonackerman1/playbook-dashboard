@@ -230,7 +230,6 @@
     <option value="In Progress">In Progress</option>
     <option value="Not Started">Not Started</option>
   </select>
-  <input type="text" id="f-search" class="roster-search" placeholder="Search name or manager&hellip;" oninput="applyFilters()" style="width:220px;">
   <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <span class="result-count" id="result-count"></span>
@@ -275,16 +274,20 @@
 
 <!-- ── Roster ──────────────────────────────────────────────────────────── -->
 <div class="section">
-  <div class="section-header">
+  <div class="section-header" style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;">
     <div>
       <div class="section-title">Certification Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
       <div class="section-hint">Click a person to see their course-level progress</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+    <div style="display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;">
       <span style="font-size:11px;color:var(--muted);">Sort:</span>
       <button class="sort-btn" data-sort="name" onclick="setSort('name')">Name</button>
       <button class="sort-btn" data-sort="status" onclick="setSort('status')">Status</button>
       <button class="sort-btn active" data-sort="pct" onclick="setSort('pct')">Completion % &#9660;</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+      <select id="f-mgr" class="filter-select" onchange="applyFilters()"><option value="">All Managers</option></select>
+      <input type="text" id="f-search" class="roster-search" placeholder="Search name&hellip;" oninput="applyFilters()" style="width:160px;">
     </div>
   </div>
   <div class="roster-key">
@@ -429,11 +432,15 @@ function pillClass(pct, total){
   return "gray";
 }
 
-// ── Populate market dropdown ───────────────────────────────────────────────
+// ── Populate dropdowns ─────────────────────────────────────────────────────
 (function(){
   var markets = [...new Set(PEOPLE.map(function(p){ return p.Market; }).filter(Boolean))].sort();
   markets.forEach(function(m){
     sel("f-market").innerHTML += '<option value="' + m + '">' + m + "</option>";
+  });
+  var mgrs = [...new Set(PEOPLE.map(function(p){ return p.Manager; }).filter(Boolean))].sort();
+  mgrs.forEach(function(m){
+    sel("f-mgr").innerHTML += '<option value="' + m + '">' + m + "</option>";
   });
 })();
 
@@ -445,9 +452,10 @@ function toggleTLG(){
   applyFilters();
 }
 function resetFilters(){
-  sel("f-market").value  = "";
-  sel("f-status").value  = "";
-  sel("f-search").value  = "";
+  sel("f-market").value = "";
+  sel("f-status").value = "";
+  sel("f-mgr").value    = "";
+  sel("f-search").value = "";
   if(hideTLG){ hideTLG = false; sel("btn-tlg").classList.remove("active"); sel("btn-tlg").textContent = "Hide TLG"; }
   applyFilters();
 }
@@ -473,15 +481,16 @@ function setSort(field){
 function applyFilters(){
   var market = sel("f-market").value;
   var status = sel("f-status").value;
+  var mgr    = sel("f-mgr").value;
   var q      = (sel("f-search").value || "").toLowerCase();
   filtered = PEOPLE.filter(function(p){
     if(hideTLG && TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
     if(market && p.Market !== market) return false;
     if(status && personStatus(p) !== status) return false;
+    if(mgr && p.Manager !== mgr) return false;
     if(q){
       var name = (p.FirstName + " " + p.LastName).toLowerCase();
-      var mgr  = (p.Manager || "").toLowerCase();
-      if(!name.includes(q) && !mgr.includes(q)) return false;
+      if(!name.includes(q)) return false;
     }
     return true;
   });
