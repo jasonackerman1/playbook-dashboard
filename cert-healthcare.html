@@ -268,8 +268,8 @@
 <!-- ── Charts ──────────────────────────────────────────────────────────── -->
 <div class="charts">
   <div class="chart-card">
-    <div class="chart-title">Completion by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
-    <div class="chart-wrap"><canvas id="marketChart"></canvas></div>
+    <div class="chart-title">Certification Pipeline <span class="info-btn" onclick="showInfo(event,'pipeline-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="pipelineChart"></canvas></div>
   </div>
   <div class="chart-card">
     <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'trend-chart')">?</span></div>
@@ -338,7 +338,7 @@ let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
 let rosterView = "individual";
-let marketChart, trendChart;
+let pipelineChart, trendChart;
 
 function sel(id) { return document.getElementById(id); }
 function cv(v)  { return getComputedStyle(document.body).getPropertyValue(v).trim(); }
@@ -386,7 +386,7 @@ var INFO_MSGS = {
   "in-progress":     "People who have completed at least one course in either curriculum but have not yet earned full certification.",
   "not-started":     "People enrolled in the program who have not yet completed any courses in HC Foundations or Layered Security.",
   "completion-rate": "The percentage of enrolled people who have earned full certification. Calculated as Certified divided by Total Enrolled. Updates when filters are applied.",
-  "market-chart":    "Average course completion percentage per sales market for the people currently shown. Each bar reflects combined progress across HC Foundations and Layered Security. Hover a bar to see the number of people in that market and how many are certified.",
+  "pipeline-chart":  "The three stages of the certification journey for the people currently shown. Not Started — no courses completed yet. In Progress — at least one course done but not yet fully certified. Certified — both HC Foundations and Layered Security complete.",
   "trend-chart":     "Number of people who earned full Healthcare certification per KM fiscal quarter. KM fiscal year runs April through March: Q1 = April to June, Q2 = July to September, Q3 = October to December, Q4 = January to March.",
   "roster":          "Full list of enrolled people matching your current filters. Each card shows status (top right), HC Foundations and Layered Security progress (bottom left), and overall completion % across all 21 courses (bottom right). Click any card to see course-by-course detail in the panel on the right.",
   "export":          "Download a printable report for the people currently shown. Full Report includes all people and all columns. Not Certified lists uncertified people sorted by manager — useful for follow-up outreach. Manager Summary shows each manager's team size and team completion rate."
@@ -519,30 +519,19 @@ function renderCharts(){
   var labelColor = isLight ? cv("--text") : cv("--muted");
   var gridColor  = cv("--border");
 
-  // Chart 1: avg overall completion % per market
-  var marketGroups = {};
-  filtered.forEach(function(p){
-    var m = p.Market || "Unknown";
-    if(!marketGroups[m]) marketGroups[m] = [];
-    marketGroups[m].push(p);
-  });
-  var marketLabels = Object.keys(marketGroups).sort();
-  var marketData   = marketLabels.map(function(m){
-    var ppl = marketGroups[m];
-    return Math.round(ppl.reduce(function(s,p){ return s + p.overallPct; }, 0) / ppl.length);
-  });
-  var marketCerts = marketLabels.map(function(m){
-    return marketGroups[m].filter(function(p){ return p.Certified === "Yes"; }).length;
-  });
+  // Chart 1: certification pipeline — Not Started, In Progress, Certified
+  var pipelineNotStarted = filtered.filter(function(p){ return personStatus(p) === "Not Started"; }).length;
+  var pipelineInProgress = filtered.filter(function(p){ return personStatus(p) === "In Progress"; }).length;
+  var pipelineCertified  = filtered.filter(function(p){ return personStatus(p) === "Certified";   }).length;
 
-  if(marketChart) marketChart.destroy();
-  marketChart = new Chart(sel("marketChart"), {
+  if(pipelineChart) pipelineChart.destroy();
+  pipelineChart = new Chart(sel("pipelineChart"), {
     type: "bar",
     data: {
-      labels: marketLabels,
+      labels: ["Not Started", "In Progress", "Certified"],
       datasets: [{
-        data: marketData,
-        backgroundColor: cv("--accent") + "bb",
+        data: [pipelineNotStarted, pipelineInProgress, pipelineCertified],
+        backgroundColor: [cv("--muted") + "88", cv("--accent") + "cc", cv("--green") + "cc"],
         borderRadius: 4,
         borderSkipped: false
       }]
@@ -552,20 +541,11 @@ function renderCharts(){
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(ctx){
-              var m = ctx.label;
-              var n = marketGroups[m] ? marketGroups[m].length : 0;
-              var c = marketCerts[ctx.dataIndex] || 0;
-              return ["Avg completion: " + ctx.raw + "%", n + " people in market", c + " certified"];
-            }
-          }
-        }
+        tooltip: { callbacks: { label: function(ctx){ return " " + ctx.raw + " people"; } } }
       },
       scales: {
-        x: { min: 0, max: 100, grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 }, callback: function(v){ return v + "%"; } } },
-        y: { grid: { display: false }, ticks: { color: labelColor, font: { size: 11 } } }
+        x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 }, stepSize: 1 } },
+        y: { grid: { display: false }, ticks: { color: labelColor, font: { size: 12 } } }
       }
     }
   });
