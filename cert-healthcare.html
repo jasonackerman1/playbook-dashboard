@@ -108,7 +108,7 @@
   .roster-person{display:flex;flex-direction:column;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;border-left:3px solid transparent;}
   .roster-person:last-child{border-bottom:none;}
   .roster-person:hover{background:var(--surface2);}
-  .roster-person.active{background:#4f8ef711;border-left-color:var(--accent);}
+  .roster-person.active{background:#4f8ef711;}
   .roster-person.stripe-green{border-left-color:var(--green);}
   .roster-person.stripe-blue{border-left-color:var(--accent);}
   .roster-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
@@ -567,12 +567,11 @@ function renderCharts(){
   // Chart 2: certifications over time by fiscal quarter
   var qtrMap = {};
   filtered.forEach(function(p){
-    if(p.Certified === "Yes" && p.CertDate){
-      var q = pFiscalQtr(p.CertDate);
-      if(q) qtrMap[q] = (qtrMap[q] || 0) + 1;
+    if(p.Certified === "Yes" && p.CertQtr){
+      qtrMap[p.CertQtr] = (qtrMap[p.CertQtr] || 0) + 1;
     }
   });
-  function parseQtr(s){ var m = s.match(/Q(\d) FY(\d+)/); return m ? +m[2] * 10 + +m[1] : 0; }
+  function parseQtr(s){ var m = s.match(/FY(\d+)\s+Q(\d)/); return m ? +m[1] * 10 + +m[2] : 0; }
   var trendLabels = Object.keys(qtrMap).sort(function(a,b){ return parseQtr(a) - parseQtr(b); });
   var trendData   = trendLabels.map(function(q){ return qtrMap[q]; });
 
@@ -844,6 +843,8 @@ function runExport(type){
 
 // ── init ───────────────────────────────────────────────────────────────────
 applyFilters();
+var firstCard = sel("roster-left").querySelector(".roster-person");
+if(firstCard) showDetail(firstCard.dataset.email);
 </script>
 </body>
 </html>

@@ -1756,7 +1756,7 @@ def load_rows_healthcare_v2(cert_file, learning_file):
         mgr_name  = (mgr_first + ' ' + mgr_last).strip()
         cert_date_raw = raw[17]
         cert_date = _date(cert_date_raw)
-        cert_qtr  = km_fiscal_quarter(cert_date_raw) if cert_date_raw and hasattr(cert_date_raw, 'month') else ''
+        cert_qtr  = _str(raw[18]) if raw[18] else ''
         certified = _str(raw[19]) if raw[19] else 'No'
         hire_date = _date(raw[14])
         cert_map[email] = {
@@ -1983,7 +1983,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   .roster-person{{display:flex;flex-direction:column;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;border-left:3px solid transparent;}}
   .roster-person:last-child{{border-bottom:none;}}
   .roster-person:hover{{background:var(--surface2);}}
-  .roster-person.active{{background:#4f8ef711;border-left-color:var(--accent);}}
+  .roster-person.active{{background:#4f8ef711;}}
   .roster-person.stripe-green{{border-left-color:var(--green);}}
   .roster-person.stripe-blue{{border-left-color:var(--accent);}}
   .roster-top{{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}}
@@ -2442,12 +2442,11 @@ function renderCharts(){{
   // Chart 2: certifications over time by fiscal quarter
   var qtrMap = {{}};
   filtered.forEach(function(p){{
-    if(p.Certified === "Yes" && p.CertDate){{
-      var q = pFiscalQtr(p.CertDate);
-      if(q) qtrMap[q] = (qtrMap[q] || 0) + 1;
+    if(p.Certified === "Yes" && p.CertQtr){{
+      qtrMap[p.CertQtr] = (qtrMap[p.CertQtr] || 0) + 1;
     }}
   }});
-  function parseQtr(s){{ var m = s.match(/Q(\d) FY(\d+)/); return m ? +m[2] * 10 + +m[1] : 0; }}
+  function parseQtr(s){{ var m = s.match(/FY(\d+)\s+Q(\d)/); return m ? +m[1] * 10 + +m[2] : 0; }}
   var trendLabels = Object.keys(qtrMap).sort(function(a,b){{ return parseQtr(a) - parseQtr(b); }});
   var trendData   = trendLabels.map(function(q){{ return qtrMap[q]; }});
 
@@ -2719,6 +2718,8 @@ function runExport(type){{
 
 // ── init ───────────────────────────────────────────────────────────────────
 applyFilters();
+var firstCard = sel("roster-left").querySelector(".roster-person");
+if(firstCard) showDetail(firstCard.dataset.email);
 </script>
 </body>
 </html>"""
