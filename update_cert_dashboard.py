@@ -1974,7 +1974,8 @@ def generate_html_healthcare_v2(slug, name, rows):
   .pill.blue{{color:var(--accent);background:var(--accent)18;border:1px solid var(--accent)44;}}
   .pill.gray{{color:var(--muted);background:var(--surface2);border:1px solid var(--border);}}
   .roster-bottom{{display:flex;justify-content:flex-end;margin-top:4px;}}
-  .roster-pct{{font-size:12px;font-weight:700;color:var(--accent);}}
+  .roster-pct{{font-size:12px;font-weight:700;color:var(--muted);}}
+  .roster-pct.pct-progress{{color:var(--accent);}}
   .roster-pct.pct-done{{color:var(--green);}}
 
   /* Sort buttons */
@@ -2449,7 +2450,7 @@ function renderRoster(){{
     var lsPct    = p.ls.pct;
     var hcfClass = pillClass(hcfPct, p.hcf.total);
     var lsClass  = pillClass(lsPct,  p.ls.total);
-    var pctClass  = p.overallPct === 100 ? " pct-done" : "";
+    var pctClass  = status === "Certified" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
     var certBadge = status === "Certified" ? '<span class="cert-check">✓ Certified</span>' : "";
     html += '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
     html += '<div class="roster-name-block">';
