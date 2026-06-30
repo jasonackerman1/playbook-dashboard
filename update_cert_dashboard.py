@@ -1604,16 +1604,42 @@ def main():
         print('No .xlsx files found in cert-data/')
         return
 
-    # Group files by vertical slug
+    generated = []
+    hc_handled = False
+
+    # ── New two-file HC format ────────────────────────────────────────────────
+    HC_CERT_FILE  = 'Healthcare Certification Learning Report.xlsx'
+    HC_LEARN_FILE = 'Healthcare Foundations for Direct Sales Learning Report.xlsx'
+    hc_cert_path  = os.path.join(cert_dir, HC_CERT_FILE)
+    hc_learn_path = os.path.join(cert_dir, HC_LEARN_FILE)
+
+    if os.path.exists(hc_cert_path) and os.path.exists(hc_learn_path):
+        print(f'\nhealthcare (Healthcare) — v2 two-file format:')
+        print(f'  {HC_CERT_FILE}')
+        print(f'  {HC_LEARN_FILE}')
+        rows = load_rows_healthcare_v2(hc_cert_path, hc_learn_path)
+        cert_count = sum(1 for r in rows if r['Certified'] == 'Yes')
+        ip_count   = sum(1 for r in rows if r['overallPct'] > 0 and r['Certified'] != 'Yes')
+        print(f'  → {len(rows)} people  ({cert_count} certified, {ip_count} in progress, {len(rows)-cert_count-ip_count} not started)')
+        html = generate_html_healthcare_v2('healthcare', 'Healthcare', rows)
+        out  = 'cert-healthcare.html'
+        with open(out, 'w', encoding='utf-8') as fh:
+            fh.write(html)
+        print(f'  Written → {out}')
+        generated.append(out)
+        hc_handled = True
+
+    # ── Original single-file loop (PS and other verticals) ───────────────────
     vert_files = {}
     for fname in files:
         slug = detect_vertical(fname)
         if not slug:
             print(f'  Skipping {fname} — could not detect vertical from filename')
             continue
+        if slug == 'healthcare' and hc_handled:
+            continue  # already handled above with v2 loader
         vert_files.setdefault(slug, []).append(fname)
 
-    generated = []
     for slug in sorted(vert_files):
         # Sort files chronologically by YYYY-MM in filename
         fnames    = sorted(vert_files[slug], key=extract_file_date)
@@ -1670,6 +1696,939 @@ def main():
         generated.append(out)
 
     print(f'\nDone. {len(generated)} dashboard(s) generated.')
+
+
+def load_rows_healthcare_v2(cert_file, learning_file):
+    """Load and join cert file + learning file for the new HC v2 data model.
+
+    cert_file columns (0-based):
+      2=First, 3=Last, 4=Email, 5=JobTitle, 7=Market,
+      9=MgrFirst, 10=MgrLast, 11=MgrEmail, 12=MgrTitle,
+      14=HireDate(datetime), 17=CertDate(datetime), 19=Certified("Yes"/"No")
+
+    learning_file columns (0-based):
+      4=Email, 17=CurriculumID, 22=ItemID, 26=ItemTitle,
+      27=CompletionDate(datetime), 29=CompletionStatusDesc
+      Skip rows where col 22 (ItemID) is None — those are curriculum-level rows.
+    """
+
+    HCF_ORDER = ['HCF_HBT','HC_PLAYBOOK','HCF_MFP','HCF_DPMS','HCF_ACS',
+                 'HCF_HBMF','HCF_HIPAACS','HCF_DPFH','HCF_OW','HCF_HHSPD']
+    LS_ORDER  = ['LS_ITM','DS','UA_ACCESSCONTROL','BIZHUB_BSMFP','MFPPT_BSBSNB',
+                 'BREACH_IDADB','CSMWSG','LSSW','LSSB_HI','LSSB_NONPROFIT','LSSB_GOV']
+
+    def _date(v):
+        return v.strftime('%Y-%m-%d') if v and hasattr(v, 'strftime') else ''
+
+    def _str(v):
+        return str(v).strip() if v is not None else ''
+
+    # ── Load cert file ────────────────────────────────────────────────────────
+    cert_map = {}   # email.lower() -> person dict
+    wb_c = openpyxl.load_workbook(cert_file, read_only=True, data_only=True)
+    ws_c = wb_c.active
+    for raw in ws_c.iter_rows(min_row=2, values_only=True):
+        if raw[2] is None:
+            continue
+        email = _str(raw[4]).lower()
+        mgr_first = _str(raw[9])
+        mgr_last  = _str(raw[10])
+        mgr_name  = (mgr_first + ' ' + mgr_last).strip()
+        cert_date_raw = raw[17]
+        cert_date = _date(cert_date_raw)
+        cert_qtr  = km_fiscal_quarter(cert_date_raw) if cert_date_raw and hasattr(cert_date_raw, 'month') else ''
+        certified = _str(raw[19]) if raw[19] else 'No'
+        hire_date = _date(raw[14])
+        cert_map[email] = {
+            'FirstName': _str(raw[2]),
+            'LastName':  _str(raw[3]),
+            'Email':     _str(raw[4]),
+            'JobTitle':  _str(raw[5]),
+            'Market':    _str(raw[7]),
+            'Manager':   mgr_name,
+            'MgrEmail':  _str(raw[11]),
+            'MgrTitle':  _str(raw[12]),
+            'HireDate':  hire_date,
+            'Certified': certified,
+            'CertDate':  cert_date,
+            'CertQtr':   cert_qtr,
+        }
+    wb_c.close()
+
+    # ── Load learning file — build per-person item maps ───────────────────────
+    # Structure: learning[email][curriculum_id][item_id] = {title, done, date}
+    learning = {}
+    wb_l = openpyxl.load_workbook(learning_file, read_only=True, data_only=True)
+    ws_l = wb_l.active
+    for raw in ws_l.iter_rows(min_row=2, values_only=True):
+        item_id = raw[22]
+        if item_id is None:
+            continue   # curriculum-level parent row — skip
+        email = _str(raw[4]).lower()
+        if not email:
+            continue
+        curr_id = _str(raw[17]).upper()
+        item_id = _str(item_id).upper()
+        title   = _str(raw[26])
+        comp_date_raw = raw[27]
+        comp_date = _date(comp_date_raw)
+        status    = _str(raw[29])
+        done = (status == 'Online-Complete')
+        if email not in learning:
+            learning[email] = {}
+        if curr_id not in learning[email]:
+            learning[email][curr_id] = {}
+        learning[email][curr_id][item_id] = {
+            'title': title,
+            'done':  done,
+            'date':  comp_date if done else '',
+        }
+    wb_l.close()
+
+    # ── Build output rows — only people in cert file ──────────────────────────
+    rows = []
+    for email, person in cert_map.items():
+        person_learning = learning.get(email, {})
+
+        def _build_curriculum(order, curr_id):
+            curr_items = person_learning.get(curr_id, {})
+            items = []
+            done_count = 0
+            for iid in order:
+                raw_item = curr_items.get(iid, {})
+                is_done  = raw_item.get('done', False)
+                # Attempt to find a title from the data; fall back to item ID
+                title = raw_item.get('title', iid)
+                if not title:
+                    title = iid
+                items.append({
+                    'id':    iid,
+                    'title': title,
+                    'done':  is_done,
+                    'date':  raw_item.get('date', '') if is_done else '',
+                })
+                if is_done:
+                    done_count += 1
+            total = len(order)
+            pct = round(done_count / total * 100) if total else 0
+            return {'done': done_count, 'total': total, 'pct': pct, 'items': items}
+
+        hcf = _build_curriculum(HCF_ORDER, 'HC_FOUNDATIONS')
+        ls  = _build_curriculum(LS_ORDER,  'LSFDS')
+
+        overall_done = hcf['done'] + ls['done']
+        overall_pct  = round(overall_done / 21 * 100)
+
+        rows.append({
+            'FirstName':   person['FirstName'],
+            'LastName':    person['LastName'],
+            'Email':       person['Email'],
+            'JobTitle':    person['JobTitle'],
+            'Market':      person['Market'],
+            'Manager':     person['Manager'],
+            'MgrEmail':    person['MgrEmail'],
+            'MgrTitle':    person['MgrTitle'],
+            'HireDate':    person['HireDate'],
+            'Certified':   person['Certified'],
+            'CertDate':    person['CertDate'],
+            'CertQtr':     person['CertQtr'],
+            'hcf':         hcf,
+            'ls':          ls,
+            'overallDone': overall_done,
+            'overallPct':  overall_pct,
+        })
+
+    return rows
+
+
+def generate_html_healthcare_v2(slug, name, rows):
+    """Generate the Healthcare v2 certification dashboard HTML.
+
+    Supports two curricula displayed as course-level progress:
+      HC Foundations (10 items) and Layered Security (11 items).
+
+    Uses double-brace escaping throughout for f-string safety.
+    All JS string literals use double quotes to avoid apostrophe breakage.
+    """
+    raw_json = json.dumps(rows)
+    tlg_json = json.dumps(sorted(TLG))
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{name} Certification Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {{
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+    --accent:#4f8ef7; --accent2:#7c5cfc; --accent3:#f7c94f;
+    --text:#e8ecf4; --muted:#7b82a0; --green:#3ecf8e; --red:#f76f6f;
+    --teal:#2dd4bf; --green-subtle:#3ecf8e22; --red-subtle:#f76f6f22;
+    --font:'Segoe UI',system-ui,sans-serif;
+  }}
+  body.light-mode {{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#eef1f7; --border:#d0d7e8;
+    --accent:#2563eb; --accent2:#6d28d9; --accent3:#d97706;
+    --text:#1a1d27; --muted:#475569; --green:#059669; --red:#dc2626;
+    --teal:#0f766e; --green-subtle:#05966922; --red-subtle:#dc262622;
+  }}
+  body.light-mode select,body.light-mode input[type=date]{{color-scheme:light;}}
+  *{{box-sizing:border-box;margin:0;padding:0;}}
+  body{{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}}
+
+  /* ── Header ────────────────────────────────────────────────────────── */
+  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
+  .header-left{{display:flex;align-items:center;gap:16px;}}
+  .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
+  .header h1 span{{color:var(--muted);font-weight:400;}}
+  .btn-theme{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
+  .btn-theme:hover{{border-color:var(--accent);color:var(--text);}}
+
+  /* ── Hamburger ─────────────────────────────────────────────────────── */
+  .hamburger{{position:relative;}}
+  .hamburger-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}}
+  .hamburger-btn:hover,.hamburger-btn.open{{border-color:var(--accent);color:var(--text);}}
+  .hamburger-menu{{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:220px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}}
+  .hamburger-menu.open{{display:block;}}
+  .hamburger-section-label{{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}}
+  .hamburger-item{{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}}
+  .hamburger-item:hover{{background:var(--surface2);}}
+  .hamburger-item.current{{font-weight:700;color:var(--accent);}}
+
+  /* ── Export dropdown ───────────────────────────────────────────────── */
+  .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
+  .btn-export:hover{{opacity:0.88;}}
+  .export-drop{{position:relative;}}
+  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:hidden;}}
+  .export-menu.open{{display:block;}}
+  .export-item{{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}}
+  .export-item:hover{{background:var(--surface2);}}
+
+  /* ── Info button / popover ─────────────────────────────────────────── */
+  .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
+  .info-btn:hover{{border-color:var(--accent);color:var(--accent);}}
+  .info-popover{{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}}
+  .info-popover.visible{{display:block;}}
+
+  /* ── Filters ───────────────────────────────────────────────────────── */
+  .filters{{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}}
+  .filter-label{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}}
+  select,input[type=text]{{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;color-scheme:dark;}}
+  select:focus,input:focus{{border-color:var(--accent);}}
+  .btn-reset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}}
+  .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
+  .btn-tlg{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}}
+  .btn-tlg:hover{{border-color:var(--red);color:var(--red);}}
+  .btn-tlg.active{{background:var(--red-subtle);border-color:var(--red);color:var(--red);}}
+  .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
+
+  /* ── Stat cards ────────────────────────────────────────────────────── */
+  .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}}
+  .stat{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}}
+  .stat-label{{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px;}}
+  .stat-value{{font-size:28px;font-weight:700;line-height:1;}}
+  .stat-value.green{{color:var(--green);}}
+  .stat-value.red{{color:var(--red);}}
+  .stat-value.teal{{color:var(--teal);}}
+  .stat-value.blue{{color:var(--accent);}}
+  .stat-value.amber{{color:var(--accent3);}}
+  .stat-sub{{font-size:11px;color:var(--muted);margin-top:4px;}}
+
+  /* ── Charts ────────────────────────────────────────────────────────── */
+  .charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
+  @media(max-width:680px){{.charts{{grid-template-columns:1fr;}}}}
+  .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
+  .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
+  body.light-mode .chart-title{{color:var(--text);}}
+  .chart-wrap{{position:relative;height:260px;}}
+
+  /* ── Roster ────────────────────────────────────────────────────────── */
+  .section{{padding:0 28px 32px;}}
+  .section-header{{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}}
+  .section-title{{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
+  body.light-mode .section-title{{color:var(--text);}}
+  .section-hint{{font-size:11px;color:var(--muted);margin-top:3px;}}
+  .roster-search{{width:200px;}}
+  .roster-wrap{{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;}}
+  .roster-left{{width:300px;flex-shrink:0;overflow-y:auto;max-height:820px;border-right:1px solid var(--border);}}
+  .roster-right{{flex:1;overflow-y:auto;max-height:820px;padding:16px 20px;}}
+  .roster-right-header{{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}}
+  .no-data{{text-align:center;color:var(--muted);padding:40px;font-size:13px;}}
+  @media(max-width:680px){{.roster-wrap{{flex-direction:column;}}.roster-left{{width:100%;max-height:220px;border-right:none;border-bottom:1px solid var(--border);}}}}
+
+  /* Person cards */
+  .roster-person{{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;border-left:3px solid transparent;}}
+  .roster-person:last-child{{border-bottom:none;}}
+  .roster-person:hover{{background:var(--surface2);}}
+  .roster-person.active{{background:#4f8ef711;border-left-color:var(--accent);}}
+  .roster-person.stripe-green{{border-left-color:var(--green);}}
+  .roster-person.stripe-blue{{border-left-color:var(--accent);}}
+  .roster-name-block{{flex:1;min-width:0;}}
+  .roster-name{{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+  .roster-title{{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+  .roster-pills{{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}}
+  .pill{{font-size:8px;font-weight:700;border-radius:10px;padding:2px 7px;white-space:nowrap;letter-spacing:.03em;}}
+  .pill.green{{color:var(--green);background:var(--green-subtle);border:1px solid var(--green)44;}}
+  .pill.blue{{color:var(--accent);background:var(--accent)18;border:1px solid var(--accent)44;}}
+  .pill.gray{{color:var(--muted);background:var(--surface2);border:1px solid var(--border);}}
+  .cert-check{{font-size:10px;font-weight:700;color:var(--green);white-space:nowrap;padding-top:2px;flex-shrink:0;}}
+
+  /* Sort buttons */
+  .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
+  .sort-btn:hover{{border-color:var(--accent);color:var(--text);}}
+  .sort-btn.active{{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}}
+
+  /* Detail panel */
+  .detail-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;margin-top:14px;}}
+  .detail-label{{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}}
+  .detail-value{{font-size:14px;font-weight:500;}}
+  .badge-status{{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}}
+  .badge-status.certified{{background:var(--green-subtle);color:var(--green);}}
+  .badge-status.not-certified{{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}}
+
+  /* Progress bars */
+  .prog-wrap{{background:var(--surface2);border-radius:4px;height:6px;width:100%;overflow:hidden;margin-top:4px;}}
+  .prog-bar{{height:6px;border-radius:4px;transition:width .3s;}}
+  .prog-bar.green{{background:var(--green);}}
+  .prog-bar.blue{{background:var(--accent);}}
+
+  /* Curriculum course list */
+  .curriculum-section{{margin-top:18px;}}
+  .curriculum-header{{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;cursor:pointer;user-select:none;}}
+  .curriculum-header:hover .curriculum-title{{color:var(--accent);}}
+  .curriculum-title{{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);transition:color .15s;}}
+  body.light-mode .curriculum-title{{color:var(--text);}}
+  .curriculum-count{{font-size:11px;color:var(--muted);}}
+  .course-list{{margin-top:8px;display:none;}}
+  .course-list.open{{display:block;}}
+  .course-item{{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);}}
+  .course-item:last-child{{border-bottom:none;}}
+  .course-icon{{flex-shrink:0;font-size:11px;margin-top:1px;}}
+  .course-icon.done{{color:var(--green);}}
+  .course-icon.todo{{color:var(--muted);}}
+  .course-title{{flex:1;font-size:12px;line-height:1.4;}}
+  .course-date{{font-size:10px;color:var(--muted);white-space:nowrap;}}
+
+  /* Print */
+  @page{{size:landscape;margin:.65in;}}
+  @media print{{
+    body{{background:#fff!important;color:#111!important;}}
+    .header,.filters,.stats,.charts,.section,.print-hide{{display:none!important;}}
+    #print-header{{display:block!important;}}
+    #print-stats{{display:flex!important;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}}
+    #print-roster-wrap{{display:block!important;}}
+    .ptable{{width:100%;border-collapse:collapse;font-size:11px;}}
+    .ptable th{{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}}
+    .ptable td{{padding:5px 8px;border:1px solid #ddd;vertical-align:middle;}}
+    .ptable tr:nth-child(even) td{{background:#fafafa;}}
+  }}
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <div class="hamburger" id="hamburger">
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
+      <div class="hamburger-menu" id="hamburger-menu">
+        <div class="hamburger-section-label">Dashboards</div>
+        <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
+        <div class="hamburger-section-label">Certifications</div>
+        <a href="cert-healthcare.html" class="hamburger-item current">&#127973; Healthcare Cert</a>
+        <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Cert</a>
+        <div class="hamburger-section-label">Programs</div>
+        <a href="onboarding.html" class="hamburger-item">&#128640; Accelerate Onboarding</a>
+      </div>
+    </div>
+    <h1>{name} <span>Certification Dashboard</span></h1>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <div class="export-drop print-hide" id="export-drop">
+      <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
+      <div class="export-menu" id="export-menu">
+        <button class="export-item" onclick="runExport('full')">Full Report</button>
+        <button class="export-item" onclick="runExport('not-certified')">Not Certified</button>
+        <button class="export-item" onclick="runExport('manager-summary')">Manager Summary</button>
+      </div>
+    </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
+    <button class="btn-theme print-hide" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
+  </div>
+</div>
+
+<!-- ── Filters ─────────────────────────────────────────────────────────── -->
+<div class="filters">
+  <span class="filter-label">Market</span>
+  <select id="f-market"><option value="">All Markets</option></select>
+  <span class="filter-label">Status</span>
+  <select id="f-status">
+    <option value="">All Status</option>
+    <option value="Certified">Certified</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Not Started">Not Started</option>
+  </select>
+  <input type="text" id="f-search" class="roster-search" placeholder="Search name or manager&hellip;" oninput="applyFilters()" style="width:220px;">
+  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <button class="btn-reset" onclick="resetFilters()">Reset</button>
+  <span class="result-count" id="result-count"></span>
+</div>
+
+<!-- ── Stat cards ──────────────────────────────────────────────────────── -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Total Enrolled <span class="info-btn" onclick="showInfo(event,'total-enrolled')">?</span></div>
+    <div class="stat-value" id="s-total">&#8212;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
+    <div class="stat-value green" id="s-certified">&#8212;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
+    <div class="stat-value blue" id="s-inprog">&#8212;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Not Started <span class="info-btn" onclick="showInfo(event,'not-started')">?</span></div>
+    <div class="stat-value red" id="s-notstarted">&#8212;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
+    <div class="stat-value teal" id="s-rate">&#8212;</div>
+    <div class="stat-sub" id="s-rate-sub"></div>
+  </div>
+</div>
+
+<!-- ── Charts ──────────────────────────────────────────────────────────── -->
+<div class="charts">
+  <div class="chart-card">
+    <div class="chart-title">Completion by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="marketChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'trend-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ── Roster ──────────────────────────────────────────────────────────── -->
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Certification Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
+      <div class="section-hint">Click a person to see their course-level progress</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--muted);">Sort:</span>
+      <button class="sort-btn" data-sort="name" onclick="setSort('name')">Name</button>
+      <button class="sort-btn" data-sort="status" onclick="setSort('status')">Status</button>
+      <button class="sort-btn active" data-sort="pct" onclick="setSort('pct')">Completion % &#9660;</button>
+    </div>
+  </div>
+  <div class="roster-wrap">
+    <div class="roster-left" id="roster-left"></div>
+    <div class="roster-right" id="roster-right">
+      <div class="no-data">Select a person to view details</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Info popover ────────────────────────────────────────────────────── -->
+<div class="info-popover" id="info-popover"></div>
+
+<!-- ── Print-only elements ────────────────────────────────────────────── -->
+<div id="print-header" style="display:none;margin-bottom:20px;">
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title"></div>
+  <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
+  <div style="font-size:12px;color:#555;" id="ph-filters"></div>
+  <div id="ph-desc" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #dde4f0;font-size:12px;color:#444;font-style:italic;"></div>
+</div>
+<div id="print-stats" style="display:none;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
+<div id="print-roster-wrap" style="display:none;">
+  <table class="ptable" id="print-roster-table">
+    <thead id="print-roster-head"></thead>
+    <tbody id="print-roster-body"></tbody>
+  </table>
+</div>
+
+<script>
+const PEOPLE = {raw_json};
+const TLG_SET = new Set({tlg_json});
+
+let filtered = [];
+let hideTLG = false;
+let sortField = "pct";
+let sortDir   = "desc";
+let selectedEmail = null;
+let marketChart, trendChart;
+
+function sel(id) {{ return document.getElementById(id); }}
+function cv(v)  {{ return getComputedStyle(document.body).getPropertyValue(v).trim(); }}
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+(function(){{
+  if(localStorage.getItem("pb-theme") === "light") document.body.classList.add("light-mode");
+  sel("btn-theme").textContent = document.body.classList.contains("light-mode") ? "🌙 Dark" : "☀ Light";
+}})();
+function toggleTheme(){{
+  var light = document.body.classList.toggle("light-mode");
+  localStorage.setItem("pb-theme", light ? "light" : "dark");
+  sel("btn-theme").textContent = light ? "🌙 Dark" : "☀ Light";
+  applyFilters();
+}}
+
+// ── Hamburger ──────────────────────────────────────────────────────────────
+function toggleHamburger(){{
+  var menu = sel("hamburger-menu"), btn = sel("hamburger-btn");
+  var open = menu.classList.toggle("open");
+  btn.classList.toggle("open", open);
+}}
+document.addEventListener("click", function(e){{
+  var h = sel("hamburger");
+  if(h && !h.contains(e.target)){{
+    sel("hamburger-menu").classList.remove("open");
+    sel("hamburger-btn").classList.remove("open");
+  }}
+  if(!e.target.classList.contains("info-btn")) sel("info-popover").classList.remove("visible");
+}});
+
+// ── Export dropdown ────────────────────────────────────────────────────────
+function toggleExportDrop(){{
+  sel("export-menu").classList.toggle("open");
+}}
+document.addEventListener("click", function(e){{
+  var d = sel("export-drop");
+  if(d && !d.contains(e.target)) sel("export-menu").classList.remove("open");
+}});
+
+// ── Info tooltip ───────────────────────────────────────────────────────────
+var INFO_MSGS = {{
+  "total-enrolled":  "Total number of people enrolled in the Healthcare certification program after active filters are applied.",
+  "certified":       "People who have received full Healthcare certification. This is the final sign-off confirming program completion.",
+  "in-progress":     "People who have started at least one course but have not yet earned full certification.",
+  "not-started":     "People enrolled in the program who have not yet completed any courses in either curriculum.",
+  "completion-rate": "Percentage of enrolled people who have earned full certification. Calculated as Certified divided by Total Enrolled.",
+  "market-chart":    "Average overall course completion percentage per market for the people currently shown. Hover a bar for details.",
+  "trend-chart":     "Number of new certifications earned per KM fiscal quarter. Only people with a certification date are counted. KM quarters: Q1 = Apr to Jun, Q2 = Jul to Sep, Q3 = Oct to Dec, Q4 = Jan to Mar.",
+  "roster":          "Full list of enrolled people. Click a person to see their course-by-course progress for both curricula. Use filters and the sort buttons to find specific people.",
+  "export":          "Export a printable report of the people currently shown. Full Report includes everyone with all columns. Not Certified lists people without certification sorted by manager. Manager Summary rolls up team size and completion rate per manager."
+}};
+function showInfo(e, key){{
+  var pop = sel("info-popover");
+  pop.textContent = INFO_MSGS[key] || "";
+  pop.classList.add("visible");
+  var r = e.target.getBoundingClientRect();
+  pop.style.top  = (r.bottom + 6) + "px";
+  pop.style.left = Math.min(r.left, window.innerWidth - 280) + "px";
+  e.stopPropagation();
+}}
+
+// ── JS helpers ─────────────────────────────────────────────────────────────
+function personStatus(p){{
+  if(p.Certified === "Yes") return "Certified";
+  if(p.overallPct > 0)      return "In Progress";
+  return "Not Started";
+}}
+function pFiscalQtr(d){{
+  if(!d) return null;
+  var pts = d.split("-"), yr = +pts[0], mo = +pts[1];
+  var fy = mo >= 4 ? yr + 1 : yr, q = mo >= 10 ? 3 : mo >= 7 ? 2 : mo >= 4 ? 1 : 4;
+  return "Q" + q + " FY" + String(fy).slice(2);
+}}
+function fmtDate(d){{
+  if(!d) return "—";
+  var pts = d.split("-"), months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return months[parseInt(pts[1]) - 1] + " " + parseInt(pts[2]) + ", " + pts[0];
+}}
+function pillClass(pct, total){{
+  if(pct === 100 || (total > 0 && pct >= 100)) return "green";
+  if(pct > 0) return "blue";
+  return "gray";
+}}
+
+// ── Populate market dropdown ───────────────────────────────────────────────
+(function(){{
+  var markets = [...new Set(PEOPLE.map(function(p){{ return p.Market; }}).filter(Boolean))].sort();
+  markets.forEach(function(m){{
+    sel("f-market").innerHTML += '<option value="' + m + '">' + m + "</option>";
+  }});
+}})();
+
+// ── TLG toggle ─────────────────────────────────────────────────────────────
+function toggleTLG(){{
+  hideTLG = !hideTLG;
+  sel("btn-tlg").classList.toggle("active", hideTLG);
+  sel("btn-tlg").textContent = hideTLG ? "Show TLG" : "Hide TLG";
+  applyFilters();
+}}
+function resetFilters(){{
+  sel("f-market").value  = "";
+  sel("f-status").value  = "";
+  sel("f-search").value  = "";
+  if(hideTLG){{ hideTLG = false; sel("btn-tlg").classList.remove("active"); sel("btn-tlg").textContent = "Hide TLG"; }}
+  applyFilters();
+}}
+
+// ── Sort ───────────────────────────────────────────────────────────────────
+function setSort(field){{
+  if(sortField === field){{
+    sortDir = sortDir === "desc" ? "asc" : "desc";
+  }} else {{
+    sortField = field;
+    sortDir   = "desc";
+  }}
+  document.querySelectorAll(".sort-btn").forEach(function(btn){{
+    var active = btn.dataset.sort === sortField;
+    btn.classList.toggle("active", active);
+    var arrow = active ? (sortDir === "desc" ? " ↓" : " ↑") : "";
+    btn.textContent = btn.textContent.replace(/ [↑↓]$/, "") + arrow;
+  }});
+  renderRoster();
+}}
+
+// ── applyFilters ───────────────────────────────────────────────────────────
+function applyFilters(){{
+  var market = sel("f-market").value;
+  var status = sel("f-status").value;
+  var q      = (sel("f-search").value || "").toLowerCase();
+  filtered = PEOPLE.filter(function(p){{
+    if(hideTLG && TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
+    if(market && p.Market !== market) return false;
+    if(status && personStatus(p) !== status) return false;
+    if(q){{
+      var name = (p.FirstName + " " + p.LastName).toLowerCase();
+      var mgr  = (p.Manager || "").toLowerCase();
+      if(!name.includes(q) && !mgr.includes(q)) return false;
+    }}
+    return true;
+  }});
+  sel("result-count").textContent = filtered.length + " shown";
+  renderStats();
+  renderCharts();
+  renderRoster();
+}}
+
+// ── renderStats ────────────────────────────────────────────────────────────
+function renderStats(){{
+  var total   = filtered.length;
+  var cert    = filtered.filter(function(p){{ return p.Certified === "Yes"; }}).length;
+  var inprog  = filtered.filter(function(p){{ return p.overallPct > 0 && p.Certified !== "Yes"; }}).length;
+  var nostart = filtered.filter(function(p){{ return p.overallPct === 0 && p.Certified !== "Yes"; }}).length;
+  var rate    = total > 0 ? Math.round(cert / total * 100) : 0;
+  sel("s-total").textContent     = total;
+  sel("s-certified").textContent = cert;
+  sel("s-inprog").textContent    = inprog;
+  sel("s-notstarted").textContent= nostart;
+  sel("s-rate").textContent      = rate + "%";
+  sel("s-rate-sub").textContent  = total > 0 ? (cert + " of " + total + " enrolled") : "";
+}}
+
+// ── renderCharts ───────────────────────────────────────────────────────────
+function renderCharts(){{
+  var isLight    = document.body.classList.contains("light-mode");
+  var labelColor = isLight ? cv("--text") : cv("--muted");
+  var gridColor  = cv("--border");
+
+  // Chart 1: avg overall completion % per market
+  var marketGroups = {{}};
+  filtered.forEach(function(p){{
+    var m = p.Market || "Unknown";
+    if(!marketGroups[m]) marketGroups[m] = [];
+    marketGroups[m].push(p);
+  }});
+  var marketLabels = Object.keys(marketGroups).sort();
+  var marketData   = marketLabels.map(function(m){{
+    var ppl = marketGroups[m];
+    return Math.round(ppl.reduce(function(s,p){{ return s + p.overallPct; }}, 0) / ppl.length);
+  }});
+  var marketCerts = marketLabels.map(function(m){{
+    return marketGroups[m].filter(function(p){{ return p.Certified === "Yes"; }}).length;
+  }});
+
+  if(marketChart) marketChart.destroy();
+  marketChart = new Chart(sel("marketChart"), {{
+    type: "bar",
+    data: {{
+      labels: marketLabels,
+      datasets: [{{
+        data: marketData,
+        backgroundColor: cv("--accent") + "bb",
+        borderRadius: 4,
+        borderSkipped: false
+      }}]
+    }},
+    options: {{
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      plugins: {{
+        legend: {{ display: false }},
+        tooltip: {{
+          callbacks: {{
+            label: function(ctx){{
+              var m = ctx.label;
+              var n = marketGroups[m] ? marketGroups[m].length : 0;
+              var c = marketCerts[ctx.dataIndex] || 0;
+              return ["Avg completion: " + ctx.raw + "%", n + " people in market", c + " certified"];
+            }}
+          }}
+        }}
+      }},
+      scales: {{
+        x: {{ min: 0, max: 100, grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 11 }}, callback: function(v){{ return v + "%"; }} }} }},
+        y: {{ grid: {{ display: false }}, ticks: {{ color: labelColor, font: {{ size: 11 }} }} }}
+      }}
+    }}
+  }});
+
+  // Chart 2: certifications over time by fiscal quarter
+  var qtrMap = {{}};
+  filtered.forEach(function(p){{
+    if(p.Certified === "Yes" && p.CertDate){{
+      var q = pFiscalQtr(p.CertDate);
+      if(q) qtrMap[q] = (qtrMap[q] || 0) + 1;
+    }}
+  }});
+  function parseQtr(s){{ var m = s.match(/Q(\d) FY(\d+)/); return m ? +m[2] * 10 + +m[1] : 0; }}
+  var trendLabels = Object.keys(qtrMap).sort(function(a,b){{ return parseQtr(a) - parseQtr(b); }});
+  var trendData   = trendLabels.map(function(q){{ return qtrMap[q]; }});
+
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(sel("trendChart"), {{
+    type: "bar",
+    data: {{
+      labels: trendLabels,
+      datasets: [{{
+        data: trendData,
+        backgroundColor: cv("--green") + "bb",
+        borderRadius: 3,
+        borderSkipped: false
+      }}]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      plugins: {{
+        legend: {{ display: false }},
+        tooltip: {{ callbacks: {{ label: function(ctx){{ return ctx.raw + " certified this quarter"; }} }} }}
+      }},
+      scales: {{
+        x: {{ grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 10 }}, maxRotation: 45 }} }},
+        y: {{ grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 11 }}, stepSize: 1 }} }}
+      }}
+    }}
+  }});
+}}
+
+// ── renderRoster ───────────────────────────────────────────────────────────
+function renderRoster(){{
+  var d = sortDir === "desc" ? -1 : 1;
+  var sorted = filtered.slice().sort(function(a, b){{
+    if(sortField === "name"){{
+      return d * (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+    }} else if(sortField === "status"){{
+      var order = {{ "Certified": 2, "In Progress": 1, "Not Started": 0 }};
+      var diff = (order[personStatus(a)] || 0) - (order[personStatus(b)] || 0);
+      if(diff !== 0) return d * diff;
+      return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+    }} else {{
+      var diff2 = a.overallPct - b.overallPct;
+      if(diff2 !== 0) return d * diff2;
+      return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+    }}
+  }});
+
+  var html = "";
+  sorted.forEach(function(p){{
+    var fullName = p.FirstName + " " + p.LastName;
+    var status   = personStatus(p);
+    var stripe   = status === "Certified" ? " stripe-green" : status === "In Progress" ? " stripe-blue" : "";
+    var hcfPct   = p.hcf.pct;
+    var lsPct    = p.ls.pct;
+    var hcfClass = pillClass(hcfPct, p.hcf.total);
+    var lsClass  = pillClass(lsPct,  p.ls.total);
+    var certBadge = status === "Certified" ? '<span class="cert-check">✓ Certified</span>' : "";
+    html += '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
+    html += '<div class="roster-name-block">';
+    html += '<div class="roster-name">' + fullName + "</div>";
+    html += '<div class="roster-title">' + (p.JobTitle || "") + "</div>";
+    html += '<div class="roster-pills">';
+    html += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
+    html += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/11</span>";
+    html += "</div></div>";
+    html += certBadge;
+    html += "</div>";
+  }});
+
+  if(!html) html = '<div class="no-data">No people match filters</div>';
+  sel("roster-left").innerHTML = html;
+
+  // Re-apply active state if selectedEmail is still in filtered
+  if(selectedEmail){{
+    var el = sel("roster-left").querySelector('[data-email="' + selectedEmail + '"]');
+    if(el) el.classList.add("active");
+    else   sel("roster-right").innerHTML = '<div class="no-data">Select a person to view details</div>';
+  }}
+}}
+
+// ── showDetail ─────────────────────────────────────────────────────────────
+function showDetail(email){{
+  selectedEmail = email;
+  var p = PEOPLE.find(function(r){{ return r.Email === email; }});
+  if(!p) return;
+  document.querySelectorAll(".roster-person").forEach(function(el){{
+    el.classList.toggle("active", el.dataset.email === email);
+  }});
+  var status  = personStatus(p);
+  var isCert  = status === "Certified";
+  var badgeClass = isCert ? "certified" : "not-certified";
+  var badgeText  = isCert ? ("✓ Certified" + (p.CertDate ? " · " + fmtDate(p.CertDate) : "")) : "Not Certified";
+
+  function progBar(pct, cls){{
+    return '<div class="prog-wrap"><div class="prog-bar ' + cls + '" style="width:' + pct + '%"></div></div>';
+  }}
+  function courseList(curriculum, id){{
+    var items = curriculum.items;
+    var html2 = '<div class="course-list open" id="cl-' + id + '">';
+    items.forEach(function(item){{
+      var iconClass = item.done ? "done" : "todo";
+      var icon      = item.done ? "✓" : "○";
+      var dateStr   = item.done && item.date ? '<span class="course-date">' + fmtDate(item.date) + "</span>" : "";
+      html2 += '<div class="course-item">';
+      html2 += '<span class="course-icon ' + iconClass + '">' + icon + "</span>";
+      html2 += '<span class="course-title">' + item.title + "</span>";
+      html2 += dateStr;
+      html2 += "</div>";
+    }});
+    html2 += "</div>";
+    return html2;
+  }}
+  function curriculumSection(label, curriculum, id){{
+    var doneOf = curriculum.done + " / " + curriculum.total + " courses";
+    var pct    = curriculum.pct;
+    var barCls = pct >= 100 ? "green" : "blue";
+    var html3  = '<div class="curriculum-section">';
+    html3 += '<div class="curriculum-header" data-id="' + id + '" onclick="toggleCourseList(this.dataset.id)">';
+    html3 += '<span class="curriculum-title">' + label + "</span>";
+    html3 += '<span class="curriculum-count">' + doneOf + " ▼</span>";
+    html3 += "</div>";
+    html3 += progBar(pct, barCls);
+    html3 += courseList(curriculum, id);
+    html3 += "</div>";
+    return html3;
+  }}
+
+  var detailHtml = "";
+  detailHtml += '<div class="roster-right-header">';
+  detailHtml += '<div style="font-size:16px;font-weight:700;margin-bottom:6px">' + p.FirstName + " " + p.LastName + "</div>";
+  detailHtml += '<span class="badge-status ' + badgeClass + '">' + badgeText + "</span>";
+  detailHtml += "</div>";
+  detailHtml += '<div class="detail-grid">';
+  detailHtml += '<div><div class="detail-label">Job Title</div><div class="detail-value">' + (p.JobTitle || "—") + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Market</div><div class="detail-value">' + (p.Market || "—") + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:' + p.Email + '" style="color:var(--accent);text-decoration:none">' + (p.Email || "—") + "</a></div></div>";
+  if(p.Manager){{
+    detailHtml += '<div><div class="detail-label">Manager</div><div class="detail-value">' + p.Manager + "</div></div>";
+    detailHtml += '<div><div class="detail-label">Manager Email</div><div class="detail-value"><a href="mailto:' + p.MgrEmail + '" style="color:var(--accent);text-decoration:none">' + (p.MgrEmail || "—") + "</a></div></div>";
+  }}
+  detailHtml += "</div>";
+  detailHtml += '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">';
+  detailHtml += curriculumSection("Healthcare Foundations · " + p.hcf.done + " / 10 courses", p.hcf, "hcf-" + email.replace(/[^a-z0-9]/gi, ""));
+  detailHtml += curriculumSection("Layered Security · " + p.ls.done + " / 11 courses", p.ls, "ls-" + email.replace(/[^a-z0-9]/gi, ""));
+  detailHtml += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);">';
+  detailHtml += p.overallDone + " of 21 courses complete (" + p.overallPct + "%)";
+  detailHtml += "</div>";
+  sel("roster-right").innerHTML = detailHtml;
+}}
+
+function toggleCourseList(id){{
+  var el = document.getElementById("cl-" + id);
+  if(el) el.classList.toggle("open");
+}}
+
+// ── Print / Export ─────────────────────────────────────────────────────────
+function setupPrintHeader(title, subtitle){{
+  sel("ph-title").textContent   = title;
+  sel("ph-date").textContent    = subtitle;
+  var market = sel("f-market").value || "All Markets";
+  var status = sel("f-status").options[sel("f-status").selectedIndex].text;
+  var search = sel("f-search").value;
+  var parts  = ["Status: " + status, "Market: " + market];
+  if(search) parts.push("Search: " + search);
+  if(hideTLG) parts.push("TLG hidden");
+  sel("ph-filters").textContent = parts.join("  |  ");
+}}
+function pBox(n, l){{
+  return '<div style="min-width:90px"><div style="font-size:30px;font-weight:700;color:#1a3a5c;line-height:1">' + n + "</div>"
+       + '<div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:5px">' + l + "</div></div>";
+}}
+function tds(cells){{ return "<tr>" + cells.map(function(c){{ return "<td>" + c + "</td>"; }}).join("") + "</tr>"; }}
+function thRow(labels){{ return "<tr>" + labels.map(function(l){{ return "<th>" + l + "</th>"; }}).join("") + "</tr>"; }}
+
+function runExport(type){{
+  sel("export-menu").classList.remove("open");
+  var now = new Date().toLocaleDateString("en-US", {{year:"numeric",month:"long",day:"numeric"}});
+
+  if(type === "full"){{
+    setupPrintHeader("{name} Certification Report", "Generated: " + now + "  |  " + filtered.length + " People");
+    var total  = filtered.length;
+    var cert   = filtered.filter(function(p){{ return p.Certified === "Yes"; }}).length;
+    var inprog = filtered.filter(function(p){{ return p.overallPct > 0 && p.Certified !== "Yes"; }}).length;
+    var rate   = total > 0 ? Math.round(cert / total * 100) : 0;
+    sel("print-stats").innerHTML = pBox(total,"Total Enrolled") + pBox(cert,"Certified") + pBox(inprog,"In Progress") + pBox(rate+"%","Completion Rate");
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Status","HC Foundations %","Layered Security %","Overall %","Cert Date","Manager"]);
+    sel("print-roster-body").innerHTML = filtered.map(function(p,i){{
+      return tds([i+1, "<b>"+p.FirstName+" "+p.LastName+"</b>", p.Market||"—", p.JobTitle||"—",
+        personStatus(p), p.hcf.pct+"%", p.ls.pct+"%", p.overallPct+"%",
+        p.CertDate||"—", p.Manager||"—"]);
+    }}).join("");
+    sel("ph-desc").style.display = "none";
+    document.body.classList.remove("print-no-summary");
+    window.print();
+
+  }} else if(type === "not-certified"){{
+    var notCert = filtered.filter(function(p){{ return p.Certified !== "Yes"; }});
+    setupPrintHeader("Not Certified — {name}", "Generated: " + now + "  |  " + notCert.length + " Employees");
+    sel("print-stats").innerHTML = "";
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Email","Market","HC Foundations %","Layered Security %","Manager","Manager Email"]);
+    sel("print-roster-body").innerHTML = notCert.length
+      ? notCert.slice().sort(function(a,b){{ return (a.Manager||"").localeCompare(b.Manager||"") || (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName); }})
+          .map(function(p,i){{ return tds([i+1,"<b>"+p.FirstName+" "+p.LastName+"</b>",p.Email||"—",p.Market||"—",p.hcf.pct+"%",p.ls.pct+"%",p.Manager||"—",p.MgrEmail||"—"]); }}).join("")
+      : '<tr><td colspan="8" style="color:#999;font-style:italic;padding:10px">All enrolled people are certified.</td></tr>';
+    sel("ph-desc").textContent = "Employees who have not yet earned Healthcare certification, sorted by manager.";
+    sel("ph-desc").style.display = "block";
+    document.body.classList.add("print-no-summary");
+    window.print();
+    document.body.classList.remove("print-no-summary");
+
+  }} else if(type === "manager-summary"){{
+    var mgrMap = {{}};
+    filtered.forEach(function(p){{
+      var k = p.Manager || "(No Manager)";
+      if(!mgrMap[k]) mgrMap[k] = {{ name:k, email:p.MgrEmail||"—", total:0, cert:0, avgPct:0, sumPct:0 }};
+      mgrMap[k].total++;
+      if(p.Certified === "Yes") mgrMap[k].cert++;
+      mgrMap[k].sumPct += p.overallPct;
+    }});
+    var mgrs = Object.values(mgrMap).map(function(m){{ m.avgPct = m.total > 0 ? Math.round(m.sumPct / m.total) : 0; return m; }})
+      .sort(function(a,b){{ return (b.cert/b.total) - (a.cert/a.total); }});
+    setupPrintHeader("Manager Summary — {name}", "Generated: " + now + "  |  " + mgrs.length + " Managers");
+    sel("print-stats").innerHTML = "";
+    sel("print-roster-head").innerHTML = thRow(["Manager","Manager Email","Team Size","Certified","Avg Overall %"]);
+    sel("print-roster-body").innerHTML = mgrs.map(function(m){{ return tds(["<b>"+m.name+"</b>",m.email,m.total,m.cert,"<b>"+m.avgPct+"%</b>"]); }}).join("");
+    sel("ph-desc").textContent = "Certification completion by manager, sorted from highest to lowest completion rate.";
+    sel("ph-desc").style.display = "block";
+    document.body.classList.add("print-no-summary");
+    window.print();
+    document.body.classList.remove("print-no-summary");
+  }}
+}}
+
+// ── init ───────────────────────────────────────────────────────────────────
+applyFilters();
+</script>
+</body>
+</html>"""
 
 
 if __name__ == '__main__':
