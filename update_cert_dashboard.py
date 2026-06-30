@@ -1973,7 +1973,7 @@ def generate_html_healthcare_v2(slug, name, rows):
   .pill.green{{color:var(--green);background:var(--green-subtle);border:1px solid var(--green)44;}}
   .pill.blue{{color:var(--accent);background:var(--accent)18;border:1px solid var(--accent)44;}}
   .pill.gray{{color:var(--muted);background:var(--surface2);border:1px solid var(--border);}}
-  .roster-bottom{{display:flex;justify-content:flex-end;margin-top:4px;}}
+  .roster-bottom{{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}}
   .roster-pct{{font-size:12px;font-weight:700;color:var(--muted);}}
   .roster-pct.pct-progress{{color:var(--accent);}}
   .roster-pct.pct-done{{color:var(--green);}}
@@ -1989,7 +1989,9 @@ def generate_html_healthcare_v2(slug, name, rows):
   .detail-value{{font-size:14px;font-weight:500;}}
   .badge-status{{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}}
   .badge-status.certified{{background:var(--green-subtle);color:var(--green);}}
+  .badge-status.in-progress{{background:var(--accent)18;color:var(--accent);border:1px solid var(--accent)44;}}
   .badge-status.not-certified{{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}}
+  .roster-bottom .badge-status{{font-size:10px;padding:2px 8px;}}
 
   /* Progress bars */
   .prog-wrap{{background:var(--surface2);border-radius:4px;height:6px;width:100%;overflow:hidden;margin-top:4px;}}
@@ -2450,8 +2452,9 @@ function renderRoster(){{
     var lsPct    = p.ls.pct;
     var hcfClass = pillClass(hcfPct, p.hcf.total);
     var lsClass  = pillClass(lsPct,  p.ls.total);
-    var pctClass  = status === "Certified" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
-    var certBadge = status === "Certified" ? '<span class="cert-check">✓ Certified</span>' : "";
+    var pctClass       = status === "Certified" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
+    var badgeStatusCls = status === "Certified" ? "certified" : status === "In Progress" ? "in-progress" : "not-certified";
+    var badgeStatusTxt = status === "Certified" ? "✓ Certified" : status === "In Progress" ? "In Progress" : "Not Started";
     html += '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
     html += '<div class="roster-name-block">';
     html += '<div class="roster-name">' + fullName + "</div>";
@@ -2460,9 +2463,11 @@ function renderRoster(){{
     html += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
     html += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/11</span>";
     html += "</div>";
-    html += '<div class="roster-bottom"><span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span></div>";
+    html += '<div class="roster-bottom">';
+    html += '<span class="badge-status ' + badgeStatusCls + '">' + badgeStatusTxt + "</span>";
+    html += '<span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span>";
     html += "</div>";
-    html += certBadge;
+    html += "</div>";
     html += "</div>";
   }});
 
