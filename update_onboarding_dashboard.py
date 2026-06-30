@@ -528,15 +528,15 @@ def generate_html(records):
 <div class="section">
   <div class="section-header">
     <div>
-      <div class="section-title">Learner Progress <span class="info-btn" onclick="showInfo(event,'heatmap')">?</span></div>
+      <div class="section-title">Progress Report <span class="info-btn" onclick="showInfo(event,'heatmap')">?</span></div>
       <div class="section-hint">Click any row to see full detail &mdash; curriculum breakdown, course checklist &amp; playbook activity</div>
     </div>
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       <div class="legend">
-        <span class="leg"><span class="leg-dot" style="background:#1baf7a"></span>75&ndash;100%</span>
-        <span class="leg"><span class="leg-dot" style="background:#eda100"></span>40&ndash;74%</span>
-        <span class="leg"><span class="leg-dot" style="background:#e34948"></span>1&ndash;39%</span>
-        <span class="leg"><span class="leg-dot" style="background:#888780"></span>0%</span>
+        <span class="leg"><span class="leg-dot" style="background:#15803d"></span>Complete</span>
+        <span class="leg"><span class="leg-dot" style="background:#1d4ed8"></span>In Progress</span>
+        <span class="leg"><span class="leg-dot" style="background:#b91c1c"></span>Past Due</span>
+        <span class="leg"><span class="leg-dot" style="background:#6b7280"></span>Not Started</span>
       </div>
       <input type="text" id="table-search" oninput="filterTableRows()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
     </div>
@@ -591,6 +591,22 @@ function pct2color(p) {{
   if (p < 40)  return {{bg:'#FCEBEB', fg:'#791F1F'}};
   if (p < 75)  return {{bg:'#FAEEDA', fg:'#633806'}};
   return {{bg:'#EAF3DE', fg:'#27500A'}};
+}}
+
+function curricPillStyle(c) {{
+  if (!c) return 'background:#6b7280;color:#fff';
+  if (c.complete) return 'background:#15803d;color:#fff';
+  if (c.daysRem !== null && c.daysRem < 0) return 'background:#b91c1c;color:#fff';
+  if (c.pct > 0)  return 'background:#1d4ed8;color:#fff';
+  return 'background:#6b7280;color:#fff';
+}}
+
+function overallPillStyle(p) {{
+  if (p.overallDone) return 'background:#15803d;color:#fff;font-weight:700';
+  const anyOverdue = Object.values(p.curricula).some(c => c && !c.complete && c.daysRem !== null && c.daysRem < 0);
+  if (anyOverdue) return 'background:#b91c1c;color:#fff;font-weight:700';
+  if (p.overallPct > 0) return 'background:#1d4ed8;color:#fff;font-weight:700';
+  return 'background:#6b7280;color:#fff;font-weight:700';
 }}
 
 function computeStatus(p) {{
@@ -824,20 +840,15 @@ function renderTable() {{
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
       const pct = c ? c.pct : 0;
-      const clr = pct2color(pct);
-      const pastDue = c && !c.complete && c.daysRem !== null && c.daysRem < 0;
-      const ring = pastDue ? ';outline:2px solid var(--red);outline-offset:1px;' : '';
-      cells += '<td class="pct-cell"><span class="pct-pill" style="background:' + clr.bg + ';color:' + clr.fg + ring + '">' + pct + '%</span></td>';
+      cells += '<td class="pct-cell"><span class="pct-pill" style="' + curricPillStyle(c) + '">' + pct + '%</span></td>';
     }});
-
-    const oclr = pct2color(p.overallPct);
 
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
       '<td class="name-cell">' + escHtml(p.name) + '</td>' +
       '<td class="market-cell">' + escHtml(p.market) + '</td>' +
       '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
       '<td style="font-size:11px;">' + daysStr + '</td>' +
-      '<td class="pct-cell"><span class="pct-pill" style="background:' + oclr.bg + ';color:' + oclr.fg + ';font-weight:700">' + p.overallPct + '%</span></td>' +
+      '<td class="pct-cell"><span class="pct-pill" style="' + overallPillStyle(p) + '">' + p.overallPct + '%</span></td>' +
       cells +
     '</tr>';
   }}).join('');
@@ -874,6 +885,14 @@ function renderMarketChart() {{
     const mp = filtered.filter(p => p.market === m);
     return Math.round(mp.reduce((s,p) => s+p.overallPct,0)/mp.length);
   }});
+  const marketStats = markets.map(m => {{
+    const mp = filtered.filter(p => p.market === m);
+    const total    = mp.length;
+    const complete = mp.filter(p => p.overallDone).length;
+    const overdue  = mp.filter(p => !p.overallDone && Object.values(p.curricula).some(c => c && !c.complete && c.daysRem !== null && c.daysRem < 0)).length;
+    const onTrack  = total - complete - overdue;
+    return {{total, complete, onTrack, overdue}};
+  }});
   const ctx = document.getElementById('marketChart').getContext('2d');
   if (marketChartObj) marketChartObj.destroy();
   marketChartObj = new Chart(ctx, {{
@@ -895,7 +914,21 @@ function renderMarketChart() {{
       maintainAspectRatio: false,
       plugins: {{
         legend: {{display:false}},
-        tooltip: {{callbacks: {{label: ctx => ' ' + ctx.parsed.x + '%'}}}}
+        tooltip: {{
+          callbacks: {{
+            label: c => '  Avg progress: ' + c.parsed.x + '%',
+            afterLabel: c => {{
+              const s = marketStats[c.dataIndex];
+              const lines = [
+                '  ' + s.total + ' learners in this market',
+                '  ✓ ' + s.complete + ' fully complete',
+                '  → ' + s.onTrack + ' on track',
+              ];
+              if (s.overdue > 0) lines.push('  ⚠ ' + s.overdue + ' past their deadline');
+              return lines;
+            }}
+          }}
+        }}
       }},
       scales: {{
         x: {{
@@ -920,6 +953,15 @@ function renderCurricChart() {{
     const vals = filtered.map(p => p.curricula[cid] ? p.curricula[cid].pct : 0);
     return vals.length ? Math.round(vals.reduce((s,v) => s+v,0)/vals.length) : 0;
   }});
+  const curricStats = CURRIC_IDS.map(cid => {{
+    const people = filtered.map(p => p.curricula[cid]).filter(Boolean);
+    const total      = filtered.length;
+    const complete   = people.filter(c => c.complete).length;
+    const inProgress = people.filter(c => !c.complete && c.pct > 0).length;
+    const notStarted = people.filter(c => !c.complete && c.pct === 0).length;
+    const pastDue    = people.filter(c => !c.complete && c.daysRem !== null && c.daysRem < 0).length;
+    return {{total, complete, inProgress, notStarted, pastDue}};
+  }});
   const ctx = document.getElementById('curricChart').getContext('2d');
   if (curricChartObj) curricChartObj.destroy();
   const colors = ['#3b82f6','#22c55e','#f59e0b','#a855f7','#ef4444','#14b8a6'];
@@ -941,7 +983,21 @@ function renderCurricChart() {{
       maintainAspectRatio: false,
       plugins: {{
         legend: {{display:false}},
-        tooltip: {{callbacks: {{label: ctx => ' ' + ctx.parsed.y + '%'}}}}
+        tooltip: {{
+          callbacks: {{
+            label: c => '  Avg progress: ' + c.parsed.y + '%',
+            afterLabel: c => {{
+              const s = curricStats[c.dataIndex];
+              const lines = [
+                '  ✓ ' + s.complete   + ' of ' + s.total + ' fully complete',
+                '  ◑ ' + s.inProgress + ' in progress',
+                '  ○ ' + s.notStarted + ' not started',
+              ];
+              if (s.pastDue > 0) lines.push('  ⚠ ' + s.pastDue + ' past their deadline');
+              return lines;
+            }}
+          }}
+        }}
       }},
       scales: {{
         y: {{
