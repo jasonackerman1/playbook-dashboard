@@ -674,16 +674,15 @@ function toggleHamburger() {{
 
 /* ── Info popover ── */
 const INFO = {{
-  'total-enrolled': 'Total number of learners currently enrolled in the Accelerate Onboarding program, matching your active filters.',
-  'overdue': 'Learners whose 45-day program window has expired and who have not yet completed all curricula. Based on their assignment date.',
-  'ontrack': 'Learners still within their 45-day window who have not yet fully completed the program.',
-  'completed': 'Learners who have completed all required curricula in the Accelerate Onboarding program.',
-  'avg-completion': 'Average overall completion percentage across all learners shown, calculated from per-curriculum item completion.',
-  'first-sale': 'Tracks whether each learner has logged their first sale in Salesforce. Salesforce integration is pending — this will populate automatically once connected.',
-  'market-chart': 'Average overall completion % for each market, based on learners currently shown. Helpful for spotting which regions need support.',
-  'curric-chart': 'Average completion % per sub-curriculum across all shown learners. Low bars indicate where learners are getting stuck.',
-  'heatmap': 'One row per learner. Each column shows their completion % for that curriculum. Color: green = 75%+, amber = 40-74%, red = 1-39%, gray = not started. Click a row for full detail.',
-  'export': 'Export is scoped to your active filters. Full Report: all learners with status and overall %. Overdue Only: contact list for follow-up with manager emails. Manager Summary: one row per manager with team count and avg completion. Example: filter to West Sls market, then export Overdue Only for a regional outreach list.',
+  'total-enrolled': 'The total number of people currently in the Accelerate Onboarding program. If you\'ve applied any filters above, this number reflects only the people matching those filters.',
+  'overdue': 'People who have missed the deadline for one or more of their required courses — as reported by the LMS. For example, if someone\'s Getting Started course was due June 11 and they haven\'t finished it, they appear here as Overdue.',
+  'ontrack': 'People who are still within all of their course deadlines. They haven\'t missed anything yet, but may not be done. Tip: click into any person\'s row to see exactly which courses still need attention.',
+  'completed': 'People who have fully completed every required course in the Accelerate Onboarding program.',
+  'first-sale': 'Will show whether each person has logged their first sale in Salesforce. This is coming soon — it will populate automatically once the Salesforce connection is set up.',
+  'market-chart': 'Shows how far along each market\'s reps are on average. Hover over any bar to see the full picture — how many people are done, still on track, or past their deadline. A shorter bar means that market may need extra attention.',
+  'curric-chart': 'Shows how far along all reps are on average for each course. Hover over any bar to see how many people have finished that course, are working on it, haven\'t started it yet, or are past its deadline. A short bar is a signal that reps are getting stuck there.',
+  'heatmap': 'One row per person. Each colored box is a course — the number inside is how far through it they are. Colors tell you the situation at a glance: Green = finished, Blue = in progress and on time, Red = past the deadline for that course, Gray = not started yet. Click any row to open their full detail card — every individual lesson, completion dates, and any Accelerate Playbook visits.',
+  'export': 'Downloads a report based on whoever is currently showing on screen — so filter first, then export. Full Report: everyone with their status and overall progress. Overdue Only: a list of people who are past a course deadline, including their manager\'s contact info for follow-up. Manager Summary: one row per manager showing their team\'s headcount and progress. Example: filter to a specific market, then choose Overdue Only to get a ready-to-use outreach list for that region.',
 }};
 function showInfo(e, key) {{
   e.stopPropagation();
