@@ -2449,7 +2449,8 @@ function renderRoster(){{
     var lsPct    = p.ls.pct;
     var hcfClass = pillClass(hcfPct, p.hcf.total);
     var lsClass  = pillClass(lsPct,  p.ls.total);
-    var pctClass = p.overallPct === 100 ? " pct-done" : "";
+    var pctClass  = p.overallPct === 100 ? " pct-done" : "";
+    var certBadge = status === "Certified" ? '<span class="cert-check">✓ Certified</span>' : "";
     html += '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
     html += '<div class="roster-name-block">';
     html += '<div class="roster-name">' + fullName + "</div>";
@@ -2460,6 +2461,7 @@ function renderRoster(){{
     html += "</div>";
     html += '<div class="roster-bottom"><span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span></div>";
     html += "</div>";
+    html += certBadge;
     html += "</div>";
   }});
 
