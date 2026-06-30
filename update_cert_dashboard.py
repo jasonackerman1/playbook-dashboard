@@ -82,6 +82,17 @@ def km_fiscal_quarter(date):
     return f'FY{fy} Q{q}'
 
 
+def fmt_date_label(yyyy_mm):
+    """Convert 'YYYY-MM' to 'Month YYYY' for display."""
+    months = ['January','February','March','April','May','June',
+              'July','August','September','October','November','December']
+    try:
+        y, m = yyyy_mm.split('-')
+        return f"{months[int(m)-1]} {y}"
+    except Exception:
+        return yyyy_mm
+
+
 def extract_file_date(fname):
     """Extract YYYY-MM from filename for chronological ordering of monthly files."""
     m = re.search(r'(\d{4}-\d{2})', os.path.basename(fname))
@@ -216,6 +227,7 @@ def generate_html(slug, name, rows):
   .info-popover.visible{{display:block;}}
   .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
   .header h1 span{{color:var(--muted);font-weight:400;}}
+  .header-date{{font-size:11px;color:var(--muted);margin-top:2px;}}
   .btn-theme{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
   .btn-theme:hover{{border-color:var(--accent);color:var(--text);}}
   .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
@@ -936,7 +948,7 @@ applyFilters();
 </html>"""
 
 
-def generate_html_publicsector(slug, name, rows):
+def generate_html_publicsector(slug, name, rows, date_label=''):
     raw_json = json.dumps(rows)
     tlg_json = json.dumps(sorted(TLG))
 
@@ -980,6 +992,7 @@ def generate_html_publicsector(slug, name, rows):
   .info-popover.visible{{display:block;}}
   .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
   .header h1 span{{color:var(--muted);font-weight:400;}}
+  .header-date{{font-size:11px;color:var(--muted);margin-top:2px;}}
   .btn-theme{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
   .btn-theme:hover{{border-color:var(--accent);color:var(--text);}}
   .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
@@ -1078,7 +1091,10 @@ def generate_html_publicsector(slug, name, rows):
         <a href="onboarding.html" class="hamburger-item">&#127919; Accelerate Onboarding</a>
       </div>
     </div>
-    <h1>{name} <span>Certification Dashboard</span></h1>
+    <div>
+      <h1>{name} <span>Certification Dashboard</span></h1>
+      <div class="header-date">Data as of {date_label}</div>
+    </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
     <div class="export-drop print-hide" id="export-drop">
@@ -1621,7 +1637,10 @@ def main():
         cert_count = sum(1 for r in rows if r['Certified'] == 'Yes')
         ip_count   = sum(1 for r in rows if r['overallPct'] > 0 and r['Certified'] != 'Yes')
         print(f'  → {len(rows)} people  ({cert_count} certified, {ip_count} in progress, {len(rows)-cert_count-ip_count} not started)')
-        html = generate_html_healthcare_v2('healthcare', 'Healthcare', rows)
+        import datetime, time
+        latest_mtime = max(os.path.getmtime(hc_cert_path), os.path.getmtime(hc_learn_path))
+        hc_date_label = datetime.datetime.fromtimestamp(latest_mtime).strftime('%B %Y')
+        html = generate_html_healthcare_v2('healthcare', 'Healthcare', rows, hc_date_label)
         out  = 'cert-healthcare.html'
         with open(out, 'w', encoding='utf-8') as fh:
             fh.write(html)
@@ -1687,7 +1706,8 @@ def main():
         elif slug == 'publicsector':
             ps_cert = sum(1 for r in deduped if r['PublicSector'] == 'Yes')
             print(f'  → {len(deduped)} unique people  ({ps_cert} certified, {len(deduped)-ps_cert} not yet)')
-            html = generate_html_publicsector(slug, vert_name, deduped)
+            ps_date_label = fmt_date_label(extract_file_date(fnames[-1]))
+            html = generate_html_publicsector(slug, vert_name, deduped, ps_date_label)
 
         out  = f'cert-{slug}.html'
         with open(out, 'w', encoding='utf-8') as fh:
@@ -1841,7 +1861,7 @@ def load_rows_healthcare_v2(cert_file, learning_file):
     return rows
 
 
-def generate_html_healthcare_v2(slug, name, rows):
+def generate_html_healthcare_v2(slug, name, rows, date_label=''):
     """Generate the Healthcare v2 certification dashboard HTML.
 
     Supports two curricula displayed as course-level progress:
@@ -1883,6 +1903,7 @@ def generate_html_healthcare_v2(slug, name, rows):
   .header-left{{display:flex;align-items:center;gap:16px;}}
   .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
   .header h1 span{{color:var(--muted);font-weight:400;}}
+  .header-date{{font-size:11px;color:var(--muted);margin-top:2px;}}
   .btn-theme{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
   .btn-theme:hover{{border-color:var(--accent);color:var(--text);}}
 
@@ -2064,7 +2085,10 @@ def generate_html_healthcare_v2(slug, name, rows):
         <a href="onboarding.html" class="hamburger-item">&#128640; Accelerate Onboarding</a>
       </div>
     </div>
-    <h1>{name} <span>Certification Dashboard</span></h1>
+    <div>
+      <h1>{name} <span>Certification Dashboard</span></h1>
+      <div class="header-date">Data as of {date_label}</div>
+    </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
     <div class="export-drop print-hide" id="export-drop">

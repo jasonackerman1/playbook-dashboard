@@ -28,6 +28,7 @@
   .header-left{display:flex;align-items:center;gap:16px;}
   .header h1{font-size:18px;font-weight:700;letter-spacing:.3px;}
   .header h1 span{color:var(--muted);font-weight:400;}
+  .header-date{font-size:11px;color:var(--muted);margin-top:2px;}
   .btn-theme{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}
   .btn-theme:hover{border-color:var(--accent);color:var(--text);}
 
@@ -209,7 +210,10 @@
         <a href="onboarding.html" class="hamburger-item">&#128640; Accelerate Onboarding</a>
       </div>
     </div>
-    <h1>Healthcare <span>Certification Dashboard</span></h1>
+    <div>
+      <h1>Healthcare <span>Certification Dashboard</span></h1>
+      <div class="header-date">Data as of June 2026</div>
+    </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
     <div class="export-drop print-hide" id="export-drop">
