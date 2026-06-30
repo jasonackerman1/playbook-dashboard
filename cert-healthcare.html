@@ -124,6 +124,14 @@
   .roster-pct.pct-progress{color:var(--accent);}
   .roster-pct.pct-done{color:var(--green);}
 
+  /* Manager group view */
+  .mgr-group-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--surface2);border-bottom:1px solid var(--border);user-select:none;}
+  .mgr-group-hdr:hover{background:var(--border);}
+  .mgr-group-hdr.open .mgr-chevron{transform:rotate(180deg);}
+  .mgr-chevron{transition:transform .15s;font-size:10px;color:var(--muted);flex-shrink:0;}
+  .mgr-team{display:none;}
+  .mgr-team.open{display:block;}
+
   /* Roster key */
   .roster-key{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:8px 12px;background:var(--surface2);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--muted);}
   .key-group{display:flex;align-items:center;gap:6px;}
@@ -274,21 +282,23 @@
 
 <!-- ── Roster ──────────────────────────────────────────────────────────── -->
 <div class="section">
-  <div class="section-header" style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;">
+  <div class="section-header">
     <div>
       <div class="section-title">Certification Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
       <div class="section-hint">Click a person to see their course-level progress</div>
     </div>
-    <div style="display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;">
-      <span style="font-size:11px;color:var(--muted);">Sort:</span>
-      <button class="sort-btn" data-sort="name" onclick="setSort('name')">Name</button>
-      <button class="sort-btn" data-sort="status" onclick="setSort('status')">Status</button>
-      <button class="sort-btn active" data-sort="pct" onclick="setSort('pct')">Completion % &#9660;</button>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--muted);margin-right:2px;">View:</span>
+      <button class="sort-btn active" id="view-individual" onclick="setRosterView('individual')">Individual</button>
+      <button class="sort-btn" id="view-manager" onclick="setRosterView('manager')">By Manager</button>
+      <span id="sort-controls" style="display:flex;align-items:center;gap:6px;margin-left:6px;">
+        <span style="font-size:11px;color:var(--muted);margin-right:2px;">Sort:</span>
+        <button class="sort-btn" data-sort="name" onclick="setSort('name')">Name</button>
+        <button class="sort-btn" data-sort="status" onclick="setSort('status')">Status</button>
+        <button class="sort-btn active" data-sort="pct" onclick="setSort('pct')">Completion % &#9660;</button>
+      </span>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-      <select id="f-mgr" class="filter-select" onchange="applyFilters()"><option value="">All Managers</option></select>
-      <input type="text" id="f-search" class="roster-search" placeholder="Search name&hellip;" oninput="applyFilters()" style="width:160px;">
-    </div>
+    <input type="text" id="f-search" class="roster-search" placeholder="Search by name&hellip;" oninput="applyFilters()" style="width:170px;">
   </div>
   <div class="roster-key">
     <div class="key-group">
@@ -345,6 +355,7 @@ let hideTLG = false;
 let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
+let rosterView = "individual";
 let marketChart, trendChart;
 
 function sel(id) { return document.getElementById(id); }
@@ -432,15 +443,11 @@ function pillClass(pct, total){
   return "gray";
 }
 
-// ── Populate dropdowns ─────────────────────────────────────────────────────
+// ── Populate market dropdown ───────────────────────────────────────────────
 (function(){
   var markets = [...new Set(PEOPLE.map(function(p){ return p.Market; }).filter(Boolean))].sort();
   markets.forEach(function(m){
     sel("f-market").innerHTML += '<option value="' + m + '">' + m + "</option>";
-  });
-  var mgrs = [...new Set(PEOPLE.map(function(p){ return p.Manager; }).filter(Boolean))].sort();
-  mgrs.forEach(function(m){
-    sel("f-mgr").innerHTML += '<option value="' + m + '">' + m + "</option>";
   });
 })();
 
@@ -454,10 +461,24 @@ function toggleTLG(){
 function resetFilters(){
   sel("f-market").value = "";
   sel("f-status").value = "";
-  sel("f-mgr").value    = "";
   sel("f-search").value = "";
   if(hideTLG){ hideTLG = false; sel("btn-tlg").classList.remove("active"); sel("btn-tlg").textContent = "Hide TLG"; }
   applyFilters();
+}
+
+// ── Roster view toggle ─────────────────────────────────────────────────────
+function setRosterView(v){
+  rosterView = v;
+  sel("view-individual").classList.toggle("active", v === "individual");
+  sel("view-manager").classList.toggle("active", v === "manager");
+  sel("sort-controls").style.display = v === "individual" ? "flex" : "none";
+  selectedEmail = null;
+  sel("roster-right").innerHTML = '<div class="no-data">Select a person to view details</div>';
+  renderRoster();
+}
+function toggleMgrGroup(el){
+  el.classList.toggle("open");
+  el.nextElementSibling.classList.toggle("open");
 }
 
 // ── Sort ───────────────────────────────────────────────────────────────────
@@ -481,17 +502,12 @@ function setSort(field){
 function applyFilters(){
   var market = sel("f-market").value;
   var status = sel("f-status").value;
-  var mgr    = sel("f-mgr").value;
   var q      = (sel("f-search").value || "").toLowerCase();
   filtered = PEOPLE.filter(function(p){
     if(hideTLG && TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
     if(market && p.Market !== market) return false;
     if(status && personStatus(p) !== status) return false;
-    if(mgr && p.Manager !== mgr) return false;
-    if(q){
-      var name = (p.FirstName + " " + p.LastName).toLowerCase();
-      if(!name.includes(q)) return false;
-    }
+    if(q && !(p.FirstName + " " + p.LastName).toLowerCase().includes(q)) return false;
     return true;
   });
   sel("result-count").textContent = filtered.length + " shown";
@@ -610,58 +626,85 @@ function renderCharts(){
   });
 }
 
+// ── buildPersonCard ────────────────────────────────────────────────────────
+function buildPersonCard(p){
+  var fullName       = p.FirstName + " " + p.LastName;
+  var status         = personStatus(p);
+  var stripe         = status === "Certified" ? " stripe-green" : status === "In Progress" ? " stripe-blue" : "";
+  var hcfClass       = pillClass(p.hcf.pct, p.hcf.total);
+  var lsClass        = pillClass(p.ls.pct,  p.ls.total);
+  var pctClass       = status === "Certified" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
+  var badgeStatusCls = status === "Certified" ? "certified" : status === "In Progress" ? "in-progress" : "not-certified";
+  var badgeStatusTxt = status === "Certified" ? "✓ Certified" : status === "In Progress" ? "In Progress" : "Not Started";
+  var h = '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
+  h += '<div class="roster-top">';
+  h += '<div class="roster-name-block">';
+  h += '<div class="roster-name">' + fullName + "</div>";
+  h += '<div class="roster-title">' + (p.JobTitle || "") + "</div>";
+  h += "</div>";
+  h += '<span class="badge-status ' + badgeStatusCls + '">' + badgeStatusTxt + "</span>";
+  h += "</div>";
+  h += '<div class="roster-bottom">';
+  h += '<div class="roster-pills">';
+  h += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
+  h += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/11</span>";
+  h += "</div>";
+  h += '<span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span>";
+  h += "</div></div>";
+  return h;
+}
+
 // ── renderRoster ───────────────────────────────────────────────────────────
 function renderRoster(){
-  var d = sortDir === "desc" ? -1 : 1;
-  var sorted = filtered.slice().sort(function(a, b){
-    if(sortField === "name"){
-      return d * (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
-    } else if(sortField === "status"){
-      var order = { "Certified": 2, "In Progress": 1, "Not Started": 0 };
-      var diff = (order[personStatus(a)] || 0) - (order[personStatus(b)] || 0);
-      if(diff !== 0) return d * diff;
-      return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
-    } else {
-      var diff2 = a.overallPct - b.overallPct;
-      if(diff2 !== 0) return d * diff2;
-      return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
-    }
-  });
-
   var html = "";
-  sorted.forEach(function(p){
-    var fullName = p.FirstName + " " + p.LastName;
-    var status   = personStatus(p);
-    var stripe   = status === "Certified" ? " stripe-green" : status === "In Progress" ? " stripe-blue" : "";
-    var hcfPct   = p.hcf.pct;
-    var lsPct    = p.ls.pct;
-    var hcfClass = pillClass(hcfPct, p.hcf.total);
-    var lsClass  = pillClass(lsPct,  p.ls.total);
-    var pctClass       = status === "Certified" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
-    var badgeStatusCls = status === "Certified" ? "certified" : status === "In Progress" ? "in-progress" : "not-certified";
-    var badgeStatusTxt = status === "Certified" ? "✓ Certified" : status === "In Progress" ? "In Progress" : "Not Started";
-    html += '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
-    html += '<div class="roster-top">';
-    html += '<div class="roster-name-block">';
-    html += '<div class="roster-name">' + fullName + "</div>";
-    html += '<div class="roster-title">' + (p.JobTitle || "") + "</div>";
-    html += "</div>";
-    html += '<span class="badge-status ' + badgeStatusCls + '">' + badgeStatusTxt + "</span>";
-    html += "</div>";
-    html += '<div class="roster-bottom">';
-    html += '<div class="roster-pills">';
-    html += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
-    html += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/11</span>";
-    html += "</div>";
-    html += '<span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span>";
-    html += "</div>";
-    html += "</div>";
-  });
+
+  if(rosterView === "manager"){
+    var groups = {};
+    filtered.forEach(function(p){
+      var mgr = p.Manager || "No Manager";
+      if(!groups[mgr]) groups[mgr] = [];
+      groups[mgr].push(p);
+    });
+    var mgrsSorted = Object.keys(groups).sort();
+    mgrsSorted.forEach(function(mgr){
+      var team = groups[mgr];
+      var certCount = team.filter(function(p){ return p.Certified === "Yes"; }).length;
+      var teamCards = team.slice()
+        .sort(function(a, b){ return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName); })
+        .map(buildPersonCard).join("");
+      html += "<div>";
+      html += '<div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">';
+      html += "<div>";
+      html += '<div style="font-size:12px;font-weight:600;color:var(--text)">' + mgr + "</div>";
+      html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + team.length + " rep" + (team.length !== 1 ? "s" : "") + " &middot; " + certCount + " certified</div>";
+      html += "</div>";
+      html += '<span class="mgr-chevron">&#9660;</span>';
+      html += "</div>";
+      html += '<div class="mgr-team open">' + teamCards + "</div>";
+      html += "</div>";
+    });
+  } else {
+    var d = sortDir === "desc" ? -1 : 1;
+    var sorted = filtered.slice().sort(function(a, b){
+      if(sortField === "name"){
+        return d * (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+      } else if(sortField === "status"){
+        var order = { "Certified": 2, "In Progress": 1, "Not Started": 0 };
+        var diff = (order[personStatus(a)] || 0) - (order[personStatus(b)] || 0);
+        if(diff !== 0) return d * diff;
+        return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+      } else {
+        var diff2 = a.overallPct - b.overallPct;
+        if(diff2 !== 0) return d * diff2;
+        return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+      }
+    });
+    sorted.forEach(function(p){ html += buildPersonCard(p); });
+  }
 
   if(!html) html = '<div class="no-data">No people match filters</div>';
   sel("roster-left").innerHTML = html;
 
-  // Re-apply active state if selectedEmail is still in filtered
   if(selectedEmail){
     var el = sel("roster-left").querySelector('[data-email="' + selectedEmail + '"]');
     if(el) el.classList.add("active");
