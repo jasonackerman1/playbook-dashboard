@@ -1979,6 +1979,16 @@ def generate_html_healthcare_v2(slug, name, rows):
   .roster-pct.pct-progress{{color:var(--accent);}}
   .roster-pct.pct-done{{color:var(--green);}}
 
+  /* Roster key */
+  .roster-key{{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:8px 12px;background:var(--surface2);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--muted);}}
+  .key-group{{display:flex;align-items:center;gap:6px;}}
+  .key-label{{font-weight:600;color:var(--text);margin-right:2px;}}
+  .key-divider{{width:1px;height:16px;background:var(--border);}}
+  .key-stripe{{display:inline-block;width:3px;height:14px;border-radius:2px;vertical-align:middle;margin-right:4px;}}
+  .key-stripe.green{{background:var(--green);}}
+  .key-stripe.blue{{background:var(--accent);}}
+  .key-stripe.gray{{background:var(--border);}}
+
   /* Sort buttons */
   .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
   .sort-btn:hover{{border-color:var(--accent);color:var(--text);}}
@@ -2132,6 +2142,26 @@ def generate_html_healthcare_v2(slug, name, rows):
       <button class="sort-btn active" data-sort="pct" onclick="setSort('pct')">Completion % &#9660;</button>
     </div>
   </div>
+  <div class="roster-key">
+    <div class="key-group">
+      <span class="key-label">Status bar:</span>
+      <span><span class="key-stripe green"></span>Certified</span>
+      <span><span class="key-stripe blue"></span>In Progress</span>
+      <span><span class="key-stripe gray"></span>Not Started</span>
+    </div>
+    <span class="key-divider"></span>
+    <div class="key-group">
+      <span class="key-label">Course pills:</span>
+      <span class="pill green" style="pointer-events:none">Complete</span>
+      <span class="pill blue" style="pointer-events:none">In Progress</span>
+      <span class="pill gray" style="pointer-events:none">Not Started</span>
+    </div>
+    <span class="key-divider"></span>
+    <div class="key-group">
+      <span class="key-label">%</span>
+      <span>Overall completion across all 21 courses (HC Foundations: 10, Layered Security: 11)</span>
+    </div>
+  </div>
   <div class="roster-wrap">
     <div class="roster-left" id="roster-left"></div>
     <div class="roster-right" id="roster-right">
@@ -2210,15 +2240,15 @@ document.addEventListener("click", function(e){{
 
 // ── Info tooltip ───────────────────────────────────────────────────────────
 var INFO_MSGS = {{
-  "total-enrolled":  "Total number of people enrolled in the Healthcare certification program after active filters are applied.",
-  "certified":       "People who have received full Healthcare certification. This is the final sign-off confirming program completion.",
-  "in-progress":     "People who have started at least one course but have not yet earned full certification.",
-  "not-started":     "People enrolled in the program who have not yet completed any courses in either curriculum.",
-  "completion-rate": "Percentage of enrolled people who have earned full certification. Calculated as Certified divided by Total Enrolled.",
-  "market-chart":    "Average overall course completion percentage per market for the people currently shown. Hover a bar for details.",
-  "trend-chart":     "Number of new certifications earned per KM fiscal quarter. Only people with a certification date are counted. KM quarters: Q1 = Apr to Jun, Q2 = Jul to Sep, Q3 = Oct to Dec, Q4 = Jan to Mar.",
-  "roster":          "Full list of enrolled people. Click a person to see their course-by-course progress for both curricula. Use filters and the sort buttons to find specific people.",
-  "export":          "Export a printable report of the people currently shown. Full Report includes everyone with all columns. Not Certified lists people without certification sorted by manager. Manager Summary rolls up team size and completion rate per manager."
+  "total-enrolled":  "Total number of people enrolled in the Healthcare certification program. This count updates when filters are applied.",
+  "certified":       "People who have completed the full Healthcare certification — both HC Foundations (10 courses) and Layered Security (11 courses). Certification status is confirmed by the LMS.",
+  "in-progress":     "People who have completed at least one course in either curriculum but have not yet earned full certification.",
+  "not-started":     "People enrolled in the program who have not yet completed any courses in HC Foundations or Layered Security.",
+  "completion-rate": "The percentage of enrolled people who have earned full certification. Calculated as Certified divided by Total Enrolled. Updates when filters are applied.",
+  "market-chart":    "Average course completion percentage per sales market for the people currently shown. Each bar reflects combined progress across HC Foundations and Layered Security. Hover a bar to see the number of people in that market and how many are certified.",
+  "trend-chart":     "Number of people who earned full Healthcare certification per KM fiscal quarter. KM fiscal year runs April through March: Q1 = April to June, Q2 = July to September, Q3 = October to December, Q4 = January to March.",
+  "roster":          "Full list of enrolled people matching your current filters. Each card shows status (top right), HC Foundations and Layered Security progress (bottom left), and overall completion % across all 21 courses (bottom right). Click any card to see course-by-course detail in the panel on the right.",
+  "export":          "Download a printable report for the people currently shown. Full Report includes all people and all columns. Not Certified lists uncertified people sorted by manager — useful for follow-up outreach. Manager Summary shows each manager's team size and team completion rate."
 }};
 function showInfo(e, key){{
   var pop = sel("info-popover");
