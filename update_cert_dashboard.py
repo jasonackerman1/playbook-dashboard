@@ -2225,6 +2225,7 @@ function showInfo(e, key){{
 }}
 
 // ── JS helpers ─────────────────────────────────────────────────────────────
+function escHtml(s){{ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }}
 function personStatus(p){{
   if(p.Certified === "Yes") return "Certified";
   if(p.overallPct > 0)      return "In Progress";
