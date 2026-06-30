@@ -104,22 +104,23 @@
   @media(max-width:680px){.roster-wrap{flex-direction:column;}.roster-left{width:100%;max-height:220px;border-right:none;border-bottom:1px solid var(--border);}}
 
   /* Person cards */
-  .roster-person{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;border-left:3px solid transparent;}
+  .roster-person{display:flex;flex-direction:column;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;border-left:3px solid transparent;}
   .roster-person:last-child{border-bottom:none;}
   .roster-person:hover{background:var(--surface2);}
   .roster-person.active{background:#4f8ef711;border-left-color:var(--accent);}
   .roster-person.stripe-green{border-left-color:var(--green);}
   .roster-person.stripe-blue{border-left-color:var(--accent);}
+  .roster-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
   .roster-name-block{flex:1;min-width:0;}
   .roster-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .roster-title{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .roster-pills{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
+  .roster-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:7px;}
+  .roster-pills{display:flex;gap:5px;flex-wrap:wrap;}
   .pill{font-size:8px;font-weight:700;border-radius:10px;padding:2px 7px;white-space:nowrap;letter-spacing:.03em;}
   .pill.green{color:var(--green);background:var(--green-subtle);border:1px solid var(--green)44;}
   .pill.blue{color:var(--accent);background:var(--accent)18;border:1px solid var(--accent)44;}
   .pill.gray{color:var(--muted);background:var(--surface2);border:1px solid var(--border);}
-  .roster-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
-  .roster-pct{font-size:12px;font-weight:700;color:var(--muted);}
+  .roster-pct{font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;margin-left:8px;}
   .roster-pct.pct-progress{color:var(--accent);}
   .roster-pct.pct-done{color:var(--green);}
 
@@ -601,17 +602,19 @@ function renderRoster(){
     var badgeStatusCls = status === "Certified" ? "certified" : status === "In Progress" ? "in-progress" : "not-certified";
     var badgeStatusTxt = status === "Certified" ? "✓ Certified" : status === "In Progress" ? "In Progress" : "Not Started";
     html += '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
+    html += '<div class="roster-top">';
     html += '<div class="roster-name-block">';
     html += '<div class="roster-name">' + fullName + "</div>";
     html += '<div class="roster-title">' + (p.JobTitle || "") + "</div>";
+    html += "</div>";
+    html += '<span class="badge-status ' + badgeStatusCls + '">' + badgeStatusTxt + "</span>";
+    html += "</div>";
+    html += '<div class="roster-bottom">';
     html += '<div class="roster-pills">';
     html += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
     html += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/11</span>";
     html += "</div>";
-    html += '<div class="roster-bottom">';
-    html += '<span class="badge-status ' + badgeStatusCls + '">' + badgeStatusTxt + "</span>";
     html += '<span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span>";
-    html += "</div>";
     html += "</div>";
     html += "</div>";
   });
