@@ -1041,7 +1041,6 @@ function openModal(email) {{
   CURRIC_IDS.forEach(cid => {{
     const c = p.curricula[cid];
     if (!c) return;
-    const clr = pct2color(c.pct);
     const drBg = c.daysRem < 0 ? 'var(--red-subtle)' : 'var(--green-subtle)';
     const drColor = c.daysRem < 0 ? 'var(--red)' : 'var(--green)';
     const drLabel = c.daysRem === null ? '' :
@@ -1067,7 +1066,7 @@ function openModal(email) {{
     curricHtml += '<div class="curric-section">' +
       '<div class="curric-header" onclick="toggleCurric(this)">' +
         '<span class="curric-title">' + escHtml(c.title) + '</span>' +
-        '<span class="pct-pill" style="background:' + clr.bg + ';color:' + clr.fg + ';font-size:11px">' + c.pct + '%</span>' +
+        '<span class="pct-pill" style="' + curricPillStyle(c) + ';font-size:11px">' + c.pct + '%</span>' +
         drLabel + doneBadge +
         '<span class="curric-chevron">&#9660;</span>' +
       '</div>' +
