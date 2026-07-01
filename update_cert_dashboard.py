@@ -193,6 +193,7 @@ def generate_html(slug, name, rows):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{name} Certification Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {{
     --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
@@ -233,10 +234,15 @@ def generate_html(slug, name, rows):
   .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
   .btn-export:hover{{opacity:0.88;}}
   .export-drop{{position:relative;}}
-  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:hidden;}}
+  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:visible;}}
   .export-menu.open{{display:block;}}
   .export-item{{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}}
   .export-item:hover{{background:var(--surface2);}}
+  .export-parent{{position:relative;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:13px;color:var(--text);cursor:default;transition:background .1s;}}
+  .export-parent:hover{{background:var(--surface2);}}
+  .export-chevron{{font-size:11px;color:var(--muted);margin-left:10px;}}
+  .export-submenu{{position:absolute;right:100%;top:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:90px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:201;overflow:hidden;margin-right:4px;}}
+  .export-parent:hover .export-submenu{{display:block;}}
 
   .filters{{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}}
   .filter-label{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}}
@@ -343,10 +349,10 @@ def generate_html(slug, name, rows):
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
-        <button class="export-item" onclick="runExport('full')">Full Report</button>
-        <button class="export-item" onclick="runExport('not-certified')">Not Certified</button>
-        <button class="export-item" onclick="runExport('manager-summary')">Manager Summary</button>
-        <button class="export-item" onclick="runExport('action-required')">Action Required</button>
+        <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
+        <div class="export-parent">Not Certified<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('not-certified')">PDF</button><button class="export-item" onclick="runExportXLSX('not-certified')">Excel</button></div></div>
+        <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
+        <div class="export-parent">Action Required<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('action-required')">PDF</button><button class="export-item" onclick="runExportXLSX('action-required')">Excel</button></div></div>
       </div>
     </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
@@ -922,6 +928,72 @@ function filterRoster(){{
   }});
 }}
 
+function runExportXLSX(type){{
+  sel('export-menu').classList.remove('open');
+  const now=new Date().toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}});
+  function makeSheet(rows,colWidths){{
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=colWidths.map(w=>({{wch:w}}));
+    return ws;
+  }}
+  function dlXLSX(name,wb){{ XLSX.writeFile(wb,name+'.xlsx'); }}
+  const wb=XLSX.utils.book_new();
+  if(type==='full'){{
+    const pTotal=filtered.length;
+    const pCert=filtered.filter(p=>p.Healthcare==='Yes').length;
+    const pLMS=filtered.filter(p=>p.Complete==='Yes'&&p.Healthcare!=='Yes').length;
+    const pIP=pTotal-pCert-pLMS;
+    const pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
+    const sumRows=[
+      ['Healthcare Certification Report'],
+      ['Generated:',now],
+      [],
+      ['SUMMARY'],
+      ['Total Assigned',pTotal],
+      ['Certified',pCert],
+      ['LMS Complete',pLMS],
+      ['In Progress',pIP],
+      ['Completion Rate',pRate+'%'],
+    ];
+    XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),'Summary');
+    const rRows=[['Name','Market','Job Title','Status','Cert Date','Manager','Email']];
+    filtered.forEach(p=>{{
+      const status=p.Healthcare==='Yes'?'Certified':p.Complete==='Yes'?'LMS Complete':'In Progress';
+      rRows.push([p.FirstName+' '+p.LastName,p.Market||'—',p.JobTitle||'—',status,p.HCDate||'—',p.Manager||'—',p.Email||'—']);
+    }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,28,32]),'Roster');
+    dlXLSX('hc-full-report',wb);
+  }} else if(type==='not-certified'){{
+    const notCert=filtered.filter(p=>p.Healthcare!=='Yes').sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName));
+    const rows=[['Name','Job Title','Market','Email','Manager','Manager Email']];
+    notCert.forEach(p=>rows.push([p.FirstName+' '+p.LastName,p.JobTitle||'—',p.Market||'—',p.Email||'—',p.Manager||'—',p.MgrEmail||'—']));
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,28,18,32,28,32]),'Not Certified');
+    dlXLSX('hc-not-certified',wb);
+  }} else if(type==='manager-summary'){{
+    const mgrMap={{}};
+    filtered.forEach(p=>{{
+      const k=p.Manager||'(No Manager)';
+      if(!mgrMap[k]) mgrMap[k]={{name:k,email:p.MgrEmail||'—',total:0,cert:0,lms:0,ip:0}};
+      mgrMap[k].total++;
+      if(p.Healthcare==='Yes') mgrMap[k].cert++;
+      else if(p.Complete==='Yes') mgrMap[k].lms++;
+      else mgrMap[k].ip++;
+    }});
+    const rows=[['Manager','Manager Email','Team Size','Certified','LMS Complete','In Progress','Completion %']];
+    Object.values(mgrMap).sort((a,b)=>(b.cert/b.total)-(a.cert/a.total)).forEach(m=>{{
+      rows.push([m.name,m.email,m.total,m.cert,m.lms,m.ip,Math.round(m.cert/m.total*100)+'%']);
+    }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,12,12,14,12,14]),'Manager Summary');
+    dlXLSX('hc-manager-summary',wb);
+  }} else if(type==='action-required'){{
+    const almostThere=filtered.filter(p=>p.Complete==='Yes'&&p.Healthcare!=='Yes').sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||''));
+    const rows=[['Name','Email','Market','Manager','Manager Email']];
+    almostThere.forEach(p=>rows.push([p.FirstName+' '+p.LastName,p.Email||'—',p.Market||'—',p.Manager||'—',p.MgrEmail||'—']));
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,18,28,32]),'Action Required');
+    dlXLSX('hc-action-required',wb);
+  }}
+}}
+
 applyFilters();
 </script>
 <div class="info-popover" id="info-popover"></div>
@@ -959,6 +1031,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{name} Certification Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {{
     --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
@@ -998,10 +1071,15 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
   .btn-export:hover{{opacity:0.88;}}
   .export-drop{{position:relative;}}
-  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:hidden;}}
+  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:visible;}}
   .export-menu.open{{display:block;}}
   .export-item{{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}}
   .export-item:hover{{background:var(--surface2);}}
+  .export-parent{{position:relative;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:13px;color:var(--text);cursor:default;transition:background .1s;}}
+  .export-parent:hover{{background:var(--surface2);}}
+  .export-chevron{{font-size:11px;color:var(--muted);margin-left:10px;}}
+  .export-submenu{{position:absolute;right:100%;top:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:90px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:201;overflow:hidden;margin-right:4px;}}
+  .export-parent:hover .export-submenu{{display:block;}}
   .filters{{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}}
   .filter-label{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}}
   select,input[type=date],input[type=text]{{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;color-scheme:dark;}}
@@ -1100,9 +1178,9 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
-        <button class="export-item" onclick="runExport('full')">Full Report</button>
-        <button class="export-item" onclick="runExport('not-certified')">Not Certified</button>
-        <button class="export-item" onclick="runExport('manager-summary')">Manager Summary</button>
+        <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
+        <div class="export-parent">Not Certified<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('not-certified')">PDF</button><button class="export-item" onclick="runExportXLSX('not-certified')">Excel</button></div></div>
+        <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
       </div>
     </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
@@ -1584,6 +1662,62 @@ function filterRoster(){{
   }});
 }}
 
+function runExportXLSX(type){{
+  sel('export-menu').classList.remove('open');
+  const now=new Date().toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}});
+  function makeSheet(rows,colWidths){{
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=colWidths.map(w=>({{wch:w}}));
+    return ws;
+  }}
+  function dlXLSX(name,wb){{ XLSX.writeFile(wb,name+'.xlsx'); }}
+  const wb=XLSX.utils.book_new();
+  if(type==='full'){{
+    const pTotal=filtered.length;
+    const pCert=filtered.filter(p=>p.PublicSector==='Yes').length;
+    const pNot=pTotal-pCert;
+    const pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
+    const sumRows=[
+      ['Public Sector Certification Report'],
+      ['Generated:',now],
+      [],
+      ['SUMMARY'],
+      ['Total Assigned',pTotal],
+      ['Certified',pCert],
+      ['Not Certified',pNot],
+      ['Completion Rate',pRate+'%'],
+    ];
+    XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),'Summary');
+    const rRows=[['Name','Market','Job Title','Status','Cert Date','Manager','Email']];
+    filtered.forEach(p=>{{
+      const status=p.PublicSector==='Yes'?'Certified':'Not Certified';
+      rRows.push([p.FirstName+' '+p.LastName,p.Market||'—',p.JobTitle||'—',status,p.CertDate||'—',p.Manager||'—',p.Email||'—']);
+    }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,28,32]),'Roster');
+    dlXLSX('ps-full-report',wb);
+  }} else if(type==='not-certified'){{
+    const notCert=filtered.filter(p=>p.PublicSector!=='Yes').sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName));
+    const rows=[['Name','Job Title','Market','Email','Manager','Manager Email']];
+    notCert.forEach(p=>rows.push([p.FirstName+' '+p.LastName,p.JobTitle||'—',p.Market||'—',p.Email||'—',p.Manager||'—',p.MgrEmail||'—']));
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,28,18,32,28,32]),'Not Certified');
+    dlXLSX('ps-not-certified',wb);
+  }} else if(type==='manager-summary'){{
+    const mgrMap={{}};
+    filtered.forEach(p=>{{
+      const k=p.Manager||'(No Manager)';
+      if(!mgrMap[k]) mgrMap[k]={{name:k,email:p.MgrEmail||'—',total:0,cert:0}};
+      mgrMap[k].total++;
+      if(p.PublicSector==='Yes') mgrMap[k].cert++;
+    }});
+    const rows=[['Manager','Manager Email','Team Size','Certified','Not Certified','Completion %']];
+    Object.values(mgrMap).sort((a,b)=>(b.cert/b.total)-(a.cert/a.total)).forEach(m=>{{
+      rows.push([m.name,m.email,m.total,m.cert,m.total-m.cert,Math.round(m.cert/m.total*100)+'%']);
+    }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,12,12,14,14]),'Manager Summary');
+    dlXLSX('ps-manager-summary',wb);
+  }}
+}}
+
 applyFilters();
 </script>
 <div class="info-popover" id="info-popover"></div>
@@ -1880,6 +2014,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{name} Certification Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {{
     --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
@@ -1922,10 +2057,15 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
   .btn-export:hover{{opacity:0.88;}}
   .export-drop{{position:relative;}}
-  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:hidden;}}
+  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:visible;}}
   .export-menu.open{{display:block;}}
   .export-item{{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}}
   .export-item:hover{{background:var(--surface2);}}
+  .export-parent{{position:relative;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:13px;color:var(--text);cursor:default;transition:background .1s;}}
+  .export-parent:hover{{background:var(--surface2);}}
+  .export-chevron{{font-size:11px;color:var(--muted);margin-left:10px;}}
+  .export-submenu{{position:absolute;right:100%;top:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:90px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:201;overflow:hidden;margin-right:4px;}}
+  .export-parent:hover .export-submenu{{display:block;}}
 
   /* ── Info button / popover ─────────────────────────────────────────── */
   .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
@@ -2094,9 +2234,9 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
-        <button class="export-item" onclick="runExport('full')">Full Report</button>
-        <button class="export-item" onclick="runExport('not-certified')">Not Certified</button>
-        <button class="export-item" onclick="runExport('manager-summary')">Manager Summary</button>
+        <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
+        <div class="export-parent">Not Certified<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('not-certified')">PDF</button><button class="export-item" onclick="runExportXLSX('not-certified')">Excel</button></div></div>
+        <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
       </div>
     </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
     <button class="btn-theme print-hide" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
@@ -2713,6 +2853,65 @@ function runExport(type){{
     document.body.classList.add("print-no-summary");
     window.print();
     document.body.classList.remove("print-no-summary");
+  }}
+}}
+
+// ── xlsx export ────────────────────────────────────────────────────────────
+function runExportXLSX(type){{
+  sel("export-menu").classList.remove("open");
+  var now=new Date().toLocaleDateString("en-US",{{year:"numeric",month:"long",day:"numeric"}});
+  function makeSheet(rows,colWidths){{
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=colWidths.map(function(w){{ return {{wch:w}}; }});
+    return ws;
+  }}
+  function dlXLSX(name,wb){{ XLSX.writeFile(wb,name+'.xlsx'); }}
+  var wb=XLSX.utils.book_new();
+  if(type==="full"){{
+    var total=filtered.length;
+    var cert=filtered.filter(function(p){{ return p.Certified==="Yes"; }}).length;
+    var rate=total>0?Math.round(cert/total*100):0;
+    var sumRows=[
+      ["{name} Certification Report"],
+      ["Generated:",now],
+      [],
+      ["SUMMARY"],
+      ["Total Enrolled",total],
+      ["Certified",cert],
+      ["Completion Rate",rate+"%"],
+    ];
+    XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),"Summary");
+    var rRows=[["Name","Market","Job Title","Status","HC Foundations %","Layered Security %","Overall %","Cert Date","Manager"]];
+    filtered.forEach(function(p){{
+      rRows.push([p.FirstName+" "+p.LastName,p.Market||"—",p.JobTitle||"—",personStatus(p),p.hcf.pct+"%",p.ls.pct+"%",p.overallPct+"%",p.CertDate||"—",p.Manager||"—"]);
+    }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,16,16,12,14,28]),"Roster");
+    dlXLSX("hc-full-report",wb);
+  }} else if(type==="not-certified"){{
+    var notCert=filtered.filter(function(p){{ return p.Certified!=="Yes"; }}).slice().sort(function(a,b){{
+      return (a.Manager||"").localeCompare(b.Manager||"")||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
+    }});
+    var rows=[["Name","Email","Market","HC Foundations %","Layered Security %","Manager","Manager Email"]];
+    notCert.forEach(function(p){{
+      rows.push([p.FirstName+" "+p.LastName,p.Email||"—",p.Market||"—",p.hcf.pct+"%",p.ls.pct+"%",p.Manager||"—",p.MgrEmail||"—"]);
+    }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,18,16,16,28,32]),"Not Certified");
+    dlXLSX("hc-not-certified",wb);
+  }} else if(type==="manager-summary"){{
+    var mgrMap={{}};
+    filtered.forEach(function(p){{
+      var k=p.Manager||"(No Manager)";
+      if(!mgrMap[k]) mgrMap[k]={{name:k,email:p.MgrEmail||"—",total:0,cert:0,sumPct:0}};
+      mgrMap[k].total++;
+      if(p.Certified==="Yes") mgrMap[k].cert++;
+      mgrMap[k].sumPct+=p.overallPct;
+    }});
+    var rows=[["Manager","Manager Email","Team Size","Certified","Avg Overall %"]];
+    Object.values(mgrMap).map(function(m){{ m.avgPct=m.total>0?Math.round(m.sumPct/m.total):0; return m; }})
+      .sort(function(a,b){{ return (b.cert/b.total)-(a.cert/a.total); }})
+      .forEach(function(m){{ rows.push([m.name,m.email,m.total,m.cert,m.avgPct+"%"]); }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,12,12,14]),"Manager Summary");
+    dlXLSX("hc-manager-summary",wb);
   }}
 }}
 

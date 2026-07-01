@@ -238,6 +238,7 @@ def generate_html(records):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Accelerate Onboarding</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {{
     --bg:#0d1117; --surface:#161b22; --surface2:#1e2530; --border:#30363d;
@@ -281,10 +282,15 @@ def generate_html(records):
   .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600;}}
   .btn-export:hover{{opacity:.88;}}
   .export-drop{{position:relative;}}
-  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:hidden;}}
+  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:visible;}}
   .export-menu.open{{display:block;}}
   .export-item{{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}}
   .export-item:hover{{background:var(--surface2);}}
+  .export-parent{{position:relative;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:13px;color:var(--text);cursor:default;transition:background .1s;}}
+  .export-parent:hover{{background:var(--surface2);}}
+  .export-chevron{{font-size:11px;color:var(--muted);margin-left:10px;}}
+  .export-submenu{{position:absolute;right:100%;top:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:90px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:201;overflow:hidden;margin-right:4px;}}
+  .export-parent:hover .export-submenu{{display:block;}}
 
   /* ── Info tooltip ── */
   .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
@@ -453,9 +459,9 @@ def generate_html(records):
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
-        <button class="export-item" onclick="runExport('full')">Full Report</button>
-        <button class="export-item" onclick="runExport('overdue')">Overdue Only</button>
-        <button class="export-item" onclick="runExport('manager-summary')">Manager Summary</button>
+        <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
+        <div class="export-parent">Overdue Only<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('overdue')">PDF</button><button class="export-item" onclick="runExportXLSX('overdue')">Excel</button></div></div>
+        <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
       </div>
     </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
@@ -1204,6 +1210,50 @@ function init() {{
   }});
 
   applyFilters();
+}}
+
+function runExportXLSX(type){{
+  document.getElementById('export-menu').classList.remove('open');
+  const now=new Date().toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}});
+  function makeSheet(rows,colWidths){{
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=colWidths.map(w=>({{wch:w}}));
+    return ws;
+  }}
+  function dlXLSX(name,wb){{ XLSX.writeFile(wb,name+'.xlsx'); }}
+  const wb=XLSX.utils.book_new();
+  if(type==='full'){{
+    const rows=[['Name','Market','Status','Days Left','Overall %','Manager']];
+    filtered.forEach(p=>{{
+      const status=computeStatus(p);
+      const d=daysLeft(p);
+      const daysStr=p.overallDone?'Complete':d===null?'—':d<0?(Math.abs(d)+'d overdue'):(d+'d left');
+      rows.push([p.name,p.market,status,daysStr,p.overallPct+'%',p.manager]);
+    }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,18,14,14,12,28]),'Full Report');
+    dlXLSX('onboarding-full-report',wb);
+  }} else if(type==='overdue'){{
+    const od=filtered.filter(p=>computeStatus(p)==='Overdue');
+    const rows=[['Name','Email','Market','Completion %','Manager','Manager Email']];
+    od.forEach(p=>rows.push([p.name,p.email,p.market,p.overallPct+'%',p.manager,p.mgrEmail]));
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,18,14,28,32]),'Overdue Only');
+    dlXLSX('onboarding-overdue',wb);
+  }} else if(type==='manager-summary'){{
+    const byMgr={{}};
+    filtered.forEach(p=>{{
+      const m=p.manager||'Unknown';
+      if(!byMgr[m]) byMgr[m]={{mgrEmail:p.mgrEmail,people:[]}};
+      byMgr[m].people.push(p);
+    }});
+    const rows=[['Manager','Manager Email','Team Count','Overdue','Avg Completion %']];
+    Object.entries(byMgr).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([mgr,data])=>{{
+      const avg=Math.round(data.people.reduce((s,p)=>s+p.overallPct,0)/data.people.length);
+      const od=data.people.filter(p=>computeStatus(p)==='Overdue').length;
+      rows.push([mgr,data.mgrEmail,data.people.length,od,avg+'%']);
+    }});
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,12,10,16]),'Manager Summary');
+    dlXLSX('onboarding-manager-summary',wb);
+  }}
 }}
 
 init();

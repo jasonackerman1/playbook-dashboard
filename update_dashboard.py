@@ -456,6 +456,7 @@ html = f"""<!DOCTYPE html>
 <title>Playbook Traffic Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {{
     --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
@@ -510,10 +511,15 @@ html = f"""<!DOCTYPE html>
   .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
   .btn-export:hover{{opacity:0.88;}}
   .export-drop{{position:relative;}}
-  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:190px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}}
+  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:190px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:visible;}}
   .export-menu.open{{display:block;}}
   .export-item{{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;}}
   .export-item:hover{{background:var(--surface2);}}
+  .export-parent{{position:relative;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:13px;color:var(--text);cursor:default;transition:background .1s;}}
+  .export-parent:hover{{background:var(--surface2);}}
+  .export-chevron{{font-size:11px;color:var(--muted);margin-left:10px;}}
+  .export-submenu{{position:absolute;right:100%;top:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:90px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:201;overflow:hidden;margin-right:4px;}}
+  .export-parent:hover .export-submenu{{display:block;}}
   .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
 
   .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}}
@@ -657,9 +663,10 @@ html = f"""<!DOCTYPE html>
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
-        <button class="export-item" onclick="runExport('full')">Full Report</button>
-        <button class="export-item" onclick="runExport('activity-summary')">Activity Summary</button>
-        <button class="export-item" onclick="runExport('by-person')">By Person</button>
+        <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
+        <div class="export-parent">Activity Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('activity-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('activity-summary')">Excel</button></div></div>
+        <div class="export-parent">By Person<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('by-person')">PDF</button><button class="export-item" onclick="runExportXLSX('by-person')">Excel</button></div></div>
+        <div class="export-parent">Last Login<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('last-login')">PDF</button><button class="export-item" onclick="runExportXLSX('last-login')">Excel</button></div></div>
       </div>
     </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">☀ Light</button>
@@ -679,7 +686,7 @@ html = f"""<!DOCTYPE html>
   <input type="date" id="f-date-to">
   <select id="f-playbook"><option value="">All Playbooks</option></select>
   <select id="f-region"><option value="">All Regions</option></select>
-  <select id="f-type"><option value="">Employee &amp; Dealer</option><option value="Employee">Employee</option><option value="Dealer">Dealer</option></select>
+  <select id="f-type"><option value="">Direct &amp; Dealer</option><option value="Employee">Direct</option><option value="Dealer">Dealer</option></select>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button><span class="info-btn" onclick="showInfo(event,'hide-tlg')">?</span>
   <button class="btn-tlg" id="btn-vertical" onclick="toggleVertical()">Vertical Markets</button><span class="info-btn" onclick="showInfo(event,'vertical-filter')">?</span>
@@ -749,6 +756,7 @@ html = f"""<!DOCTYPE html>
   </div>
 </div>
 
+
 <script>
 if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 const RAW = {json.dumps(records)};
@@ -806,8 +814,19 @@ function setPrevMonth(btn){{
   sel('f-date-to').value   = prevMonthTo();
   applyFilters();
 }}
-sel('f-date-from').value = prevMonthFrom();
-sel('f-date-to').value   = prevMonthTo();
+(function(){{
+  var months = RAW.map(function(r){{ return r.Month; }}).filter(Boolean).sort();
+  var latest = months[months.length - 1];
+  if(latest){{
+    var parts = latest.split('-');
+    var y = +parts[0], m = +parts[1];
+    sel('f-date-from').value = new Date(y, m-1, 1).toISOString().slice(0,10);
+    sel('f-date-to').value   = new Date(y, m, 0).toISOString().slice(0,10);
+  }} else {{
+    sel('f-date-from').value = prevMonthFrom();
+    sel('f-date-to').value   = prevMonthTo();
+  }}
+}})();
 
 function setRange(days, btn){{
   document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
@@ -863,6 +882,8 @@ function toggleVertical(){{
   sel('btn-vertical').textContent = hideVertical ? 'All Playbooks' : 'Vertical Markets';
   applyFilters();
 }}
+
+function typeLabel(t){{ return t === 'Employee' ? 'Direct' : (t || '—'); }}
 
 function applyFilters(){{
   const f = getFilters();
@@ -1157,7 +1178,7 @@ function drillSelect(el, name) {{
     <div class="drilldown-right-header">
       <strong style="font-size:14px">${{name}}</strong>
       <span style="color:var(--muted)"> · ${{visits.length}} visit${{visits.length!==1?'s':''}} · ${{region}} · </span>
-      <span class="pill" style="background:${{typeBg}};color:${{typeColor}}">${{type}}</span>
+      <span class="pill" style="background:${{typeBg}};color:${{typeColor}}">${{typeLabel(type)}}</span>
       <span style="color:var(--muted)"> · Last visit: </span><span style="color:${{lastVisitColor}};font-weight:600">${{lastVisit||'—'}}</span>
     </div>
     <table style="width:100%;border-collapse:collapse;">
@@ -1465,7 +1486,7 @@ function runExport(type){{
       <td>${{i+1}}</td>
       <td style="font-weight:600">${{r.FirstName}} ${{r.LastName}}</td>
       <td>${{r.Region||'—'}}</td>
-      <td>${{r.Type||'—'}}</td>
+      <td>${{typeLabel(r.Type)}}</td>
       <td>${{r.Playbook||'—'}}</td>
       <td style="font-size:10px">${{r.Page||'—'}}</td>
       <td>${{r.Date||'—'}}</td>
@@ -1496,7 +1517,7 @@ function runExport(type){{
     const people={{}};
     filtered.forEach(r=>{{
       const key=(r.FirstName+' '+r.LastName).trim();
-      if(!people[key]) people[key]={{name:key,region:r.Region||'—',type:r.Type||'—',views:0,pbs:new Set()}};
+      if(!people[key]) people[key]={{name:key,region:r.Region||'—',type:typeLabel(r.Type),views:0,pbs:new Set()}};
       people[key].views++;
       if(r.Playbook) people[key].pbs.add(r.Playbook);
     }});
@@ -1508,8 +1529,121 @@ function runExport(type){{
       <td>${{p.views}}</td>
       <td style="font-size:11px">${{[...p.pbs].sort().join(', ')}}</td>
     </tr>`).join('');
+  }} else if(type === 'last-login'){{
+    sel('ph-report-type').textContent = 'Last Login — most recent login date per person per playbook';
+    psEl.style.display='none'; pcEl.style.display='none';
+    thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Region</th><th>Type</th><th>Playbook</th><th>Last Login</th></tr>';
+    const map={{}};
+    filtered.forEach(r=>{{
+      const name=(r.FirstName+' '+r.LastName).trim();
+      const key=name+'|||'+(r.Playbook||'');
+      if(!map[key]||r.Date>map[key].date) map[key]={{name,region:r.Region||'—',type:typeLabel(r.Type),playbook:r.Playbook||'—',date:r.Date||'—'}};
+    }});
+    tbody.innerHTML = Object.values(map).sort((a,b)=>b.date.localeCompare(a.date)).map((r,i)=>`<tr>
+      <td>${{i+1}}</td>
+      <td style="font-weight:600">${{r.name}}</td>
+      <td>${{r.region}}</td>
+      <td>${{r.type}}</td>
+      <td>${{r.playbook}}</td>
+      <td>${{r.date}}</td>
+    </tr>`).join('');
   }}
   window.print();
+}}
+
+function runExportXLSX(type){{
+  sel('export-menu').classList.remove('open');
+  const pbVal=sel('f-playbook').value, frVal=sel('f-date-from').value, toVal=sel('f-date-to').value;
+  const parts=[]; if(pbVal) parts.push(pbVal); if(frVal||toVal) parts.push((frVal||'')+'_'+(toVal||''));
+  const slug = parts.length ? '_'+parts.join('_') : '';
+  function makeSheet(rows, colWidths){{
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = colWidths.map(w => ({{wch: w}}));
+    return ws;
+  }}
+  function dl(name, wb){{ XLSX.writeFile(wb, name+slug+'.xlsx'); }}
+
+  const wb = XLSX.utils.book_new();
+
+  if(type==='full'){{
+    const totalViews=filtered.length;
+    const uniqueSet=new Set(filtered.map(r=>(r.FirstName+' '+r.LastName).trim()));
+    const uniqueUsers=uniqueSet.size;
+    const avgVisits=uniqueUsers?(totalViews/uniqueUsers).toFixed(1):'0';
+    const pbCounts={{}},pbVis={{}},rgCounts={{}},pgCounts={{}},pgVis={{}};
+    filtered.forEach(r=>{{
+      const pb=r.Playbook||'Unknown',rg=r.Region||'Unknown',pg=r.Page||'Unknown',name=(r.FirstName+' '+r.LastName).trim();
+      pbCounts[pb]=(pbCounts[pb]||0)+1; if(!pbVis[pb]) pbVis[pb]=new Set(); pbVis[pb].add(name);
+      rgCounts[rg]=(rgCounts[rg]||0)+1;
+      pgCounts[pg]=(pgCounts[pg]||0)+1; if(!pgVis[pg]) pgVis[pg]=new Set(); pgVis[pg].add(name);
+    }});
+    const pbRows=Object.entries(pbCounts).sort((a,b)=>b[1]-a[1]);
+    const rgRows=Object.entries(rgCounts).sort((a,b)=>b[1]-a[1]);
+    const pgRows=Object.entries(pgCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const topPb=pbRows[0]?.[0]||'—';
+    const dateStr=new Date().toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}});
+    const filterParts=[];
+    if(pbVal) filterParts.push('Playbook: '+pbVal);
+    if(sel('f-region').value) filterParts.push('Region: '+sel('f-region').value);
+    if(sel('f-type').value) filterParts.push('Type: '+typeLabel(sel('f-type').value));
+    if(frVal||toVal) filterParts.push('Dates: '+(frVal||'—')+' to '+(toVal||'—'));
+    if(hideTLG) filterParts.push('TLG Hidden');
+    // Sheet 1: Summary
+    const summaryRows=[
+      ['Playbook Traffic Report'],
+      ['Generated: '+dateStr,'Records: '+totalViews],
+      ['Filters: '+(filterParts.length?filterParts.join(' | '):'No filters active — showing all data')],
+      [],
+      ['SUMMARY'],
+      ['Total Views','Unique Users','Avg Visits / Person','Top Playbook','Active Playbooks'],
+      [totalViews,uniqueUsers,avgVisits,topPb,pbRows.length],
+      [],
+      ['VIEWS BY PLAYBOOK'],
+      ['Playbook','Total Views','Unique Visitors','% of Total'],
+      ...pbRows.map(([pb,cnt])=>[pb,cnt,pbVis[pb].size,totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—']),
+      [],
+      ['VIEWS BY REGION'],
+      ['Region','Total Views','% of Total'],
+      ...rgRows.map(([rg,cnt])=>[rg,cnt,totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—']),
+      [],
+      ['TOP PAGES (Top 10)'],
+      ['Page','Total Views','Unique Visitors'],
+      ...pgRows.map(([pg,cnt])=>[pg,cnt,pgVis[pg].size]),
+    ];
+    XLSX.utils.book_append_sheet(wb, makeSheet(summaryRows,[40,18,18,40,20]), 'Summary');
+    // Sheet 2: Activity Log
+    const logRows=[
+      ['Name','Region','Type','Playbook','Page','Date'],
+      ...filtered.map(r=>[(r.FirstName+' '+r.LastName).trim(),r.Region||'',typeLabel(r.Type),r.Playbook||'',r.Page||'',r.Date||''])
+    ];
+    XLSX.utils.book_append_sheet(wb, makeSheet(logRows,[28,16,10,30,36,14]), 'Activity Log');
+    dl('full-report', wb);
+
+  }} else if(type==='activity-summary'){{
+    const totals={{}},visitors={{}};
+    filtered.forEach(r=>{{ const pb=r.Playbook||'Unknown'; totals[pb]=(totals[pb]||0)+1; if(!visitors[pb]) visitors[pb]=new Set(); visitors[pb].add((r.FirstName+' '+r.LastName).trim()); }});
+    const total=filtered.length;
+    const rows=[['Playbook','Total Views','Unique Visitors','% of Total'],
+      ...Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([pb,cnt])=>[pb,cnt,visitors[pb].size,total?(cnt/total*100).toFixed(1)+'%':'—'])];
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows,[34,14,18,14]), 'Activity Summary');
+    dl('activity-summary', wb);
+
+  }} else if(type==='by-person'){{
+    const people={{}};
+    filtered.forEach(r=>{{ const key=(r.FirstName+' '+r.LastName).trim(); if(!people[key]) people[key]={{name:key,region:r.Region||'',type:typeLabel(r.Type),views:0,pbs:new Set()}}; people[key].views++; if(r.Playbook) people[key].pbs.add(r.Playbook); }});
+    const rows=[['Name','Region','Type','Total Views','Playbooks Accessed'],
+      ...Object.values(people).sort((a,b)=>b.views-a.views).map(p=>[p.name,p.region,p.type,p.views,[...p.pbs].sort().join(', ')])];
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows,[28,16,10,14,50]), 'By Person');
+    dl('by-person', wb);
+
+  }} else if(type==='last-login'){{
+    const map={{}};
+    filtered.forEach(r=>{{ const name=(r.FirstName+' '+r.LastName).trim(); const key=name+'|||'+(r.Playbook||''); if(!map[key]||r.Date>map[key].date) map[key]={{name,region:r.Region||'',type:typeLabel(r.Type),playbook:r.Playbook||'',date:r.Date||''}}; }});
+    const rows=[['Name','Region','Type','Playbook','Last Login'],
+      ...Object.values(map).sort((a,b)=>b.date.localeCompare(a.date)).map(r=>[r.name,r.region,r.type,r.playbook,r.date])];
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows,[28,16,10,30,14]), 'Last Login');
+    dl('last-login', wb);
+  }}
 }}
 
 document.addEventListener('click', function(e){{
