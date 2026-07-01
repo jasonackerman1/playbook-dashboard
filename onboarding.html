@@ -33,16 +33,6 @@
   .header h1 span{color:var(--muted);font-weight:400;}
   .data-badge{font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;white-space:nowrap;}
 
-  /* ── Hamburger ── */
-  .hamburger{position:relative;}
-  .hamburger-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}
-  .hamburger-btn:hover,.hamburger-btn.open{border-color:var(--accent);color:var(--text);}
-  .hamburger-menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:220px;box-shadow:0 4px 24px rgba(0,0,0,.4);display:none;z-index:200;overflow:hidden;}
-  .hamburger-menu.open{display:block;}
-  .hamburger-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}
-  .hamburger-item{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}
-  .hamburger-item:hover{background:var(--surface2);}
-
   /* ── Buttons ── */
   .btn-theme{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}
   .btn-theme:hover{border-color:var(--accent);color:var(--text);}
@@ -216,16 +206,6 @@
 <!-- Header -->
 <div class="header">
   <div class="header-left">
-    <div class="hamburger" id="hamburger">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()">&#9776;</button>
-      <div class="hamburger-menu" id="hamburger-menu">
-        <div class="hamburger-section-label">Dashboards</div>
-        <a class="hamburger-item" href="index.html">&#128202; Playbook Traffic Dashboard</a>
-        <div class="hamburger-section-label">Certifications</div>
-        <a class="hamburger-item" href="cert-healthcare.html">&#127973; Healthcare Certification</a>
-        <a class="hamburger-item" href="cert-publicsector.html">&#127963; Public Sector Certification</a>
-      </div>
-    </div>
     <div>
       <h1>Accelerate Onboarding</h1>
     </div>
@@ -452,12 +432,6 @@ function toggleTheme() {
     document.getElementById('btn-theme').innerHTML = '&#9790; Dark';
   }
 })();
-
-/* ── Hamburger ── */
-function toggleHamburger() {
-  document.getElementById('hamburger-btn').classList.toggle('open');
-  document.getElementById('hamburger-menu').classList.toggle('open');
-}
 
 /* ── Info popover ── */
 const INFO = {
@@ -1024,10 +998,6 @@ function init() {
   document.addEventListener('click', e => {
     if (!document.getElementById('export-drop').contains(e.target))
       document.getElementById('export-menu').classList.remove('open');
-    if (!document.getElementById('hamburger').contains(e.target)) {
-      document.getElementById('hamburger-btn').classList.remove('open');
-      document.getElementById('hamburger-menu').classList.remove('open');
-    }
     if (!document.getElementById('info-popover').contains(e.target) && !e.target.classList.contains('info-btn'))
       document.getElementById('info-popover').classList.remove('visible');
   });
@@ -1080,6 +1050,15 @@ function runExportXLSX(type){
 }
 
 init();
+(function(){
+  var n=0,t;
+  var h=document.querySelector('.header h1');
+  if(h) h.addEventListener('click',function(){
+    n++;clearTimeout(t);
+    if(n>=3){n=0;window.location.href='index.html';}
+    else t=setTimeout(function(){n=0;},1500);
+  });
+})();
 </script>
 </body>
 </html>

@@ -26,16 +26,19 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install openpyxl
+        run: pip install -r requirements.txt
 
       - name: Generate onboarding.html
         run: python update_onboarding_dashboard.py
+
+      - name: Regenerate homepage
+        run: python generate_homepage.py
 
       - name: Commit and push generated HTML
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add onboarding.html
+          git add onboarding.html index.html
           git diff --cached --quiet || git commit -m "Auto-update onboarding.html [skip ci]"
           git push
 

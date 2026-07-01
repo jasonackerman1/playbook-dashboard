@@ -21,7 +21,7 @@ from pathlib import Path
 # ── Paths ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR  = Path(__file__).parent
 DATA_DIR    = SCRIPT_DIR / "data"
-OUTPUT_FILE = SCRIPT_DIR / "index.html"
+OUTPUT_FILE = SCRIPT_DIR / "playbook.html"
 
 # ── Playbook name normalisation ───────────────────────────────────────────────
 PLAYBOOK_MAP = {
@@ -483,14 +483,6 @@ html = f"""<!DOCTYPE html>
   .header-left{{display:flex;align-items:center;gap:16px;}}
   .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
   .header h1 span{{color:var(--muted);font-weight:400;}}
-  .hamburger{{position:relative;}}
-  .hamburger-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}}
-  .hamburger-btn:hover,.hamburger-btn.open{{border-color:var(--accent);color:var(--text);}}
-  .hamburger-menu{{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:240px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}}
-  .hamburger-menu.open{{display:block;}}
-  .hamburger-section-label{{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}}
-  .hamburger-item{{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}}
-  .hamburger-item:hover{{background:var(--surface2);}}
   .badges{{display:flex;gap:8px;flex-wrap:wrap;}}
   .badge{{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--muted);}}
 
@@ -647,16 +639,6 @@ html = f"""<!DOCTYPE html>
 
 <div class="header">
   <div class="header-left">
-    <div class="hamburger" id="hamburger">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
-      <div class="hamburger-menu" id="hamburger-menu">
-        <div class="hamburger-section-label">Certifications</div>
-        <a href="cert-healthcare.html" class="hamburger-item">&#127973; Healthcare Certification Dashboard</a>
-        <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Certification Dashboard</a>
-        <div class="hamburger-section-label">Programs</div>
-        <a href="onboarding.html" class="hamburger-item">&#127919; Accelerate Onboarding</a>
-      </div>
-    </div>
     <h1>Playbook Traffic Dashboard</h1>
   </div>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -1385,12 +1367,6 @@ function showInfo(e, key) {{
   pop.style.top = (r.bottom + 8 + window.scrollY) + 'px';
   pop.style.position = 'absolute';
 }}
-function toggleHamburger(){{
-  const menu = sel('hamburger-menu');
-  const btn  = sel('hamburger-btn');
-  const open = menu.classList.toggle('open');
-  btn.classList.toggle('open', open);
-}}
 function toggleExportDrop(){{
   sel('export-menu').classList.toggle('open');
 }}
@@ -1648,15 +1624,19 @@ function runExportXLSX(type){{
 }}
 
 document.addEventListener('click', function(e){{
-  const h = sel('hamburger');
-  if(h && !h.contains(e.target)){{
-    sel('hamburger-menu').classList.remove('open');
-    sel('hamburger-btn').classList.remove('open');
-  }}
   const ed = sel('export-drop');
   if(ed && !ed.contains(e.target)) sel('export-menu').classList.remove('open');
   document.getElementById('info-popover')?.classList.remove('visible');
 }});
+(function(){{
+  var n=0,t;
+  var h=document.querySelector('.header h1');
+  if(h) h.addEventListener('click',function(){{
+    n++;clearTimeout(t);
+    if(n>=3){{n=0;window.location.href='index.html';}}
+    else t=setTimeout(function(){{n=0;}},1500);
+  }});
+}})();
 </script>
 <div id="info-popover" class="info-popover"></div>
 <div id="print-header" style="display:none;margin-bottom:16px;">

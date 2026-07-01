@@ -33,17 +33,6 @@
   .btn-theme{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}
   .btn-theme:hover{border-color:var(--accent);color:var(--text);}
 
-  /* ── Hamburger ─────────────────────────────────────────────────────── */
-  .hamburger{position:relative;}
-  .hamburger-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}
-  .hamburger-btn:hover,.hamburger-btn.open{border-color:var(--accent);color:var(--text);}
-  .hamburger-menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:220px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}
-  .hamburger-menu.open{display:block;}
-  .hamburger-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}
-  .hamburger-item{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}
-  .hamburger-item:hover{background:var(--surface2);}
-  .hamburger-item.current{font-weight:700;color:var(--accent);}
-
   /* ── Export dropdown ───────────────────────────────────────────────── */
   .btn-export{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}
   .btn-export:hover{opacity:0.88;}
@@ -205,18 +194,6 @@
 <!-- ── Header ──────────────────────────────────────────────────────────── -->
 <div class="header">
   <div class="header-left">
-    <div class="hamburger" id="hamburger">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
-      <div class="hamburger-menu" id="hamburger-menu">
-        <div class="hamburger-section-label">Dashboards</div>
-        <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
-        <div class="hamburger-section-label">Certifications</div>
-        <a href="cert-healthcare.html" class="hamburger-item current">&#127973; Healthcare Cert</a>
-        <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Cert</a>
-        <div class="hamburger-section-label">Programs</div>
-        <a href="onboarding.html" class="hamburger-item">&#128640; Accelerate Onboarding</a>
-      </div>
-    </div>
     <div>
       <h1>Healthcare <span>Certification Dashboard</span></h1>
       <div class="header-date">Data as of June 2026</div>
@@ -370,18 +347,7 @@ function toggleTheme(){
   applyFilters();
 }
 
-// ── Hamburger ──────────────────────────────────────────────────────────────
-function toggleHamburger(){
-  var menu = sel("hamburger-menu"), btn = sel("hamburger-btn");
-  var open = menu.classList.toggle("open");
-  btn.classList.toggle("open", open);
-}
 document.addEventListener("click", function(e){
-  var h = sel("hamburger");
-  if(h && !h.contains(e.target)){
-    sel("hamburger-menu").classList.remove("open");
-    sel("hamburger-btn").classList.remove("open");
-  }
   if(!e.target.classList.contains("info-btn")) sel("info-popover").classList.remove("visible");
 });
 
@@ -911,6 +877,15 @@ function runExportXLSX(type){
 applyFilters();
 var firstCard = sel("roster-left").querySelector(".roster-person");
 if(firstCard) showDetail(firstCard.dataset.email);
+(function(){
+  var n=0,t;
+  var h=document.querySelector(".header h1");
+  if(h) h.addEventListener("click",function(){
+    n++;clearTimeout(t);
+    if(n>=3){n=0;window.location.href="index.html";}
+    else t=setTimeout(function(){n=0;},1500);
+  });
+})();
 </script>
 </body>
 </html>

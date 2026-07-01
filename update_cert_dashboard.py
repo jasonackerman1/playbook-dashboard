@@ -214,14 +214,6 @@ def generate_html(slug, name, rows):
 
   .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
   .header-left{{display:flex;align-items:center;gap:16px;}}
-  .hamburger{{position:relative;}}
-  .hamburger-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}}
-  .hamburger-btn:hover,.hamburger-btn.open{{border-color:var(--accent);color:var(--text);}}
-  .hamburger-menu{{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:220px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}}
-  .hamburger-menu.open{{display:block;}}
-  .hamburger-section-label{{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}}
-  .hamburger-item{{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}}
-  .hamburger-item:hover{{background:var(--surface2);}}
   .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
   .info-btn:hover{{border-color:var(--accent);color:var(--accent);}}
   .info-popover{{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}}
@@ -333,17 +325,6 @@ def generate_html(slug, name, rows):
 
 <div class="header">
   <div class="header-left">
-    <div class="hamburger" id="hamburger">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
-      <div class="hamburger-menu" id="hamburger-menu">
-        <div class="hamburger-section-label">Dashboards</div>
-        <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
-        <div class="hamburger-section-label">Certifications</div>
-        <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Certifications</a>
-        <div class="hamburger-section-label">Programs</div>
-        <a href="onboarding.html" class="hamburger-item">&#127919; Accelerate Onboarding</a>
-      </div>
-    </div>
     <h1>{name} <span>Certification Dashboard</span></h1>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
@@ -596,18 +577,7 @@ allMarkets.forEach(m => sel('f-market').innerHTML += `<option value="${{m}}">${{
   sel(id).addEventListener('change', applyFilters);
 }});
 
-function toggleHamburger(){{
-  const menu = sel('hamburger-menu');
-  const btn  = sel('hamburger-btn');
-  const open = menu.classList.toggle('open');
-  btn.classList.toggle('open', open);
-}}
 document.addEventListener('click', function(e){{
-  const h = sel('hamburger');
-  if(h && !h.contains(e.target)){{
-    sel('hamburger-menu').classList.remove('open');
-    sel('hamburger-btn').classList.remove('open');
-  }}
   if(!e.target.classList.contains('info-btn')){{
     sel('info-popover').classList.remove('visible');
   }}
@@ -996,6 +966,15 @@ function runExportXLSX(type){{
 }}
 
 applyFilters();
+(function(){{
+  var n=0,t;
+  var h=document.querySelector('.header h1');
+  if(h) h.addEventListener('click',function(){{
+    n++;clearTimeout(t);
+    if(n>=3){{n=0;window.location.href='index.html';}}
+    else t=setTimeout(function(){{n=0;}},1500);
+  }});
+}})();
 </script>
 <div class="info-popover" id="info-popover"></div>
 <!-- Print-only elements (hidden until runExport()) -->
@@ -1052,14 +1031,6 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   body{{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}}
   .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
   .header-left{{display:flex;align-items:center;gap:16px;}}
-  .hamburger{{position:relative;}}
-  .hamburger-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}}
-  .hamburger-btn:hover,.hamburger-btn.open{{border-color:var(--accent);color:var(--text);}}
-  .hamburger-menu{{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:220px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}}
-  .hamburger-menu.open{{display:block;}}
-  .hamburger-section-label{{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}}
-  .hamburger-item{{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}}
-  .hamburger-item:hover{{background:var(--surface2);}}
   .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
   .info-btn:hover{{border-color:var(--accent);color:var(--accent);}}
   .info-popover{{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}}
@@ -1161,16 +1132,6 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
 
 <div class="header">
   <div class="header-left">
-    <div class="hamburger" id="hamburger">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
-      <div class="hamburger-menu" id="hamburger-menu">
-        <div class="hamburger-section-label">Dashboards</div>
-        <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
-        <a href="cert-healthcare.html" class="hamburger-item">&#127973; Healthcare Certifications</a>
-        <div class="hamburger-section-label">Programs</div>
-        <a href="onboarding.html" class="hamburger-item">&#127919; Accelerate Onboarding</a>
-      </div>
-    </div>
     <div>
       <h1>{name} <span>Certification Dashboard</span></h1>
       <div class="header-date">Data as of {date_label}</div>
@@ -1401,14 +1362,7 @@ allMarkets.forEach(m => sel('f-market').innerHTML += `<option value="${{m}}">${{
   sel(id).addEventListener('change', applyFilters);
 }});
 
-function toggleHamburger(){{
-  const menu=sel('hamburger-menu'), btn=sel('hamburger-btn');
-  const open=menu.classList.toggle('open');
-  btn.classList.toggle('open', open);
-}}
 document.addEventListener('click', function(e){{
-  const h=sel('hamburger');
-  if(h&&!h.contains(e.target)){{ sel('hamburger-menu').classList.remove('open'); sel('hamburger-btn').classList.remove('open'); }}
   if(!e.target.classList.contains('info-btn')) sel('info-popover').classList.remove('visible');
 }});
 
@@ -1721,6 +1675,15 @@ function runExportXLSX(type){{
 }}
 
 applyFilters();
+(function(){{
+  var n=0,t;
+  var h=document.querySelector('.header h1');
+  if(h) h.addEventListener('click',function(){{
+    n++;clearTimeout(t);
+    if(n>=3){{n=0;window.location.href='index.html';}}
+    else t=setTimeout(function(){{n=0;}},1500);
+  }});
+}})();
 </script>
 <div class="info-popover" id="info-popover"></div>
 <!-- Print-only elements -->
@@ -2044,17 +2007,6 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   .btn-theme{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
   .btn-theme:hover{{border-color:var(--accent);color:var(--text);}}
 
-  /* ── Hamburger ─────────────────────────────────────────────────────── */
-  .hamburger{{position:relative;}}
-  .hamburger-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:16px;cursor:pointer;transition:all .15s;line-height:1;}}
-  .hamburger-btn:hover,.hamburger-btn.open{{border-color:var(--accent);color:var(--text);}}
-  .hamburger-menu{{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:220px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:200;overflow:hidden;}}
-  .hamburger-menu.open{{display:block;}}
-  .hamburger-section-label{{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 14px 4px;}}
-  .hamburger-item{{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s;}}
-  .hamburger-item:hover{{background:var(--surface2);}}
-  .hamburger-item.current{{font-weight:700;color:var(--accent);}}
-
   /* ── Export dropdown ───────────────────────────────────────────────── */
   .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
   .btn-export:hover{{opacity:0.88;}}
@@ -2216,18 +2168,6 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
 <!-- ── Header ──────────────────────────────────────────────────────────── -->
 <div class="header">
   <div class="header-left">
-    <div class="hamburger" id="hamburger">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()" aria-label="Menu">&#9776;</button>
-      <div class="hamburger-menu" id="hamburger-menu">
-        <div class="hamburger-section-label">Dashboards</div>
-        <a href="index.html" class="hamburger-item">&#128202; Playbook Dashboard</a>
-        <div class="hamburger-section-label">Certifications</div>
-        <a href="cert-healthcare.html" class="hamburger-item current">&#127973; Healthcare Cert</a>
-        <a href="cert-publicsector.html" class="hamburger-item">&#127963; Public Sector Cert</a>
-        <div class="hamburger-section-label">Programs</div>
-        <a href="onboarding.html" class="hamburger-item">&#128640; Accelerate Onboarding</a>
-      </div>
-    </div>
     <div>
       <h1>{name} <span>Certification Dashboard</span></h1>
       <div class="header-date">Data as of {date_label}</div>
@@ -2381,18 +2321,7 @@ function toggleTheme(){{
   applyFilters();
 }}
 
-// ── Hamburger ──────────────────────────────────────────────────────────────
-function toggleHamburger(){{
-  var menu = sel("hamburger-menu"), btn = sel("hamburger-btn");
-  var open = menu.classList.toggle("open");
-  btn.classList.toggle("open", open);
-}}
 document.addEventListener("click", function(e){{
-  var h = sel("hamburger");
-  if(h && !h.contains(e.target)){{
-    sel("hamburger-menu").classList.remove("open");
-    sel("hamburger-btn").classList.remove("open");
-  }}
   if(!e.target.classList.contains("info-btn")) sel("info-popover").classList.remove("visible");
 }});
 
@@ -2922,6 +2851,15 @@ function runExportXLSX(type){{
 applyFilters();
 var firstCard = sel("roster-left").querySelector(".roster-person");
 if(firstCard) showDetail(firstCard.dataset.email);
+(function(){{
+  var n=0,t;
+  var h=document.querySelector(".header h1");
+  if(h) h.addEventListener("click",function(){{
+    n++;clearTimeout(t);
+    if(n>=3){{n=0;window.location.href="index.html";}}
+    else t=setTimeout(function(){{n=0;}},1500);
+  }});
+}})();
 </script>
 </body>
 </html>"""
