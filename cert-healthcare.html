@@ -627,8 +627,8 @@ function buildPersonCard(p){
   h += "</div>";
   h += '<div class="roster-bottom">';
   h += '<div class="roster-pills">';
-  h += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
   h += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/11</span>";
+  h += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
   h += "</div>";
   h += '<span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span>";
   h += "</div></div>";
@@ -756,8 +756,8 @@ function showDetail(email){
   }
   detailHtml += "</div>";
   detailHtml += '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">';
-  detailHtml += curriculumSection("Healthcare Foundations · " + p.hcf.done + " / 10 courses", p.hcf, "hcf-" + email.replace(/[^a-z0-9]/gi, ""));
   detailHtml += curriculumSection("Layered Security · " + p.ls.done + " / 11 courses", p.ls, "ls-" + email.replace(/[^a-z0-9]/gi, ""));
+  detailHtml += curriculumSection("Healthcare Foundations · " + p.hcf.done + " / 10 courses", p.hcf, "hcf-" + email.replace(/[^a-z0-9]/gi, ""));
   detailHtml += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);">';
   detailHtml += p.overallDone + " of 21 courses complete (" + p.overallPct + "%)";
   detailHtml += "</div>";
