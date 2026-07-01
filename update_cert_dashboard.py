@@ -266,7 +266,8 @@ def generate_html(slug, name, rows):
   .stat-sub{{font-size:11px;color:var(--muted);margin-top:4px;}}
 
   .charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
-  @media(max-width:680px){{.charts{{grid-template-columns:1fr;}}}}
+  @media(max-width:900px){{.charts{{grid-template-columns:1fr;}}}}
+  @media(max-width:480px){{.chart-wrap{{height:180px;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
   .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
   body.light-mode .chart-title{{color:var(--text);}}
@@ -1099,7 +1100,8 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   .stat-value.teal{{color:var(--teal);}}
   .stat-sub{{font-size:11px;color:var(--muted);margin-top:4px;}}
   .charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
-  @media(max-width:680px){{.charts{{grid-template-columns:1fr;}}}}
+  @media(max-width:900px){{.charts{{grid-template-columns:1fr;}}}}
+  @media(max-width:480px){{.chart-wrap{{height:180px;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
   .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
   body.light-mode .chart-title{{color:var(--text);}}
@@ -2099,7 +2101,8 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
 
   /* ── Charts ────────────────────────────────────────────────────────── */
   .charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
-  @media(max-width:680px){{.charts{{grid-template-columns:1fr;}}}}
+  @media(max-width:900px){{.charts{{grid-template-columns:1fr;}}}}
+  @media(max-width:480px){{.chart-wrap{{height:180px;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
   .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
   body.light-mode .chart-title{{color:var(--text);}}

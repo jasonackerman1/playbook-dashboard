@@ -533,7 +533,8 @@ html = f"""<!DOCTYPE html>
   .charts-top{{display:grid;grid-template-columns:2fr 1fr;gap:16px;padding:0 28px 16px;}}
   .charts-bottom{{padding:0 28px 20px;}}
   .charts-pages{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
-  @media(max-width:860px){{.charts-top,.charts-pages{{grid-template-columns:1fr;}}}}
+  @media(max-width:900px){{.charts-top,.charts-pages{{grid-template-columns:1fr;}}}}
+  @media(max-width:480px){{.chart-wrap{{height:180px;}}.chart-wrap-tall{{height:140px;}}.chart-wrap-pages{{height:220px;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
   .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
   .chart-wrap{{position:relative;height:240px;}}

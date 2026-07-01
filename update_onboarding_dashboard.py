@@ -307,6 +307,14 @@ def generate_html(records):
   .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
   .btn-tlg{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}}
   .btn-tlg.active{{background:var(--red-subtle);border-color:var(--red);color:var(--red);}}
+  .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
+  .sort-btn:hover{{border-color:var(--accent);color:var(--text);}}
+  .sort-btn.active{{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}}
+  .mgr-group-hdr-row td{{padding:0;}}
+  .mgr-group-hdr{{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--surface2);border-bottom:1px solid var(--border);user-select:none;}}
+  .mgr-group-hdr:hover{{background:var(--border);}}
+  .mgr-group-hdr.open .mgr-chevron{{transform:rotate(180deg);}}
+  .mgr-chevron{{font-size:10px;color:var(--muted);transition:transform .15s;}}
   .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
 
   /* ── Stats ── */
@@ -412,7 +420,8 @@ def generate_html(records):
 
   /* ── Charts ── */
   .charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
-  @media(max-width:760px){{.charts{{grid-template-columns:1fr;}}}}
+  @media(max-width:900px){{.charts{{grid-template-columns:1fr;}}}}
+  @media(max-width:480px){{.chart-wrap{{height:160px;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
   .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
   body.light-mode .chart-title{{color:var(--text);}}
@@ -537,7 +546,11 @@ def generate_html(records):
       <div class="section-title">Progress Report <span class="info-btn" onclick="showInfo(event,'heatmap')">?</span></div>
       <div class="section-hint">Click any row to see full detail &mdash; curriculum breakdown, course checklist &amp; playbook activity</div>
     </div>
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;gap:6px;">
+        <button class="sort-btn active" id="view-individual" onclick="setTableView('individual')">Individual</button>
+        <button class="sort-btn" id="view-manager" onclick="setTableView('manager')">By Manager</button>
+      </div>
       <div class="legend">
         <span class="leg"><span class="leg-dot" style="background:#15803d"></span>Complete</span>
         <span class="leg"><span class="leg-dot" style="background:#1d4ed8"></span>In Progress</span>
@@ -590,6 +603,7 @@ let filtered = [];
 let marketChartObj = null;
 let curricChartObj = null;
 let tableSort = {{col: 'overall', dir: 'asc'}};
+let tableView = 'individual';
 
 /* ── Utilities ── */
 function pct2color(p) {{
@@ -713,8 +727,26 @@ function toggleExportDrop() {{
 function filterTableRows() {{
   const q = (document.getElementById('table-search').value || '').toLowerCase();
   document.querySelectorAll('#heatmap-body tr').forEach(row => {{
-    row.style.display = (!q || row.dataset.name.includes(q)) ? '' : 'none';
+    if (row.classList.contains('mgr-group-hdr-row')) return;
+    row.style.display = (!q || (row.dataset.name || '').includes(q)) ? '' : 'none';
   }});
+}}
+
+function setTableView(v) {{
+  tableView = v;
+  document.getElementById('view-individual').classList.toggle('active', v === 'individual');
+  document.getElementById('view-manager').classList.toggle('active', v === 'manager');
+  renderTable();
+}}
+
+function toggleMgrGroup(el) {{
+  el.classList.toggle('open');
+  const isOpen = el.classList.contains('open');
+  let row = el.closest('tr').nextElementSibling;
+  while (row && !row.classList.contains('mgr-group-hdr-row')) {{
+    row.style.display = isOpen ? '' : 'none';
+    row = row.nextElementSibling;
+  }}
 }}
 
 /* ── Column sort ── */
@@ -831,7 +863,7 @@ function renderTable() {{
       return 0;
     }});
   }}
-  tbody.innerHTML = display.map(p => {{
+  function personRow(p) {{
     const status = computeStatus(p);
     const statusClass = status === 'Completed' ? 'sb-completed' : status === 'On Track' ? 'sb-ontrack' : 'sb-overdue';
     const od = overdueCount(p);
@@ -840,14 +872,12 @@ function renderTable() {{
       od > 0 ? '<span style="color:var(--red);font-weight:700">' + od + ' past due</span>' :
       sdl === null ? '&mdash;' :
       '<span style="color:var(--green)">' + sdl + 'd left</span>';
-
     let cells = '';
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
       const pct = c ? c.pct : 0;
       cells += '<td class="pct-cell"><span class="pct-pill" style="' + curricPillStyle(c) + '">' + pct + '%</span></td>';
     }});
-
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
       '<td class="name-cell">' + escHtml(p.name) + '</td>' +
       '<td class="market-cell">' + escHtml(p.market) + '</td>' +
@@ -856,7 +886,33 @@ function renderTable() {{
       '<td class="pct-cell"><span class="pct-pill" style="' + overallPillStyle(p) + '">' + p.overallPct + '%</span></td>' +
       cells +
     '</tr>';
-  }}).join('');
+  }}
+
+  if (tableView === 'manager') {{
+    const groups = {{}};
+    filtered.forEach(p => {{
+      const mgr = p.manager || '(No Manager)';
+      if (!groups[mgr]) groups[mgr] = [];
+      groups[mgr].push(p);
+    }});
+    const colCount = 5 + CURRIC_IDS.length;
+    let html = '';
+    Object.keys(groups).sort().forEach(mgr => {{
+      const team = groups[mgr];
+      const avg = Math.round(team.reduce((s, p) => s + p.overallPct, 0) / team.length);
+      const od = team.filter(p => computeStatus(p) === 'Overdue').length;
+      const odStr = od > 0 ? ' &nbsp;·&nbsp; <span style="color:var(--red);font-weight:600">' + od + ' overdue</span>' : '';
+      html += '<tr class="mgr-group-hdr-row"><td colspan="' + colCount + '">' +
+        '<div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">' +
+        '<span style="font-weight:700;font-size:13px;">' + escHtml(mgr) + '</span>' +
+        '<span style="font-size:11px;color:var(--muted);">' + team.length + ' learner' + (team.length !== 1 ? 's' : '') + ' &nbsp;·&nbsp; avg ' + avg + '%' + odStr + ' &nbsp;<span class="mgr-chevron">&#9660;</span></span>' +
+        '</div></td></tr>';
+      team.forEach(p => {{ html += personRow(p); }});
+    }});
+    tbody.innerHTML = html;
+  }} else {{
+    tbody.innerHTML = display.map(personRow).join('');
+  }}
 
   // Footer (averages)
   const tfoot = document.getElementById('heatmap-foot');
