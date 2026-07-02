@@ -344,14 +344,14 @@ def generate_html(pb, hc, ps, ob):
         </div>
         <div class="stat-sub">{hc_avg_pct}% avg completion</div>
       </div>
-      <div class="stat-row">
-        <span class="pill pill-green">&#10003; {hc_certified} certified</span>
-        <span class="pill pill-blue">&#9679; {hc_in_progress} in progress</span>
-        <div style="width:100%;height:0;"></div>
-        <span class="pill pill-muted">&#9675; {hc_not_started} not started</span>
-      </div>
-      <div class="card-footer">
-        <a href="cert-healthcare.html" class="btn-open">Go to Dashboard &#8250;</a>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-green">&#10003; {hc_certified} certified</span>
+          <span class="pill pill-blue">&#9679; {hc_in_progress} in progress</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-muted">&#9675; {hc_not_started} not started</span>
+        </div>
+        <a href="cert-healthcare.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
@@ -371,14 +371,14 @@ def generate_html(pb, hc, ps, ob):
         </div>
         <div class="stat-sub">{ps_rate}% completion rate</div>
       </div>
-      <div class="stat-row">
-        <span class="pill pill-green">&#10003; {ps_completed} completed</span>
-        {ps_inprog_pill}
-        <div style="width:100%;height:0;"></div>
-        <span class="pill pill-muted">&#9675; {ps_not_started} not started</span>
-      </div>
-      <div class="card-footer">
-        <a href="cert-publicsector.html" class="btn-open">Go to Dashboard &#8250;</a>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-green">&#10003; {ps_completed} completed</span>
+          {ps_inprog_pill}
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-muted">&#9675; {ps_not_started} not started</span>
+        </div>
+        <a href="cert-publicsector.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
@@ -398,14 +398,14 @@ def generate_html(pb, hc, ps, ob):
         </div>
         <div class="stat-sub">{ob_avg_pct}% avg completion</div>
       </div>
-      <div class="stat-row">
-        <span class="pill pill-green">&#10003; {ob_completed} completed</span>
-        <span class="pill pill-blue">&#9679; {ob_on_track} on track</span>
-        <div style="width:100%;height:0;"></div>
-        <span class="pill pill-red">&#9888; {ob_overdue} overdue</span>
-      </div>
-      <div class="card-footer">
-        <a href="onboarding.html" class="btn-open">Go to Dashboard &#8250;</a>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-green">&#10003; {ob_completed} completed</span>
+          <span class="pill pill-blue">&#9679; {ob_on_track} on track</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-red">&#9888; {ob_overdue} overdue</span>
+        </div>
+        <a href="onboarding.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
