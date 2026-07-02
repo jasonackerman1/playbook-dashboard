@@ -86,12 +86,16 @@ def hc_cert_stats():
 
     if hc_cert_path.exists() and hc_learn_path.exists():
         from update_cert_dashboard import load_rows_healthcare_v2, TLG as CT
-        rows      = load_rows_healthcare_v2(str(hc_cert_path), str(hc_learn_path))
-        non_tlg   = [r for r in rows if f"{r['FirstName']} {r['LastName']}" not in CT]
-        total     = len(non_tlg)
-        certified = sum(1 for r in non_tlg if r['Certified'] == 'Yes')
-        rate      = round(certified / total * 100) if total else 0
-        return {'total': total, 'certified': certified, 'rate': rate}
+        rows        = load_rows_healthcare_v2(str(hc_cert_path), str(hc_learn_path))
+        non_tlg     = [r for r in rows if f"{r['FirstName']} {r['LastName']}" not in CT]
+        total       = len(non_tlg)
+        certified   = sum(1 for r in non_tlg if r['Certified'] == 'Yes')
+        in_progress = sum(1 for r in non_tlg if r['Certified'] != 'Yes' and r.get('overallDone', 0) > 0)
+        not_started = total - certified - in_progress
+        avg_pct     = round(sum(r.get('overallPct', 0) for r in non_tlg) / total) if total else 0
+        rate        = round(certified / total * 100) if total else 0
+        return {'total': total, 'certified': certified, 'rate': rate,
+                'in_progress': in_progress, 'not_started': not_started, 'avg_pct': avg_pct}
 
     # Fallback: old single-file format
     from update_cert_dashboard import load_rows, extract_file_date, person_key, TLG as CT
@@ -115,7 +119,8 @@ def hc_cert_stats():
     total     = len(deduped)
     certified = sum(1 for r in deduped if r['Complete'] == 'Yes')
     rate      = round(certified / total * 100) if total else 0
-    return {'total': total, 'certified': certified, 'rate': rate}
+    return {'total': total, 'certified': certified, 'rate': rate,
+            'in_progress': 0, 'not_started': total - certified, 'avg_pct': rate}
 
 # ── PS Cert stats ─────────────────────────────────────────────────────────────
 def ps_cert_stats():
@@ -175,21 +180,23 @@ def generate_html(pb, hc, ps, ob):
     pb_top   = pb['top_playbook']  if pb else '—'
     pb_reps  = pb['unique_reps']   if pb else '—'
 
-    hc_total     = hc['total']     if hc else '—'
-    hc_certified = hc['certified'] if hc else '—'
-    hc_rate      = hc['rate']      if hc else '—'
+    hc_total       = hc['total']       if hc else '—'
+    hc_certified   = hc['certified']   if hc else '—'
+    hc_rate        = hc['rate']        if hc else '—'
+    hc_in_progress = hc['in_progress'] if hc else '—'
+    hc_not_started = hc['not_started'] if hc else '—'
+    hc_avg_pct     = hc['avg_pct']     if hc else '—'
 
-    ps_total     = ps['total']     if ps else '—'
-    ps_certified = ps['certified'] if ps else '—'
-    ps_rate      = ps['rate']      if ps else '—'
+    ps_total         = ps['total']     if ps else '—'
+    ps_completed     = ps['certified'] if ps else '—'
+    ps_not_completed = (ps['total'] - ps['certified']) if ps else '—'
+    ps_rate          = ps['rate']      if ps else '—'
 
     ob_total     = ob['total']     if ob else '—'
     ob_completed = ob['completed'] if ob else '—'
     ob_overdue   = ob['overdue']   if ob else '—'
     ob_avg_pct   = ob['avg_pct']   if ob else '—'
 
-    hc_not_yet   = (hc['total'] - hc['certified']) if hc else '—'
-    ps_not_yet   = (ps['total'] - ps['certified']) if ps else '—'
     ob_on_track  = (ob['total'] - ob['completed'] - ob['overdue']) if ob else '—'
 
     return f"""<!DOCTYPE html>
@@ -246,6 +253,7 @@ def generate_html(pb, hc, ps, ob):
   .pill-green{{background:rgba(34,197,94,0.80);color:#fff;}}
   .pill-red{{background:rgba(239,68,68,0.80);color:#fff;}}
   .pill-blue{{background:rgba(74,124,247,0.80);color:#fff;}}
+  .pill-muted{{background:rgba(136,145,170,0.60);color:#fff;}}
 
   .card-footer{{margin-top:auto;}}
   .btn-open{{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity .15s;}}
@@ -311,13 +319,15 @@ def generate_html(pb, hc, ps, ob):
       </div>
       <div>
         <div class="stat-main">
-          <span class="stat-num" style="color:var(--green)">{hc_certified}</span>
-          <span class="stat-unit">of {hc_total} certified</span>
+          <span class="stat-num" style="color:var(--accent)">{hc_total}</span>
+          <span class="stat-unit">total learners</span>
         </div>
-        <div class="stat-sub">{hc_rate}% completion rate</div>
+        <div class="stat-sub">{hc_avg_pct}% avg completion</div>
       </div>
       <div class="stat-row">
-        <span class="pill pill-red">&#9679; {hc_not_yet} not yet completed</span>
+        <span class="pill pill-green">&#10003; {hc_certified} certified</span>
+        <span class="pill pill-blue">&#9679; {hc_in_progress} in progress</span>
+        <span class="pill pill-muted">&#9675; {hc_not_started} not started</span>
       </div>
       <div class="card-footer">
         <a href="cert-healthcare.html" class="btn-open">Open Dashboard &#8250;</a>
@@ -335,13 +345,14 @@ def generate_html(pb, hc, ps, ob):
       </div>
       <div>
         <div class="stat-main">
-          <span class="stat-num" style="color:var(--green)">{ps_certified}</span>
-          <span class="stat-unit">of {ps_total} comp</span>
+          <span class="stat-num" style="color:var(--accent)">{ps_total}</span>
+          <span class="stat-unit">total learners</span>
         </div>
         <div class="stat-sub">{ps_rate}% completion rate</div>
       </div>
       <div class="stat-row">
-        <span class="pill pill-red">&#9679; {ps_not_yet} not yet completed</span>
+        <span class="pill pill-green">&#10003; {ps_completed} completed</span>
+        <span class="pill pill-muted">&#9675; {ps_not_completed} not yet</span>
       </div>
       <div class="card-footer">
         <a href="cert-publicsector.html" class="btn-open">Open Dashboard &#8250;</a>
