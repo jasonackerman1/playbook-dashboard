@@ -360,7 +360,7 @@ def generate_html(pb, hc, ps, ob):
     </div>
 
     <!-- Public Sector Curriculum -->
-    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Public_Sector_Playbook_Images/publicSectorHero3.jpg');min-height:250px;">
+    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Public_Sector_Playbook_Images/publicSectorHero3.jpg')">
       <div class="card-head">
         <span class="card-icon">&#127963;</span>
         <div>
@@ -387,7 +387,7 @@ def generate_html(pb, hc, ps, ob):
     </div>
 
     <!-- Accelerate Onboarding -->
-    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);min-height:250px;">
+    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
       <div class="card-head">
         <span class="card-icon">&#127919;</span>
         <div>
