@@ -477,7 +477,7 @@ def generate_html(records):
   </select>
   <input type="text" id="f-search" placeholder="Search name or manager..." oninput="applyFilters()" style="width:200px;">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -578,7 +578,7 @@ const TLG_SET = new Set([
   'laura sefcik','samantha maresca','staci musco','cj homer','rich moore','dale kinsey'
 ]);
 
-let hideTLG = false;
+let hideTLG = true;
 let filtered = [];
 let marketChartObj = null;
 let curricChartObj = null;

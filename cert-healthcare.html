@@ -196,7 +196,7 @@
   <div class="header-left">
     <div>
       <h1>Healthcare <span>Certification Dashboard</span></h1>
-      <div class="header-date">Data as of July 2026</div>
+      <div class="header-date">Data as of June 2026</div>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
@@ -228,7 +228,7 @@
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to" onchange="applyFilters()">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -325,7 +325,7 @@ const PEOPLE = [{"FirstName": "Andrea", "LastName": "Adkins", "Email": "AAdkins@
 const TLG_SET = new Set(["Bianca Davis", "Bradley Pierce", "CJ Homer", "Chris Curtis", "Dale Kinsey", "James Parker", "Jason Ackerman", "Jeremy MacBean", "Laura Sefcik", "Resmie Biba", "Rich Moore", "Samantha Maresca", "Sara Thompson", "Staci Musco"]);
 
 let filtered = [];
-let hideTLG = false;
+let hideTLG = true;
 let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
@@ -427,7 +427,7 @@ function resetFilters(){
   sel("f-date-from").value = "";
   sel("f-date-to").value = "";
   sel("f-search").value = "";
-  if(hideTLG){ hideTLG = false; sel("btn-tlg").classList.remove("active"); sel("btn-tlg").textContent = "Hide TLG"; }
+  if(!hideTLG){ hideTLG = true; sel("btn-tlg").classList.add("active"); sel("btn-tlg").textContent = "Show TLG"; }
   applyFilters();
 }
 

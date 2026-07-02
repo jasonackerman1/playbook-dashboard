@@ -355,7 +355,7 @@ def generate_html(slug, name, rows):
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
   <span id="in-progress-box" style="display:none;align-items:center;gap:6px;background:var(--accent)11;border:1px solid var(--accent)44;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--accent);margin-left:4px;">
     <span id="in-progress-count">0</span> In Progress
@@ -430,7 +430,7 @@ const RAW = {raw_json};
 const TLG_SET = new Set({tlg_json});
 
 let filtered = [];
-let hideTLG = false;
+let hideTLG = true;
 let regionChart, trendChart;
 let rosterSortField = 'status';
 let rosterSortDir   = 'desc';
@@ -613,7 +613,7 @@ function toggleTLG(){{
 
 function resetFilters(){{
   ['f-status','f-market','f-date-from','f-date-to'].forEach(id => sel(id).value = '');
-  if(hideTLG){{ hideTLG=false; sel('btn-tlg').classList.remove('active'); sel('btn-tlg').textContent='Hide TLG'; }}
+  if(!hideTLG){{ hideTLG=true; sel('btn-tlg').classList.add('active'); sel('btn-tlg').textContent='Show TLG'; }}
   applyFilters();
 }}
 
@@ -1164,7 +1164,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -1241,7 +1241,7 @@ const RAW = {raw_json};
 const TLG_SET = new Set({tlg_json});
 
 let filtered = [];
-let hideTLG = false;
+let hideTLG = true;
 let pipelineChart, trendChart;
 let rosterSortField = 'status';
 let rosterSortDir   = 'desc';
@@ -1393,7 +1393,7 @@ function toggleTLG(){{
 }}
 function resetFilters(){{
   ['f-status','f-market','f-date-from','f-date-to'].forEach(id=>sel(id).value='');
-  if(hideTLG){{ hideTLG=false; sel('btn-tlg').classList.remove('active'); sel('btn-tlg').textContent='Hide TLG'; }}
+  if(!hideTLG){{ hideTLG=true; sel('btn-tlg').classList.add('active'); sel('btn-tlg').textContent='Show TLG'; }}
   applyFilters();
 }}
 function applyFilters(){{
@@ -2202,7 +2202,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to" onchange="applyFilters()">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button>
+  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -2299,7 +2299,7 @@ const PEOPLE = {raw_json};
 const TLG_SET = new Set({tlg_json});
 
 let filtered = [];
-let hideTLG = false;
+let hideTLG = true;
 let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
@@ -2401,7 +2401,7 @@ function resetFilters(){{
   sel("f-date-from").value = "";
   sel("f-date-to").value = "";
   sel("f-search").value = "";
-  if(hideTLG){{ hideTLG = false; sel("btn-tlg").classList.remove("active"); sel("btn-tlg").textContent = "Hide TLG"; }}
+  if(!hideTLG){{ hideTLG = true; sel("btn-tlg").classList.add("active"); sel("btn-tlg").textContent = "Show TLG"; }}
   applyFilters();
 }}
 

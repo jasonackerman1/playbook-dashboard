@@ -671,7 +671,7 @@ html = f"""<!DOCTYPE html>
   <select id="f-region"><option value="">All Regions</option></select>
   <select id="f-type"><option value="">Direct &amp; Dealer</option><option value="Employee">Direct</option><option value="Dealer">Dealer</option></select>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg" id="btn-tlg" onclick="toggleTLG()">Hide TLG</button><span class="info-btn" onclick="showInfo(event,'hide-tlg')">?</span>
+  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button><span class="info-btn" onclick="showInfo(event,'hide-tlg')">?</span>
   <button class="btn-tlg" id="btn-vertical" onclick="toggleVertical()">Vertical Markets</button><span class="info-btn" onclick="showInfo(event,'vertical-filter')">?</span>
   <span class="result-count" id="result-count"></span>
 </div>
@@ -843,7 +843,7 @@ function getFilters(){{
 }}
 
 const TLG = new Set(["Jason Ackerman","Bianca Davis","James Parker","Resmie Biba","Chris Curtis","Sara Thompson","Jeremy MacBean","Bradley Pierce","Laura Sefcik","Samantha Maresca","Staci Musco","CJ Homer","Rich Moore","Dale Kinsey"]);
-let hideTLG = false;
+let hideTLG = true;
 let lastVisitMap = {{}};
 let visitorMap   = {{}};
 let sortField = 'visits';
@@ -895,9 +895,9 @@ function resetFilters(){{
   sel('f-date-from').value = prevMonthFrom();
   sel('f-date-to').value   = prevMonthTo();
   ['f-playbook','f-region','f-type'].forEach(id => sel(id).value = '');
-  hideTLG = false;
-  sel('btn-tlg').classList.remove('active');
-  sel('btn-tlg').textContent = 'Hide TLG';
+  hideTLG = true;
+  sel('btn-tlg').classList.add('active');
+  sel('btn-tlg').textContent = 'Show TLG';
   hideVertical = false;
   sel('btn-vertical').classList.remove('active');
   sel('btn-vertical').textContent = 'Vertical Markets';
