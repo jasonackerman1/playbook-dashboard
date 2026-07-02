@@ -65,15 +65,17 @@ def playbook_stats():
         frames.append(df)
 
     combined = pd.concat(frames, ignore_index=True)
-    total_views = len(combined)
+    total_views  = len(combined)
     latest_month = fmt_month(files[-1][0])
     top = combined['Playbook'].value_counts()
     top_playbook = top.index[0] if len(top) else '—'
+    unique_reps  = combined['Uid'].nunique() if 'Uid' in combined.columns else '—'
 
     return {
-        'total_views': f"{total_views:,}",
+        'total_views':  f"{total_views:,}",
         'latest_month': latest_month,
         'top_playbook': top_playbook,
+        'unique_reps':  unique_reps,
     }
 
 # ── HC Cert stats ─────────────────────────────────────────────────────────────
@@ -161,7 +163,8 @@ def onboarding_stats():
             for c in p.get('curricula', {}).values()
         )
     )
-    return {'total': total, 'completed': completed, 'overdue': overdue}
+    avg_pct = round(sum(p.get('overallPct', 0) for p in people) / total) if total else 0
+    return {'total': total, 'completed': completed, 'overdue': overdue, 'avg_pct': avg_pct}
 
 # ── HTML generation ───────────────────────────────────────────────────────────
 def generate_html(pb, hc, ps, ob):
@@ -170,6 +173,7 @@ def generate_html(pb, hc, ps, ob):
     pb_views = pb['total_views']   if pb else '—'
     pb_month = pb['latest_month']  if pb else '—'
     pb_top   = pb['top_playbook']  if pb else '—'
+    pb_reps  = pb['unique_reps']   if pb else '—'
 
     hc_total     = hc['total']     if hc else '—'
     hc_certified = hc['certified'] if hc else '—'
@@ -182,6 +186,11 @@ def generate_html(pb, hc, ps, ob):
     ob_total     = ob['total']     if ob else '—'
     ob_completed = ob['completed'] if ob else '—'
     ob_overdue   = ob['overdue']   if ob else '—'
+    ob_avg_pct   = ob['avg_pct']   if ob else '—'
+
+    hc_not_yet   = (hc['total'] - hc['certified']) if hc else '—'
+    ps_not_yet   = (ps['total'] - ps['certified']) if ps else '—'
+    ob_on_track  = (ob['total'] - ob['completed'] - ob['overdue']) if ob else '—'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -219,9 +228,9 @@ def generate_html(pb, hc, ps, ob):
   .grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}}
   @media(max-width:680px){{.grid{{grid-template-columns:1fr;}}}}
 
-  .card{{background-color:var(--surface);background-image:linear-gradient(115deg,rgba(26,29,39,0.93) 0%,rgba(26,29,39,0.72) 40%,rgba(26,29,39,0.35) 100%),var(--card-bg,none);background-size:auto,cover;background-position:center;border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px;transition:border-color .15s;position:relative;overflow:hidden;}}
+  .card{{background-color:var(--surface);background-image:linear-gradient(115deg,rgba(26,29,39,1.0) 0%,rgba(26,29,39,0.85) 40%,rgba(26,29,39,0.35) 100%),var(--card-bg,none);background-size:auto,cover;background-position:center;border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px;transition:border-color .15s;position:relative;overflow:hidden;}}
   .card:hover{{border-color:var(--accent);}}
-  .light-mode .card{{background-image:linear-gradient(115deg,rgba(255,255,255,0.93) 0%,rgba(255,255,255,0.72) 40%,rgba(255,255,255,0.32) 100%),var(--card-bg,none);}}
+  .light-mode .card{{background-image:linear-gradient(115deg,rgba(255,255,255,1.0) 0%,rgba(255,255,255,0.85) 40%,rgba(255,255,255,0.32) 100%),var(--card-bg,none);}}
   .card-head{{display:flex;align-items:center;gap:12px;}}
   .card-icon{{font-size:22px;line-height:1;}}
   .card-title{{font-size:16px;font-weight:700;}}
@@ -285,6 +294,10 @@ def generate_html(pb, hc, ps, ob):
         <span style="font-size:12px;color:var(--muted)">Top playbook:</span>
         <span class="pill pill-blue">{pb_top}</span>
       </div>
+      <div class="stat-row">
+        <span style="font-size:12px;color:var(--muted)">Unique reps:</span>
+        <span class="pill pill-blue">{pb_reps}</span>
+      </div>
       <div class="card-footer">
         <a href="playbook.html" class="btn-open">Open Dashboard &#8250;</a>
       </div>
@@ -306,26 +319,34 @@ def generate_html(pb, hc, ps, ob):
         </div>
         <div class="stat-sub">{hc_rate}% completion rate</div>
       </div>
+      <div class="divider"></div>
+      <div class="stat-row">
+        <span class="pill pill-red">&#9679; {hc_not_yet} not yet completed</span>
+      </div>
       <div class="card-footer">
         <a href="cert-healthcare.html" class="btn-open">Open Dashboard &#8250;</a>
       </div>
     </div>
 
-    <!-- Public Sector Certification -->
+    <!-- Public Sector Curriculum -->
     <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Public_Sector_Playbook_Images/publicSectorHero3.jpg')">
       <div class="card-head">
         <span class="card-icon">&#127963;</span>
         <div>
-          <div class="card-title">Public Sector Certification</div>
-          <div class="card-desc">LMS certification progress</div>
+          <div class="card-title">Public Sector Curriculum</div>
+          <div class="card-desc">LMS curriculum progress</div>
         </div>
       </div>
       <div>
         <div class="stat-main">
           <span class="stat-num" style="color:var(--green)">{ps_certified}</span>
-          <span class="stat-unit">of {ps_total} certified</span>
+          <span class="stat-unit">of {ps_total} comp</span>
         </div>
         <div class="stat-sub">{ps_rate}% completion rate</div>
+      </div>
+      <div class="divider"></div>
+      <div class="stat-row">
+        <span class="pill pill-red">&#9679; {ps_not_yet} not yet completed</span>
       </div>
       <div class="card-footer">
         <a href="cert-publicsector.html" class="btn-open">Open Dashboard &#8250;</a>
@@ -346,9 +367,11 @@ def generate_html(pb, hc, ps, ob):
           <span class="stat-num" style="color:var(--accent)">{ob_total}</span>
           <span class="stat-unit">total learners</span>
         </div>
+        <div class="stat-sub">{ob_avg_pct}% avg completion</div>
       </div>
       <div class="stat-row">
         <span class="pill pill-green">&#10003; {ob_completed} completed</span>
+        <span class="pill pill-blue">&#9679; {ob_on_track} on track</span>
         <span class="pill pill-red">&#9888; {ob_overdue} overdue</span>
       </div>
       <div class="card-footer">

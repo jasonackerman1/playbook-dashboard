@@ -34,9 +34,9 @@
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
   @media(max-width:680px){.grid{grid-template-columns:1fr;}}
 
-  .card{background-color:var(--surface);background-image:linear-gradient(115deg,rgba(26,29,39,0.93) 0%,rgba(26,29,39,0.72) 40%,rgba(26,29,39,0.35) 100%),var(--card-bg,none);background-size:auto,cover;background-position:center;border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px;transition:border-color .15s;position:relative;overflow:hidden;}
+  .card{background-color:var(--surface);background-image:linear-gradient(115deg,rgba(26,29,39,1.0) 0%,rgba(26,29,39,0.85) 40%,rgba(26,29,39,0.35) 100%),var(--card-bg,none);background-size:auto,cover;background-position:center;border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px;transition:border-color .15s;position:relative;overflow:hidden;}
   .card:hover{border-color:var(--accent);}
-  .light-mode .card{background-image:linear-gradient(115deg,rgba(255,255,255,0.93) 0%,rgba(255,255,255,0.72) 40%,rgba(255,255,255,0.32) 100%),var(--card-bg,none);}
+  .light-mode .card{background-image:linear-gradient(115deg,rgba(255,255,255,1.0) 0%,rgba(255,255,255,0.85) 40%,rgba(255,255,255,0.32) 100%),var(--card-bg,none);}
   .card-head{display:flex;align-items:center;gap:12px;}
   .card-icon{font-size:22px;line-height:1;}
   .card-title{font-size:16px;font-weight:700;}
@@ -100,6 +100,10 @@
         <span style="font-size:12px;color:var(--muted)">Top playbook:</span>
         <span class="pill pill-blue">Accelerate</span>
       </div>
+      <div class="stat-row">
+        <span style="font-size:12px;color:var(--muted)">Unique reps:</span>
+        <span class="pill pill-blue">348</span>
+      </div>
       <div class="card-footer">
         <a href="playbook.html" class="btn-open">Open Dashboard &#8250;</a>
       </div>
@@ -121,26 +125,34 @@
         </div>
         <div class="stat-sub">0% completion rate</div>
       </div>
+      <div class="divider"></div>
+      <div class="stat-row">
+        <span class="pill pill-red">&#9679; 59 not yet completed</span>
+      </div>
       <div class="card-footer">
         <a href="cert-healthcare.html" class="btn-open">Open Dashboard &#8250;</a>
       </div>
     </div>
 
-    <!-- Public Sector Certification -->
+    <!-- Public Sector Curriculum -->
     <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Public_Sector_Playbook_Images/publicSectorHero3.jpg')">
       <div class="card-head">
         <span class="card-icon">&#127963;</span>
         <div>
-          <div class="card-title">Public Sector Certification</div>
-          <div class="card-desc">LMS certification progress</div>
+          <div class="card-title">Public Sector Curriculum</div>
+          <div class="card-desc">LMS curriculum progress</div>
         </div>
       </div>
       <div>
         <div class="stat-main">
           <span class="stat-num" style="color:var(--green)">6</span>
-          <span class="stat-unit">of 33 certified</span>
+          <span class="stat-unit">of 33 comp</span>
         </div>
         <div class="stat-sub">18% completion rate</div>
+      </div>
+      <div class="divider"></div>
+      <div class="stat-row">
+        <span class="pill pill-red">&#9679; 27 not yet completed</span>
       </div>
       <div class="card-footer">
         <a href="cert-publicsector.html" class="btn-open">Open Dashboard &#8250;</a>
@@ -161,9 +173,11 @@
           <span class="stat-num" style="color:var(--accent)">29</span>
           <span class="stat-unit">total learners</span>
         </div>
+        <div class="stat-sub">59% avg completion</div>
       </div>
       <div class="stat-row">
         <span class="pill pill-green">&#10003; 0 completed</span>
+        <span class="pill pill-blue">&#9679; 0 on track</span>
         <span class="pill pill-red">&#9888; 29 overdue</span>
       </div>
       <div class="card-footer">
