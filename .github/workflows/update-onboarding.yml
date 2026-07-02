@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'onboarding-data/*.xlsx'
+      - 'data/playbook-monthly-*.xlsx'
       - 'update_onboarding_dashboard.py'
   workflow_dispatch:
 
