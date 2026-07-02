@@ -352,7 +352,7 @@ def generate_html(pb, hc, ps, ob):
       </div>
       <div class="stat-row">
         <span class="pill pill-green">&#10003; {ps_completed} completed</span>
-        <span class="pill pill-muted">&#9675; {ps_not_completed} not yet</span>
+        <span class="pill pill-muted">&#9675; {ps_not_completed} not started</span>
       </div>
       <div class="card-footer">
         <a href="cert-publicsector.html" class="btn-open">Open Dashboard &#8250;</a>
