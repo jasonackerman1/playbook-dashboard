@@ -842,7 +842,7 @@ function getFilters(){{
   }};
 }}
 
-const TLG = new Set(["Jason Ackerman","Bianca Davis","James Parker","Resmie Biba","Chris Curtis","Sara Thompson","Jeremy MacBean","Bradley Pierce","Laura Sefcik","Samantha Maresca","Staci Musco","CJ Homer","Rich Moore","Dale Kinsey","John Lechner","Resmie Nesimi","Samantha D'Angelo","Bianca DiPasquale"]);
+const TLG = new Set(["Jason Ackerman","Bianca Davis","James Parker","Resmie Biba","Chris Curtis","Sara Thompson","Jeremy MacBean","Bradley Pierce","Laura Sefcik","Samantha Maresca","Staci Musco","CJ Homer","Rich Moore","Dale Kinsey","John Lechner","Resmie Nesimi","Samantha D'Angelo","Bianca DiPasquale","Doug Falk"]);
 let hideTLG = true;
 let lastVisitMap = {{}};
 let visitorMap   = {{}};

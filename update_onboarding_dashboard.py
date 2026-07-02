@@ -57,7 +57,7 @@ TLG = {
     'chris curtis', 'sara thompson', 'jeremy macbean', 'bradley pierce',
     'laura sefcik', 'samantha maresca', 'staci musco', 'cj homer',
     'rich moore', 'dale kinsey',
-    'john lechner', 'resmie nesimi', "samantha d'angelo", 'bianca dipasquale',
+    'john lechner', 'resmie nesimi', "samantha d'angelo", 'bianca dipasquale', 'doug falk',
 }
 
 PAGE_LABELS = {
@@ -577,7 +577,7 @@ const TLG_SET = new Set([
   'jason ackerman','bianca davis','james parker','resmie biba',
   'chris curtis','sara thompson','jeremy macbean','bradley pierce',
   'laura sefcik','samantha maresca','staci musco','cj homer','rich moore','dale kinsey',
-  'john lechner','resmie nesimi',"samantha d'angelo",'bianca dipasquale'
+  'john lechner','resmie nesimi',"samantha d'angelo",'bianca dipasquale','doug falk'
 ]);
 
 let hideTLG = true;
