@@ -123,6 +123,10 @@ def hc_cert_stats():
             'in_progress': 0, 'not_started': total - certified, 'avg_pct': rate}
 
 # ── PS Cert stats ─────────────────────────────────────────────────────────────
+# PS learning file: update filename below when Resmie provides the learning report.
+# Once the file exists in cert-data/, in_progress will populate automatically.
+PS_LEARN_FILE = 'Public Sector Foundations Learning Report.xlsx'
+
 def ps_cert_stats():
     cert_dir = SCRIPT_DIR / 'cert-data'
     from update_cert_dashboard import load_rows_publicsector, extract_file_date, person_key
@@ -147,7 +151,20 @@ def ps_cert_stats():
     total     = len(deduped)
     certified = sum(1 for r in deduped if r['PublicSector'] == 'Yes')
     rate      = round(certified / total * 100) if total else 0
-    return {'total': total, 'certified': certified, 'rate': rate}
+
+    # In-progress breakdown requires a PS learning file (not yet available).
+    # When PS_LEARN_FILE exists in cert-data/, add parsing logic here similar to HC v2.
+    ps_learn_path = cert_dir / PS_LEARN_FILE
+    if ps_learn_path.exists():
+        # TODO: parse ps_learn_path to compute in_progress and not_started
+        in_progress = 0   # replace with real count once parsing is implemented
+        not_started = total - certified - in_progress
+    else:
+        in_progress = 0
+        not_started = total - certified
+
+    return {'total': total, 'certified': certified, 'rate': rate,
+            'in_progress': in_progress, 'not_started': not_started}
 
 # ── Onboarding stats ──────────────────────────────────────────────────────────
 def onboarding_stats():
@@ -187,10 +204,13 @@ def generate_html(pb, hc, ps, ob):
     hc_not_started = hc['not_started'] if hc else '—'
     hc_avg_pct     = hc['avg_pct']     if hc else '—'
 
-    ps_total         = ps['total']     if ps else '—'
-    ps_completed     = ps['certified'] if ps else '—'
-    ps_not_completed = (ps['total'] - ps['certified']) if ps else '—'
-    ps_rate          = ps['rate']      if ps else '—'
+    ps_total       = ps['total']       if ps else '—'
+    ps_completed   = ps['certified']   if ps else '—'
+    ps_in_progress = ps['in_progress'] if ps else 0
+    ps_not_started = ps['not_started'] if ps else '—'
+    ps_rate        = ps['rate']        if ps else '—'
+    ps_inprog_pill = (f'<span class="pill pill-blue">&#9679; {ps_in_progress} in progress</span>'
+                      if ps_in_progress and ps_in_progress > 0 else '')
 
     ob_total     = ob['total']     if ob else '—'
     ob_completed = ob['completed'] if ob else '—'
@@ -352,7 +372,8 @@ def generate_html(pb, hc, ps, ob):
       </div>
       <div class="stat-row">
         <span class="pill pill-green">&#10003; {ps_completed} completed</span>
-        <span class="pill pill-muted">&#9675; {ps_not_completed} not started</span>
+        {ps_inprog_pill}
+        <span class="pill pill-muted">&#9675; {ps_not_started} not started</span>
       </div>
       <div class="card-footer">
         <a href="cert-publicsector.html" class="btn-open">Open Dashboard &#8250;</a>
