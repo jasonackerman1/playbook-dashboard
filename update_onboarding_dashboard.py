@@ -50,7 +50,7 @@ CURRICULA = [
     ('ACCELERATE_PM', 'Pipeline Mgmt'),
 ]
 
-PROGRAM_DAYS = 45
+PROGRAM_DAYS = 35
 
 TLG = {
     'jason ackerman', 'bianca davis', 'james parker', 'resmie biba',
@@ -70,8 +70,11 @@ PAGE_LABELS = {
     'managers':              'Managers',
     'index':                 'Home',
     'prospectingskills':     'Prospecting Skills',
-    'callprep':              'Call Prep',
+    'salesforceprospecting': 'Salesforce Prospecting',
+    'callprep':              'Prep Essentials',
     'workingwithnumbers':    'Working With Numbers',
+    'movingdeals':           'Moving Deals Forward',
+    'pipelineownership':     'Pipeline Ownership',
 }
 
 
@@ -326,7 +329,7 @@ def generate_html(records):
   body.light-mode .section-title{{color:var(--text);}}
   .section-hint{{font-size:11px;color:var(--muted);}}
   .table-wrap{{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);}}
-  table{{border-collapse:collapse;width:100%;min-width:900px;}}
+  table{{border-collapse:collapse;width:100%;min-width:680px;}}
   thead th{{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap;}}
   thead th.curric-col{{text-align:center;min-width:96px;white-space:normal;line-height:1.3;font-size:10px;}}
   thead th.overall-col{{text-align:center;min-width:80px;}}
@@ -527,18 +530,39 @@ def generate_html(records):
       <div class="section-title">Progress Report <span class="info-btn" onclick="showInfo(event,'heatmap')">?</span></div>
       <div class="section-hint">Click any row to see full detail &mdash; curriculum breakdown, course checklist &amp; playbook activity</div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <div style="display:flex;gap:6px;">
         <button class="sort-btn active" id="view-individual" onclick="setTableView('individual')">Individual</button>
         <button class="sort-btn" id="view-manager" onclick="setTableView('manager')">By Manager</button>
       </div>
-      <div class="legend">
-        <span class="leg"><span class="leg-dot" style="background:#15803d"></span>Complete</span>
-        <span class="leg"><span class="leg-dot" style="background:#1d4ed8"></span>In Progress</span>
-        <span class="leg"><span class="leg-dot" style="background:#b91c1c"></span>Past Due</span>
-        <span class="leg"><span class="leg-dot" style="background:#6b7280"></span>Not Started</span>
-      </div>
       <input type="text" id="table-search" oninput="filterTableRows()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);">
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Curricula &#9632;</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;margin-right:4px;flex-shrink:0;"></span>Done</span>
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1d4ed8;margin-right:4px;flex-shrink:0;"></span>In Progress</span>
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Past Due</span>
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#6b7280;margin-right:4px;flex-shrink:0;"></span>Not Started</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Playbook &#9679;</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span class="leg"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px;flex-shrink:0;"></span>Using playbook</span>
+        <span class="leg"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Completing without playbook</span>
+        <span class="leg"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b7280;margin-right:4px;flex-shrink:0;"></span>No activity yet</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Gap</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;margin-right:4px;flex-shrink:0;"></span>On pace or ahead (0% or less)</span>
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b45309;margin-right:4px;flex-shrink:0;"></span>Check-in (1&ndash;40%)</span>
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Coaching needed (41%+)</span>
+      </div>
     </div>
   </div>
   <div class="table-wrap">
@@ -570,6 +594,18 @@ const PEOPLE = {people_json};
 const CURRIC_IDS = {curric_ids};
 const CURRIC_NAMES = {curric_names};
 const PROGRAM_DAYS = {PROGRAM_DAYS};
+const PLAYBOOK_CURRIC = {{
+  'welcome':                 'ACCELERATE_GS',
+  'understandingsalesforce': 'ACCELERATE_GS',
+  'salesworkflow':           'ACCELERATE_SW',
+  'coreportfolio':           'ACCELERATE_CP',
+  'prospectingskills':       'ACCELERATE_P',
+  'salesforceprospecting':   'ACCELERATE_P',
+  'callprep':                'ACCELERATE_SS',
+  'workingwithnumbers':      'ACCELERATE_SS',
+  'movingdeals':             'ACCELERATE_PM',
+  'pipelineownership':       'ACCELERATE_PM',
+}};
 const TODAY = new Date();
 TODAY.setHours(0,0,0,0);
 
@@ -598,14 +634,21 @@ function pct2color(p) {{
 function curricPillStyle(c) {{
   if (!c) return 'background:#6b7280;color:#fff';
   if (c.complete) return 'background:#15803d;color:#fff';
-  if (c.daysRem !== null && c.daysRem < 0) return 'background:#b91c1c;color:#fff';
+  if (c.daysRem !== null && c.daysRem <= 0) return 'background:#b91c1c;color:#fff';
   if (c.pct > 0)  return 'background:#1d4ed8;color:#fff';
   return 'background:#6b7280;color:#fff';
+}}
+function curricDotBg(c) {{
+  if (!c) return '#6b7280';
+  if (c.complete) return '#15803d';
+  if (c.daysRem !== null && c.daysRem <= 0) return '#b91c1c';
+  if (c.pct > 0) return '#1d4ed8';
+  return '#6b7280';
 }}
 
 function overallPillStyle(p) {{
   if (p.overallDone) return 'background:#15803d;color:#fff;font-weight:700';
-  const anyOverdue = Object.values(p.curricula).some(c => c && !c.complete && c.daysRem !== null && c.daysRem < 0);
+  const anyOverdue = Object.values(p.curricula).some(c => c && !c.complete && c.daysRem !== null && c.daysRem <= 0);
   if (anyOverdue) return 'background:#b91c1c;color:#fff;font-weight:700';
   if (p.overallPct > 0) return 'background:#1d4ed8;color:#fff;font-weight:700';
   return 'background:#6b7280;color:#fff;font-weight:700';
@@ -617,13 +660,13 @@ function computeStatus(p) {{
   if (!ids.length) return 'Unknown';
   const anyOverdue = ids.some(cid => {{
     const c = p.curricula[cid];
-    return c && !c.complete && c.daysRem !== null && c.daysRem < 0;
+    return c && !c.complete && c.daysRem !== null && c.daysRem <= 0;
   }});
   return anyOverdue ? 'Overdue' : 'On Track';
 }}
 
 function overdueCount(p) {{
-  return Object.values(p.curricula).filter(c => c && !c.complete && c.daysRem !== null && c.daysRem < 0).length;
+  return Object.values(p.curricula).filter(c => c && !c.complete && c.daysRem !== null && c.daysRem <= 0).length;
 }}
 
 function soonestDaysLeft(p) {{
@@ -641,6 +684,73 @@ function daysElapsed(p) {{
   if (!p.assignDate) return 0;
   const start = new Date(p.assignDate);
   return Math.max(0, Math.round((TODAY - start) / 86400000));
+}}
+function expectedPct(p) {{
+  return Math.min(100, Math.round(daysElapsed(p) / PROGRAM_DAYS * 100));
+}}
+function gapPct(p) {{
+  return expectedPct(p) - p.overallPct;
+}}
+function gapStyle(g) {{
+  if (g > 40) return 'background:#b91c1c;color:#fff;font-weight:700';
+  if (g > 0)  return 'background:#b45309;color:#fff;font-weight:700';
+  return 'background:#15803d;color:#fff;font-weight:700';
+}}
+function urlSlug(url) {{
+  const m = (url || '').match(/\/([^\/]+?)(?:\.html)?(?:\?.*)?$/);
+  if (!m || !m[1] || m[1] === 'accelerate_sales_playbook' || m[1] === '') return 'index';
+  return m[1].toLowerCase();
+}}
+function pbEngagement(p) {{
+  const visits = p.playbook || [];
+  if (!visits.length) {{
+    const level = p.overallPct > 0 ? 'alert' : 'none';
+    return {{totalVisits:0, uniquePages:0, visitedCurricula:{{}}, mismatches:[], level}};
+  }}
+  const totalVisits = visits.length;
+  const slugs = visits.map(v => urlSlug(v.url));
+  const uniquePages = new Set(slugs).size;
+  const visitedCurricula = {{}};
+  slugs.forEach(slug => {{
+    const cid = PLAYBOOK_CURRIC[slug];
+    if (cid) visitedCurricula[cid] = (visitedCurricula[cid] || 0) + 1;
+  }});
+  const mismatches = CURRIC_IDS.filter(cid => {{
+    const c = p.curricula[cid];
+    return c && c.done > 0 && !visitedCurricula[cid];
+  }});
+  const level = mismatches.length > 0 ? 'partial' : 'active';
+  return {{totalVisits, uniquePages, visitedCurricula, mismatches, level}};
+}}
+function pbSummaryHtml(p) {{
+  const eng = pbEngagement(p);
+  let html = '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);">';
+  html += '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Playbook Engagement</div>';
+  if (eng.totalVisits === 0) {{
+    const msg = p.overallPct > 0
+      ? '<span style="color:var(--red)">&#9888; Completing courses with no playbook visits recorded</span>'
+      : '<span style="color:var(--muted)">No playbook visits recorded yet</span>';
+    html += '<div style="font-size:13px;margin-bottom:8px;">' + msg + '</div>';
+  }} else {{
+    html += '<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">' + eng.totalVisits + ' visit' + (eng.totalVisits!==1?'s':'') + ' &middot; ' + eng.uniquePages + ' unique page' + (eng.uniquePages!==1?'s':'') + '</div>';
+  }}
+  html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">';
+  CURRIC_IDS.forEach(cid => {{
+    const c = p.curricula[cid];
+    const hasDone = c && c.done > 0;
+    const visited = !!eng.visitedCurricula[cid];
+    let bg, color, icon;
+    if (visited)       {{ bg='var(--green-subtle)'; color='var(--green)';  icon='&#10003;'; }}
+    else if (hasDone)  {{ bg='var(--red-subtle)';   color='var(--red)';    icon='&#10007;'; }}
+    else               {{ bg='var(--surface2)';      color='var(--muted)';  icon='&middot;'; }}
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:'+bg+';color:'+color+';font-size:11px;font-weight:600;">'+icon+' '+CURRIC_NAMES[cid]+'</span>';
+  }});
+  html += '</div>';
+  if (eng.mismatches.length > 0) {{
+    html += '<div style="background:var(--red-subtle);color:var(--red);border-radius:6px;padding:8px 12px;font-size:12px;">&#9888; Courses completed without visiting: ' + eng.mismatches.map(cid=>CURRIC_NAMES[cid]).join(', ') + '</div>';
+  }}
+  html += '</div>';
+  return html;
 }}
 
 function fmtDate(d) {{
@@ -677,7 +787,7 @@ const INFO = {{
   "first-sale": "Will show whether each person has logged their first sale in Salesforce. This is coming soon — it will populate automatically once the Salesforce connection is set up.",
   "market-chart": "Shows how far along each market's reps are on average. Hover over any bar to see the full picture — how many people are done, still on track, or past their deadline. A shorter bar means that market may need extra attention.",
   "curric-chart": "Shows how far along all reps are on average for each course. Hover over any bar to see how many people have finished that course, are working on it, have not started it yet, or are past its deadline. A short bar is a signal that reps are getting stuck there.",
-  "heatmap": "One row per person. Each colored box is a course — the number inside is how far through it they are. Colors tell you the situation at a glance: Green = finished, Blue = in progress and on time, Red = past the deadline for that course, Gray = not started yet. Click any row to open their full detail card — every individual lesson, completion dates, and any Accelerate Playbook visits.",
+  "heatmap": "One row per person. The Curricula column shows 6 colored squares — one per curriculum — so you can see at a glance where someone stands across the whole program. Green = done, Blue = in progress, Red = past due, Gray = not started. The playbook dot shows whether they are using the Accelerate Playbook alongside their LMS courses. Click any row to open their full detail card — every individual lesson, completion dates, curriculum breakdown, and playbook activity.",
   "export": "Downloads a report based on whoever is currently showing on screen — so filter first, then export. Full Report: everyone with their status and overall progress. Overdue Only: a list of people who are past a course deadline, including their manager's contact info for follow-up. Manager Summary: one row per manager showing their team's headcount and progress. Example: filter to a specific market, then choose Overdue Only to get a ready-to-use outreach list for that region.",
 }};
 function showInfo(e, key) {{
@@ -792,7 +902,7 @@ function renderStats() {{
 
   document.getElementById('s-total').textContent = total;
   document.getElementById('s-overdue').textContent = overdue;
-  document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past their 45-day window' : '';
+  document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past their 35-day LMS window' : '';
   document.getElementById('s-ontrack').textContent = ontrack;
   document.getElementById('s-completed').textContent = completed;
 }}
@@ -807,18 +917,18 @@ function renderTable() {{
     const cls = ['sortable-th', extraCls, active ? 'sort-active' : ''].filter(Boolean).join(' ');
     return '<th class="' + cls + '" data-col="' + col + '" onclick="sortByCol(this.dataset.col)">' + label + arrow + '</th>';
   }}
-  let hRow = '<tr>' + thS('Learner','name') + thS('Market','market') + thS('Status','status') + thS('Days Left','days');
-  hRow += thS('Overall','overall','overall-col');
-  CURRIC_IDS.forEach(cid => {{
-    hRow += thS(CURRIC_NAMES[cid], cid, 'curric-col');
-  }});
+  let hRow = '<tr>' + thS('Learner','name') + thS('Status','status') + thS('Days Left','days');
+  hRow += thS('Actual %','overall','overall-col');
+  hRow += thS('Expected %','expected','overall-col');
+  hRow += thS('Gap','gap','overall-col');
+  hRow += '<th style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;">Curricula</th>';
   hRow += '</tr>';
   thead.innerHTML = hRow;
 
   // Body
   const tbody = document.getElementById('heatmap-body');
   if (!filtered.length) {{
-    tbody.innerHTML = '<tr><td colspan="' + (5 + CURRIC_IDS.length) + '" style="text-align:center;color:var(--muted);padding:32px;">No learners match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">No learners match the current filters.</td></tr>';
     document.getElementById('heatmap-foot').innerHTML = '';
     return;
   }}
@@ -832,7 +942,9 @@ function renderTable() {{
       else if (col === 'market')  {{ va = a.market; vb = b.market; }}
       else if (col === 'status')  {{ va = computeStatus(a); vb = computeStatus(b); }}
       else if (col === 'days')    {{ va = daysLeft(a) ?? 9999; vb = daysLeft(b) ?? 9999; }}
-      else if (col === 'overall') {{ va = a.overallPct; vb = b.overallPct; }}
+      else if (col === 'overall')   {{ va = a.overallPct; vb = b.overallPct; }}
+      else if (col === 'expected')  {{ va = expectedPct(a); vb = expectedPct(b); }}
+      else if (col === 'gap')       {{ va = gapPct(a); vb = gapPct(b); }}
       else {{ va = a.curricula[col] ? a.curricula[col].pct : 0; vb = b.curricula[col] ? b.curricula[col].pct : 0; }}
       if (va < vb) return tableSort.dir === 'asc' ? -1 : 1;
       if (va > vb) return tableSort.dir === 'asc' ? 1 : -1;
@@ -848,19 +960,25 @@ function renderTable() {{
       od > 0 ? '<span style="color:var(--red);font-weight:700">' + od + ' past due</span>' :
       sdl === null ? '&mdash;' :
       '<span style="color:var(--green)">' + sdl + 'd left</span>';
-    let cells = '';
+    let dotsCell = '<td style="text-align:center;padding:5px 12px;"><div style="display:inline-flex;gap:3px;align-items:center;">';
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
-      const pct = c ? c.pct : 0;
-      cells += '<td class="pct-cell"><span class="pct-pill" style="' + curricPillStyle(c) + '">' + pct + '%</span></td>';
+      const bg = curricDotBg(c);
+      const lbl = CURRIC_NAMES[cid] + ': ' + (c ? c.pct + '%' : 'N/A');
+      dotsCell += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + bg + ';" title="' + lbl + '"></span>';
     }});
+    dotsCell += '</div></td>';
+    const eng = pbEngagement(p);
+    const dotColor = (eng.level === 'alert') ? '#b91c1c' : (eng.level === 'none') ? '#6b7280' : '#22c55e';
+    const dotTip  = (eng.level === 'alert') ? 'Completing courses — no playbook visits recorded' : (eng.level === 'none') ? 'No activity yet' : 'Using the playbook';
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
-      '<td class="name-cell">' + escHtml(p.name) + '</td>' +
-      '<td class="market-cell">' + escHtml(p.market) + '</td>' +
+      '<td class="name-cell"><span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;" title="' + dotTip + '"></span>' + escHtml(p.name) + '</td>' +
       '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
       '<td style="font-size:11px;">' + daysStr + '</td>' +
-      '<td class="pct-cell"><span class="pct-pill" style="' + overallPillStyle(p) + '">' + p.overallPct + '%</span></td>' +
-      cells +
+      '<td class="pct-cell" style="font-weight:600;font-size:12px;">' + p.overallPct + '%</td>' +
+      '<td class="pct-cell" style="font-weight:600;font-size:12px;color:var(--muted);">' + expectedPct(p) + '%</td>' +
+      (function(){{ const g=gapPct(p); return '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(g) + '">' + g + '%</span></td>'; }})() +
+      dotsCell +
     '</tr>';
   }}
 
@@ -871,7 +989,7 @@ function renderTable() {{
       if (!groups[mgr]) groups[mgr] = [];
       groups[mgr].push(p);
     }});
-    const colCount = 5 + CURRIC_IDS.length;
+    const colCount = 7;
     let html = '';
     Object.keys(groups).sort().forEach(mgr => {{
       const team = groups[mgr];
@@ -892,16 +1010,14 @@ function renderTable() {{
 
   // Footer (averages)
   const tfoot = document.getElementById('heatmap-foot');
-  let fRow = '<tr><td colspan="4" style="font-weight:700;font-size:11px;">Averages (' + filtered.length + ' learners)</td>';
+  let fRow = '<tr><td colspan="3" style="font-weight:700;font-size:11px;">Averages (' + filtered.length + ' learners)</td>';
   const oAvg = filtered.length ? Math.round(filtered.reduce((s,p) => s+p.overallPct,0)/filtered.length) : 0;
-  const oclr = pct2color(oAvg);
-  fRow += '<td class="pct-cell"><span class="pct-pill" style="background:' + oclr.bg + ';color:' + oclr.fg + ';font-weight:700">' + oAvg + '%</span></td>';
-  CURRIC_IDS.forEach(cid => {{
-    const vals = filtered.map(p => p.curricula[cid] ? p.curricula[cid].pct : 0);
-    const avg = vals.length ? Math.round(vals.reduce((s,v) => s+v,0) / vals.length) : 0;
-    const clr = pct2color(avg);
-    fRow += '<td class="pct-cell"><span class="pct-pill" style="background:' + clr.bg + ';color:' + clr.fg + '">' + avg + '%</span></td>';
-  }});
+  fRow += '<td class="pct-cell" style="font-weight:700;font-size:11px;">' + oAvg + '%</td>';
+  const eAvg = filtered.length ? Math.round(filtered.reduce((s,p) => s+expectedPct(p),0)/filtered.length) : 0;
+  fRow += '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--muted);">' + eAvg + '%</td>';
+  const gAvg = eAvg - oAvg;
+  fRow += '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(gAvg) + '">' + gAvg + '%</span></td>';
+  fRow += '<td></td>';
   fRow += '</tr>';
   tfoot.innerHTML = fRow;
 }}
@@ -926,7 +1042,7 @@ function renderMarketChart() {{
     const mp = filtered.filter(p => p.market === m);
     const total    = mp.length;
     const complete = mp.filter(p => p.overallDone).length;
-    const overdue  = mp.filter(p => !p.overallDone && Object.values(p.curricula).some(c => c && !c.complete && c.daysRem !== null && c.daysRem < 0)).length;
+    const overdue  = mp.filter(p => !p.overallDone && Object.values(p.curricula).some(c => c && !c.complete && c.daysRem !== null && c.daysRem <= 0)).length;
     const onTrack  = total - complete - overdue;
     return {{total, complete, onTrack, overdue}};
   }});
@@ -996,7 +1112,7 @@ function renderCurricChart() {{
     const complete   = people.filter(c => c.complete).length;
     const inProgress = people.filter(c => !c.complete && c.pct > 0).length;
     const notStarted = people.filter(c => !c.complete && c.pct === 0).length;
-    const pastDue    = people.filter(c => !c.complete && c.daysRem !== null && c.daysRem < 0).length;
+    const pastDue    = people.filter(c => !c.complete && c.daysRem !== null && c.daysRem <= 0).length;
     return {{total, complete, inProgress, notStarted, pastDue}};
   }});
   const ctx = document.getElementById('curricChart').getContext('2d');
@@ -1061,12 +1177,13 @@ function openModal(email) {{
   const dl = daysLeft(p);
   const elapsed = daysElapsed(p);
   const pct45 = Math.min(100, Math.round(elapsed / PROGRAM_DAYS * 100));
-  const barColor = p.overallDone ? 'var(--green)' : dl < 0 ? 'var(--red)' : 'var(--accent)';
+  const barColor = p.overallDone ? 'var(--green)' : dl <= 0 ? 'var(--red)' : 'var(--accent)';
 
   let daysLabel = '';
   if (p.overallDone) daysLabel = 'Program complete';
   else if (dl === null) daysLabel = 'No assignment date';
-  else if (dl < 0) daysLabel = Math.abs(dl) + ' days past the 45-day window';
+  else if (dl < 0) daysLabel = Math.abs(dl) + ' days past the 35-day LMS window';
+  else if (dl === 0) daysLabel = 'Due today &mdash; final day of the 35-day LMS window';
   else daysLabel = 'Day ' + elapsed + ' of ' + PROGRAM_DAYS + ' &mdash; ' + dl + ' days remaining';
 
   const statusBadge = '<span class="status-badge ' +
@@ -1078,13 +1195,25 @@ function openModal(email) {{
   CURRIC_IDS.forEach(cid => {{
     const c = p.curricula[cid];
     if (!c) return;
-    const drBg = c.daysRem < 0 ? 'var(--red-subtle)' : 'var(--green-subtle)';
-    const drColor = c.daysRem < 0 ? 'var(--red)' : 'var(--green)';
+    const drBg = c.daysRem <= 0 ? 'var(--red-subtle)' : 'var(--green-subtle)';
+    const drColor = c.daysRem <= 0 ? 'var(--red)' : 'var(--green)';
     const drLabel = c.daysRem === null ? '' :
       '<span class="days-badge" style="background:' + drBg + ';color:' + drColor + '">' +
-      (c.daysRem < 0 ? Math.abs(c.daysRem) + 'd overdue' : c.daysRem + 'd left') + '</span>';
+      (c.daysRem < 0 ? Math.abs(c.daysRem) + 'd overdue' : c.daysRem === 0 ? 'Due today' : c.daysRem + 'd left') + '</span>';
     const doneBadge = c.complete ?
       '<span class="status-badge sb-completed" style="font-size:10px">Done</span>' : '';
+
+    let missingLabel = '';
+    if (!c.complete) {{
+      const missingCourses   = c.items.filter(i => !i.done && i.type !== 'VILT').length;
+      const missingWorkshops = c.items.filter(i => !i.done && i.type === 'VILT').length;
+      if (missingCourses > 0 || missingWorkshops > 0) {{
+        const parts = [];
+        if (missingCourses   > 0) parts.push(missingCourses   + ' ' + (missingCourses   === 1 ? 'course'   : 'courses'));
+        if (missingWorkshops > 0) parts.push(missingWorkshops + ' ' + (missingWorkshops === 1 ? 'workshop' : 'workshops'));
+        missingLabel = '<span style="font-size:11px;color:var(--muted);white-space:nowrap;">Missing: ' + parts.join(', ') + '</span>';
+      }}
+    }}
 
     const itemsHtml = c.items.map(it => {{
       const checkClass = it.done ? 'done' : 'not';
@@ -1104,59 +1233,120 @@ function openModal(email) {{
       '<div class="curric-header" onclick="toggleCurric(this)">' +
         '<span class="curric-title">' + escHtml(c.title) + '</span>' +
         '<span class="pct-pill" style="' + curricPillStyle(c) + ';font-size:11px">' + c.pct + '%</span>' +
-        drLabel + doneBadge +
+        drLabel + doneBadge + missingLabel +
         '<span class="curric-chevron">&#9660;</span>' +
       '</div>' +
       '<div class="curric-items">' + itemsHtml + '</div>' +
     '</div>';
   }});
 
-  // Playbook activity
-  let pbHtml = '';
-  if (!p.playbook || p.playbook.length === 0) {{
-    pbHtml = '<div class="playbook-empty">No Accelerate playbook visits recorded for this learner.</div>';
-  }} else {{
-    pbHtml = p.playbook.map(v =>
-      '<div class="pb-visit-row">' +
-        '<span class="pb-page">&#128196; ' + escHtml(v.page) + '</span>' +
-        '<span class="pb-date">' + fmtDate(v.date) + '</span>' +
-      '</div>'
-    ).join('');
+  // Activity timeline — deduped playbook visits + LMS completions, sorted by date
+  const tlEvents = [];
+  const tlSeen = new Set();
+  (p.playbook || []).forEach(v => {{
+    const k = (v.page || '') + '|' + (v.date || '');
+    if (!tlSeen.has(k)) {{ tlSeen.add(k); tlEvents.push({{t:'pb', date:v.date||'', page:v.page||''}}); }}
+  }});
+  CURRIC_IDS.forEach(cid => {{
+    const c = p.curricula[cid];
+    if (!c) return;
+    c.items.forEach(it => {{
+      if (it.done && it.date) tlEvents.push({{t:'lms', date:it.date, title:it.title, curric:c.title}});
+    }});
+  }});
+  tlEvents.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+
+  // Path score: for each curriculum with completions, did a playbook visit precede the first completion?
+  const evalCurricula = [];
+  CURRIC_IDS.forEach(cid => {{
+    const c = p.curricula[cid];
+    if (!c) return;
+    const firstCompletion = c.items.filter(i => i.done && i.date).map(i => i.date).sort()[0];
+    if (!firstCompletion) return;
+    const mappedSlugs = Object.keys(PLAYBOOK_CURRIC).filter(slug => PLAYBOOK_CURRIC[slug] === cid);
+    const firstVisit = (p.playbook || [])
+      .filter(v => mappedSlugs.includes(urlSlug(v.url)))
+      .map(v => v.date).sort()[0];
+    evalCurricula.push({{cid, onPath: !!(firstVisit && firstVisit <= firstCompletion)}});
+  }});
+  let pathLabel = '', pathColor = '';
+  if (evalCurricula.length > 0) {{
+    const ratio = evalCurricula.filter(x => x.onPath).length / evalCurricula.length;
+    if (ratio >= 0.6)      {{ pathLabel = 'Playbook-led';      pathColor = 'var(--green)'; }}
+    else if (ratio >= 0.3) {{ pathLabel = 'Mixed';              pathColor = 'var(--amber)'; }}
+    else                   {{ pathLabel = 'Skipping playbook';  pathColor = 'var(--red)'; }}
   }}
+
+  // Sequence check: first completion dates should be non-decreasing across CURRIC_IDS order
+  const curricSeq = CURRIC_IDS.map(cid => {{
+    const c = p.curricula[cid];
+    if (!c) return null;
+    const first = c.items.filter(i => i.done && i.date).map(i => i.date).sort()[0];
+    return first ? {{cid, first}} : null;
+  }}).filter(Boolean);
+  let seqLabel = '', seqColor = '';
+  if (curricSeq.length >= 2) {{
+    const inSeq = curricSeq.every((x, i) => i === 0 || x.first >= curricSeq[i-1].first);
+    seqLabel = inSeq ? 'In sequence' : 'Out of sequence';
+    seqColor = inSeq ? 'var(--green)' : 'var(--amber)';
+  }}
+
+  const tlHtml = tlEvents.length === 0
+    ? '<div style="font-size:12px;color:var(--muted);padding:12px 14px;">No activity recorded yet.</div>'
+    : tlEvents.map(ev => ev.t === 'pb'
+        ? '<div class="item-row"><div style="width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div><div style="flex:1;font-size:12px;"><span style="color:var(--accent);font-weight:500;">Playbook</span> &mdash; ' + escHtml(ev.page) + '</div><div class="item-date">' + fmtDate(ev.date) + '</div></div>'
+        : '<div class="item-row"><div style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><div style="flex:1;font-size:12px;"><span style="color:var(--green);font-weight:500;">Completed</span> &mdash; ' + escHtml(ev.title) + ' <span style="color:var(--muted);font-size:11px;">(' + escHtml(ev.curric) + ')</span></div><div class="item-date">' + fmtDate(ev.date) + '</div></div>'
+      ).join('');
 
   const content = `
     <div class="modal-header" style="padding-right:52px;">
-      <div class="modal-name">${{escHtml(p.name)}}</div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;">
-        ${{statusBadge}}
-        <div class="modal-meta" style="gap:8px;">
-          <span>${{escHtml(p.jobTitle)}}</span>
-          <span>&middot; ${{escHtml(p.market)}}</span>
-          ${{p.hireDate ? '<span>&middot; Hired ' + fmtDate(p.hireDate) + '</span>' : ''}}
-          ${{p.assignDate ? '<span>&middot; Enrolled ' + fmtDate(p.assignDate) + '</span>' : ''}}
-        </div>
+      <div style="position:absolute;top:17px;right:54px;">${{statusBadge}}</div>
+      <div class="modal-name">${{escHtml(p.name)}}${{p.jobTitle ? ' <span style="font-size:14px;font-weight:400;color:var(--muted);">&middot; ' + escHtml(p.jobTitle) + '</span>' : ''}}</div>
+      <div class="modal-meta" style="margin-top:6px;gap:8px;flex-wrap:wrap;">
+        ${{p.email ? '<a href="mailto:' + escHtml(p.email) + '" style="color:var(--accent)">' + escHtml(p.email) + '</a>' : ''}}
+        ${{p.market ? '<span>&middot; ' + escHtml(p.market) + '</span>' : ''}}
+        ${{p.hireDate ? '<span>&middot; Hired ' + fmtDate(p.hireDate) + '</span>' : ''}}
+        ${{p.assignDate ? '<span>&middot; Enrolled ' + fmtDate(p.assignDate) + '</span>' : ''}}
       </div>
+      ${{p.manager ? '<div class="modal-meta" style="margin-top:3px;gap:6px;"><span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;">Manager</span><span>' + escHtml(p.manager) + '</span><span>&middot; ' + escHtml(p.mgrTitle) + '</span><span>&middot; <a href="mailto:' + escHtml(p.mgrEmail) + '" style="color:var(--accent)">' + escHtml(p.mgrEmail) + '</a></span></div>' : ''}}
     </div>
     <div class="modal-body">
       <div class="progress-section">
         <div class="progress-label">
-          <span>45-Day Program Window</span>
+          <span>35-Day LMS Window</span>
           <span style="font-size:11px;color:var(--muted)">${{daysLabel}}</span>
         </div>
         <div class="progress-bar-wrap">
           <div class="progress-bar-fill" style="width:${{pct45}}%;background:${{barColor}}"></div>
         </div>
-        <div class="progress-sublabel">Overall curriculum completion: <strong>${{p.overallPct}}%</strong></div>
+        <div class="progress-sublabel" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+          <span>Actual: <strong>${{p.overallPct}}%</strong></span>
+          <span style="color:var(--muted)">Expected: <strong style="color:var(--text)">${{expectedPct(p)}}%</strong></span>
+          <span>Gap: <strong style="color:${{gapPct(p) > 40 ? 'var(--red)' : gapPct(p) > 0 ? '#b45309' : 'var(--green)'}}">${{gapPct(p)}}%</strong>
+            ${{gapPct(p) > 40 ? '<span style="font-size:11px;color:var(--red)">— coaching recommended</span>' : gapPct(p) > 0 ? '<span style="font-size:11px;color:var(--muted)">— check in</span>' : '<span style="font-size:11px;color:var(--green)">— on pace</span>'}}</span>
+        </div>
       </div>
 
-      ${{p.manager ? '<div class="mgr-block"><div class="mgr-label">Manager</div><div class="mgr-name">' + escHtml(p.manager) + '</div><div class="mgr-detail">' + escHtml(p.mgrTitle) + ' &middot; <a href="mailto:' + escHtml(p.mgrEmail) + '" style="color:var(--accent)">' + escHtml(p.mgrEmail) + '</a></div></div>' : ''}}
+      ${{pbSummaryHtml(p)}}
 
-      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Curriculum Progress</div>
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Curriculum Progress</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:10px;align-items:center;">
+        <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:#15803d;border-radius:2px;display:inline-block;"></span>Done</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:#1d4ed8;border-radius:2px;display:inline-block;"></span>In Progress</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:#b91c1c;border-radius:2px;display:inline-block;"></span>Past Due</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:#6b7280;border-radius:2px;display:inline-block;"></span>Not Started</span>
+      </div>
       ${{curricHtml}}
 
-      <div class="playbook-section">
-        <div class="playbook-header">Accelerate Playbook Activity (${{p.playbook ? p.playbook.length : 0}} visits)</div>
-        ${{pbHtml}}
+      <div class="curric-section" style="margin-top:20px;margin-bottom:0;">
+        <div class="curric-header" onclick="toggleCurric(this)">
+          <span class="curric-title">Activity Timeline</span>
+          <span style="font-size:11px;color:var(--muted);">${{tlEvents.length}} event${{tlEvents.length !== 1 ? 's' : ''}}</span>
+          ${{pathLabel ? '<span style="font-size:11px;font-weight:700;color:' + pathColor + ';">' + pathLabel + '</span>' : ''}}
+          ${{seqLabel ? '<span style="font-size:11px;font-weight:700;color:' + seqColor + ';">' + seqLabel + '</span>' : ''}}
+          <span class="curric-chevron">&#9660;</span>
+        </div>
+        <div class="curric-items">${{tlHtml}}</div>
       </div>
     </div>
   `;
