@@ -347,6 +347,7 @@ def generate_html(pb, hc, ps, ob):
       <div class="stat-row">
         <span class="pill pill-green">&#10003; {hc_certified} certified</span>
         <span class="pill pill-blue">&#9679; {hc_in_progress} in progress</span>
+        <div style="width:100%;height:0;"></div>
         <span class="pill pill-muted">&#9675; {hc_not_started} not started</span>
       </div>
       <div class="card-footer">
@@ -373,6 +374,7 @@ def generate_html(pb, hc, ps, ob):
       <div class="stat-row">
         <span class="pill pill-green">&#10003; {ps_completed} completed</span>
         {ps_inprog_pill}
+        <div style="width:100%;height:0;"></div>
         <span class="pill pill-muted">&#9675; {ps_not_started} not started</span>
       </div>
       <div class="card-footer">
@@ -399,6 +401,7 @@ def generate_html(pb, hc, ps, ob):
       <div class="stat-row">
         <span class="pill pill-green">&#10003; {ob_completed} completed</span>
         <span class="pill pill-blue">&#9679; {ob_on_track} on track</span>
+        <div style="width:100%;height:0;"></div>
         <span class="pill pill-red">&#9888; {ob_overdue} overdue</span>
       </div>
       <div class="card-footer">
