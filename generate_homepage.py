@@ -244,7 +244,7 @@ def generate_html(pb, hc, ps, ob):
 
   .pill{{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;}}
   .pill-green{{background:rgba(34,197,94,0.32);color:var(--green);}}
-  .pill-red{{background:rgba(239,68,68,0.80);color:#fff;}}
+  .pill-red{{background:rgba(239,68,68,0.80);color:var(--red);}}
   .pill-blue{{background:rgba(74,124,247,0.32);color:var(--accent);}}
 
   .card-footer{{margin-top:auto;}}
