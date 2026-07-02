@@ -318,13 +318,15 @@ def generate_html(pb, hc, ps, ob):
         <div class="stat-sub">Latest data: {pb_month}</div>
       </div>
       <div class="stat-row">
-        <span style="font-size:12px;color:var(--muted)">Top:</span>
+        <span style="font-size:12px;color:var(--muted)">Top playbook:</span>
         <span class="pill pill-blue">{pb_top}</span>
-        <span style="font-size:12px;color:var(--muted);margin-left:4px;">Reps:</span>
-        <span class="pill pill-blue">{pb_reps}</span>
       </div>
-      <div class="card-footer">
-        <a href="playbook.html" class="btn-open">Go to Dashboard &#8250;</a>
+      <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span style="font-size:12px;color:var(--muted)">Unique reps:</span>
+          <span class="pill pill-blue">{pb_reps}</span>
+        </div>
+        <a href="playbook.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
