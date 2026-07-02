@@ -270,10 +270,10 @@ def generate_html(pb, hc, ps, ob):
   .stat-row{{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}}
 
   .pill{{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;}}
-  .pill-green{{background:rgba(34,197,94,0.80);color:#fff;}}
-  .pill-red{{background:rgba(239,68,68,0.80);color:#fff;}}
-  .pill-blue{{background:rgba(74,124,247,0.80);color:#fff;}}
-  .pill-muted{{background:rgba(136,145,170,0.60);color:#fff;}}
+  .pill-green{{background:rgba(34,197,94,0.22);color:var(--green);}}
+  .pill-red{{background:rgba(239,68,68,0.22);color:var(--red);}}
+  .pill-blue{{background:rgba(74,124,247,0.22);color:var(--accent);}}
+  .pill-muted{{background:rgba(136,145,170,0.22);color:var(--muted);}}
 
   .card-footer{{margin-top:auto;display:flex;justify-content:flex-end;}}
   .btn-open{{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity .15s;}}
