@@ -275,7 +275,7 @@ def generate_html(pb, hc, ps, ob):
   .pill-blue{{background:rgba(74,124,247,0.80);color:#fff;}}
   .pill-muted{{background:rgba(136,145,170,0.60);color:#fff;}}
 
-  .card-footer{{margin-top:auto;}}
+  .card-footer{{margin-top:auto;display:flex;justify-content:flex-end;}}
   .btn-open{{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity .15s;}}
   .btn-open:hover{{opacity:.88;}}
 
@@ -324,7 +324,7 @@ def generate_html(pb, hc, ps, ob):
         <span class="pill pill-blue">{pb_reps}</span>
       </div>
       <div class="card-footer">
-        <a href="playbook.html" class="btn-open">Open Dashboard &#8250;</a>
+        <a href="playbook.html" class="btn-open">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
@@ -350,7 +350,7 @@ def generate_html(pb, hc, ps, ob):
         <span class="pill pill-muted">&#9675; {hc_not_started} not started</span>
       </div>
       <div class="card-footer">
-        <a href="cert-healthcare.html" class="btn-open">Open Dashboard &#8250;</a>
+        <a href="cert-healthcare.html" class="btn-open">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
@@ -376,7 +376,7 @@ def generate_html(pb, hc, ps, ob):
         <span class="pill pill-muted">&#9675; {ps_not_started} not started</span>
       </div>
       <div class="card-footer">
-        <a href="cert-publicsector.html" class="btn-open">Open Dashboard &#8250;</a>
+        <a href="cert-publicsector.html" class="btn-open">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
@@ -402,7 +402,7 @@ def generate_html(pb, hc, ps, ob):
         <span class="pill pill-red">&#9888; {ob_overdue} overdue</span>
       </div>
       <div class="card-footer">
-        <a href="onboarding.html" class="btn-open">Open Dashboard &#8250;</a>
+        <a href="onboarding.html" class="btn-open">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
