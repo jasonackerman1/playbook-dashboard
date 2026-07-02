@@ -243,9 +243,9 @@ def generate_html(pb, hc, ps, ob):
   .stat-row{{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}}
 
   .pill{{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;}}
-  .pill-green{{background:rgba(34,197,94,0.12);color:var(--green);}}
-  .pill-red{{background:rgba(239,68,68,0.12);color:var(--red);}}
-  .pill-blue{{background:rgba(74,124,247,0.12);color:var(--accent);}}
+  .pill-green{{background:rgba(34,197,94,0.22);color:var(--green);}}
+  .pill-red{{background:rgba(239,68,68,0.25);color:var(--red);}}
+  .pill-blue{{background:rgba(74,124,247,0.22);color:var(--accent);}}
 
   .card-footer{{margin-top:auto;}}
   .btn-open{{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity .15s;}}
@@ -289,13 +289,10 @@ def generate_html(pb, hc, ps, ob):
         </div>
         <div class="stat-sub">Latest data: {pb_month}</div>
       </div>
-      <div class="divider"></div>
       <div class="stat-row">
-        <span style="font-size:12px;color:var(--muted)">Top playbook:</span>
+        <span style="font-size:12px;color:var(--muted)">Top:</span>
         <span class="pill pill-blue">{pb_top}</span>
-      </div>
-      <div class="stat-row">
-        <span style="font-size:12px;color:var(--muted)">Unique reps:</span>
+        <span style="font-size:12px;color:var(--muted);margin-left:4px;">Reps:</span>
         <span class="pill pill-blue">{pb_reps}</span>
       </div>
       <div class="card-footer">
@@ -319,7 +316,6 @@ def generate_html(pb, hc, ps, ob):
         </div>
         <div class="stat-sub">{hc_rate}% completion rate</div>
       </div>
-      <div class="divider"></div>
       <div class="stat-row">
         <span class="pill pill-red">&#9679; {hc_not_yet} not yet completed</span>
       </div>
@@ -344,7 +340,6 @@ def generate_html(pb, hc, ps, ob):
         </div>
         <div class="stat-sub">{ps_rate}% completion rate</div>
       </div>
-      <div class="divider"></div>
       <div class="stat-row">
         <span class="pill pill-red">&#9679; {ps_not_yet} not yet completed</span>
       </div>
