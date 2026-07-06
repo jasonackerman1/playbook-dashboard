@@ -2106,8 +2106,9 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   .stat-sub{{font-size:11px;color:var(--muted);margin-top:4px;}}
 
   /* ── Charts ────────────────────────────────────────────────────────── */
-  .charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
-  @media(max-width:900px){{.charts{{grid-template-columns:1fr;}}}}
+  .charts{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:0 28px 16px;}}
+  @media(max-width:1100px){{.charts{{grid-template-columns:1fr 1fr;}}}}
+  @media(max-width:700px){{.charts{{grid-template-columns:1fr;}}}}
   @media(max-width:480px){{.chart-wrap{{height:180px;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
   .chart-title{{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
@@ -2292,12 +2293,12 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
     <div class="chart-wrap"><canvas id="pipelineChart"></canvas></div>
   </div>
   <div class="chart-card">
+    <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="marketChart"></canvas></div>
+  </div>
+  <div class="chart-card">
     <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'trend-chart')">?</span></div>
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
-  </div>
-  <div class="chart-card" style="grid-column:1/-1;">
-    <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
-    <div class="chart-wrap" style="height:220px;"><canvas id="marketChart"></canvas></div>
   </div>
 </div>
 
