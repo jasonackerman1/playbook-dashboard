@@ -2295,6 +2295,10 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
     <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'trend-chart')">?</span></div>
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
+  <div class="chart-card" style="grid-column:1/-1;">
+    <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
+    <div class="chart-wrap" style="height:220px;"><canvas id="marketChart"></canvas></div>
+  </div>
 </div>
 
 <!-- ── Roster ──────────────────────────────────────────────────────────── -->
@@ -2358,7 +2362,7 @@ let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
 let rosterView = "individual";
-let pipelineChart, trendChart;
+let pipelineChart, trendChart, marketChart;
 
 function sel(id) {{ return document.getElementById(id); }}
 function cv(v)  {{ return getComputedStyle(document.body).getPropertyValue(v).trim(); }}
@@ -2397,6 +2401,7 @@ var INFO_MSGS = {{
   "completion-rate": "The percentage of enrolled people who have earned full certification. Calculated as Certified divided by Total Enrolled. Updates when filters are applied.",
   "pipeline-chart":  "The three stages of the certification journey for the people currently shown. Not Started — no courses completed yet. In Progress — at least one course done but not yet fully certified. Certified — both HC Foundations and Layered Security complete.",
   "trend-chart":     "Number of people who earned full Healthcare certification per KM fiscal quarter. KM fiscal year runs April through March: Q1 = April to June, Q2 = July to September, Q3 = October to December, Q4 = January to March.",
+  "market-chart":    "Distribution of enrolled learners by sales market. Hover a segment to see the exact count and percentage. Reflects your current filters.",
   "roster":          "Full list of enrolled people matching your current filters. Each card shows status (top right), HC Foundations and Layered Security progress (bottom left), and overall completion % across all 21 courses (bottom right). Click any card to see course-by-course detail in the panel on the right.",
   "export":          "Download a printable report for the people currently shown. Full Report includes all people and all columns. Not Certified lists uncertified people sorted by manager — useful for follow-up outreach. Manager Summary shows each manager's team size and team completion rate."
 }};
@@ -2597,6 +2602,28 @@ function renderCharts(){{
       scales: {{
         x: {{ grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 10 }}, maxRotation: 45 }} }},
         y: {{ grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 11 }}, stepSize: 1 }} }}
+      }}
+    }}
+  }});
+
+  // Chart 3: learners by market
+  var mktCounts = {{}};
+  filtered.forEach(function(p){{ var m = p.Market || "Unknown"; mktCounts[m] = (mktCounts[m] || 0) + 1; }});
+  var mktLabels = Object.keys(mktCounts).sort(function(a,b){{ return mktCounts[b] - mktCounts[a]; }});
+  var mktData   = mktLabels.map(function(m){{ return mktCounts[m]; }});
+  var mktColors = ["#4a7cf7","#22c55e","#f59e0b","#a855f7","#ef4444","#06b6d4","#f97316","#64748b"];
+
+  if(marketChart) marketChart.destroy();
+  marketChart = new Chart(sel("marketChart"), {{
+    type: "doughnut",
+    data: {{ labels: mktLabels, datasets: [{{ data: mktData, backgroundColor: mktColors.slice(0, mktLabels.length), borderWidth: 0, hoverOffset: 6 }}] }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      layout: {{ padding: {{ top: 8, bottom: 8 }} }},
+      plugins: {{
+        legend: {{ display: true, position: "right", labels: {{ color: labelColor, font: {{ size: 12 }}, padding: 14, boxWidth: 14 }} }},
+        tooltip: {{ callbacks: {{ label: function(ctx){{ return " " + ctx.raw + " (" + Math.round(ctx.raw / filtered.length * 100) + "%)"; }} }} }},
+        datalabels: {{ display: false }}
       }}
     }}
   }});
