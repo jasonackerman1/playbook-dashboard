@@ -1724,8 +1724,8 @@ def main():
     hc_handled = False
 
     # ── New two-file HC format ────────────────────────────────────────────────
-    HC_CERT_FILE  = 'Healthcare Certification Learning Report.xlsx'
-    HC_LEARN_FILE = 'Healthcare Foundations for Direct Sales Learning Report.xlsx'
+    HC_CERT_FILE  = 'Healthcare=Certification-Report-07.06.2026.xlsx'
+    HC_LEARN_FILE = 'Healthcare-Certification-Foundations-Curricula-Report-07.06.2026.xlsx'
     hc_cert_path  = os.path.join(cert_dir, HC_CERT_FILE)
     hc_learn_path = os.path.join(cert_dir, HC_LEARN_FILE)
 
@@ -1827,9 +1827,9 @@ def load_rows_healthcare_v2(cert_file, learning_file):
       14=HireDate(datetime), 17=CertDate(datetime), 19=Certified("Yes"/"No")
 
     learning_file columns (0-based):
-      4=Email, 17=CurriculumID, 22=ItemID, 26=ItemTitle,
-      27=CompletionDate(datetime), 29=CompletionStatusDesc
-      Skip rows where col 22 (ItemID) is None — those are curriculum-level rows.
+      4=Email, 16=CurriculumTitle, 20=ItemID, 24=ItemTitle,
+      25=CompletionDate(datetime), 27=CompletionStatusDesc
+      Skip rows where col 20 (ItemID) is None — those are curriculum-level rows.
     """
 
     HCF_ORDER = ['HCF_HBT','HC_PLAYBOOK','HCF_MFP','HCF_DPMS','HCF_ACS',
@@ -1877,22 +1877,29 @@ def load_rows_healthcare_v2(cert_file, learning_file):
 
     # ── Load learning file — build per-person item maps ───────────────────────
     # Structure: learning[email][curriculum_id][item_id] = {title, done, date}
+    CURRIC_TITLE_TO_ID = {
+        'healthcare foundations': 'HC_FOUNDATIONS',
+        'layered security certification - direct sales': 'LSFDS',
+    }
     learning = {}
     wb_l = openpyxl.load_workbook(learning_file, read_only=True, data_only=True)
     ws_l = wb_l.active
     for raw in ws_l.iter_rows(min_row=2, values_only=True):
-        item_id = raw[22]
+        item_id = raw[20]
         if item_id is None:
             continue   # curriculum-level parent row — skip
         email = _str(raw[4]).lower()
         if not email:
             continue
-        curr_id = _str(raw[17]).upper()
+        ctitle = _str(raw[16]).lower()
+        curr_id = CURRIC_TITLE_TO_ID.get(ctitle)
+        if not curr_id:
+            continue   # unknown curriculum — skip
         item_id = _str(item_id).upper()
-        title   = _str(raw[26])
-        comp_date_raw = raw[27]
+        title   = _str(raw[24])
+        comp_date_raw = raw[25]
         comp_date = _date(comp_date_raw)
-        status    = _str(raw[29])
+        status    = _str(raw[27])
         done = (status == 'Online-Complete')
         if email not in learning:
             learning[email] = {}

@@ -81,8 +81,8 @@ def playbook_stats():
 # ── HC Cert stats ─────────────────────────────────────────────────────────────
 def hc_cert_stats():
     cert_dir = SCRIPT_DIR / 'cert-data'
-    hc_cert_path  = cert_dir / 'Healthcare Certification Learning Report.xlsx'
-    hc_learn_path = cert_dir / 'Healthcare Foundations for Direct Sales Learning Report.xlsx'
+    hc_cert_path  = cert_dir / 'Healthcare=Certification-Report-07.06.2026.xlsx'
+    hc_learn_path = cert_dir / 'Healthcare-Certification-Foundations-Curricula-Report-07.06.2026.xlsx'
 
     if hc_cert_path.exists() and hc_learn_path.exists():
         from update_cert_dashboard import load_rows_healthcare_v2, TLG as CT
