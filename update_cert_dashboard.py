@@ -397,6 +397,10 @@ def generate_html(slug, name, rows):
     <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'over-time')">?</span></div>
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
+  <div class="chart-card" style="grid-column:1/-1;">
+    <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market')">?</span></div>
+    <div class="chart-wrap" style="height:220px;"><canvas id="marketChart"></canvas></div>
+  </div>
 </div>
 
 <div class="section">
@@ -432,7 +436,7 @@ const TLG_SET = new Set({tlg_json});
 
 let filtered = [];
 let hideTLG = true;
-let regionChart, trendChart;
+let regionChart, trendChart, marketChart;
 let rosterSortField = 'status';
 let rosterSortDir   = 'desc';
 let rosterView      = 'individual';
@@ -592,6 +596,7 @@ const INFO_MSGS = {{
   'completion-rate':     'Percentage of assigned people who have earned full manager-confirmed certification. Calculated as Certified ÷ Total Assigned.',
   'pipeline':            'The three stages of the certification journey: In Progress — enrolled but LMS coursework not yet complete; Curriculum Complete — LMS done, awaiting manager sign-off; Certified — fully certified by manager.',
   'over-time':           'Certifications earned per KM fiscal quarter, stacked by curriculum type. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
+  'market':              'Distribution of assigned learners by sales market. Hover a segment to see the exact count and percentage. Reflects current filters.',
   'roster':              'Full list of assigned people with their certification status. Click a name to see job title, market, LMS status, cert date, and manager info. Use the View toggle to group by manager.',
   'export':              'Export a printable report of the data currently on screen. Filter first, then export — the report only includes what passes your active filters. Full Report lists everyone with full detail. Not Certified is a contact list for outreach sorted by manager. Manager Summary rolls up team count and completion % per manager. Action Required lists people who have finished the LMS but are still awaiting certification.',
 }};
@@ -723,6 +728,47 @@ function render(){{
       scales:{{
         x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:10}},maxRotation:45}}}},
         y:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}},stepSize:1}}}}
+      }}
+    }}
+  }});
+
+  // Market donut chart
+  const marketCounts = {{}};
+  filtered.forEach(r => {{
+    const m = r.Market || 'Unknown';
+    marketCounts[m] = (marketCounts[m] || 0) + 1;
+  }});
+  const marketLabels = Object.keys(marketCounts).sort((a,b) => marketCounts[b] - marketCounts[a]);
+  const marketData   = marketLabels.map(m => marketCounts[m]);
+  const marketColors = ['#4a7cf7','#22c55e','#f59e0b','#a855f7','#ef4444','#06b6d4','#f97316','#64748b'];
+
+  if(marketChart) marketChart.destroy();
+  marketChart = new Chart(sel('marketChart'), {{
+    type: 'doughnut',
+    data: {{
+      labels: marketLabels,
+      datasets: [{{
+        data: marketData,
+        backgroundColor: marketColors.slice(0, marketLabels.length),
+        borderWidth: 0,
+        hoverOffset: 6,
+      }}]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      layout: {{ padding: {{ top: 8, bottom: 8 }} }},
+      plugins: {{
+        legend: {{
+          display: true,
+          position: 'right',
+          labels: {{ color: chartLabel, font: {{ size: 12 }}, padding: 14, boxWidth: 14 }}
+        }},
+        tooltip: {{
+          callbacks: {{
+            label: ctx => ` ${{ctx.raw}} (${{Math.round(ctx.raw / filtered.length * 100)}}%)`
+          }}
+        }},
+        datalabels: {{ display: false }}
       }}
     }}
   }});
