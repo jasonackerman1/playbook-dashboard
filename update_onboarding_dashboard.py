@@ -33,6 +33,7 @@ COL_ITEM_TTL   = 26  # Item Title
 COL_ITEM_TYPE  = 23  # Item Type (ONLINE/VILT)
 COL_ITEM_DATE  = 27  # Item Completion Date
 COL_ITEM_STS   = 29  # Item Completion Status Description
+COL_ITEM_REQ   = 30  # Item Required Date
 
 # ── Playbook traffic columns ──────────────────────────────────────────────────
 PB_FIRST = 1
@@ -80,6 +81,16 @@ PAGE_LABELS = {
 
 def pkey(first, last):
     return f"{str(first).strip().lower()} {str(last).strip().lower()}"
+
+
+def _date(val):
+    """Return YYYY-MM-DD string from a datetime object or None/empty."""
+    if not val:
+        return None
+    if hasattr(val, 'strftime'):
+        return val.strftime('%Y-%m-%d')
+    s = str(val).strip()
+    return s if s else None
 
 
 def extract_date(fname):
@@ -151,6 +162,7 @@ def load_lms():
                         'type':  str(ir[COL_ITEM_TYPE] or 'ONLINE'),
                         'done':  bool(ir[COL_ITEM_STS]),
                         'date':  ir[COL_ITEM_DATE].strftime('%Y-%m-%d') if ir[COL_ITEM_DATE] else None,
+                        'req':   _date(ir[COL_ITEM_REQ]),
                     })
 
                 total = len(items)
@@ -591,6 +603,18 @@ def generate_html(records):
 const PEOPLE = {people_json};
 const CURRIC_IDS = {curric_ids};
 const CURRIC_NAMES = {curric_names};
+/* The designed pacing schedule, straight from each curriculum's LMS title
+   (e.g. "Sales Skills (Weeks 2 & 3)"). [startDay, endDay] in program days,
+   1-indexed, inclusive -- used to say which curriculum someone SHOULD be
+   focused on right now, independent of both deadlines and raw % complete. */
+const CURRIC_WEEK_RANGE = {{
+  "ACCELERATE_GS": [1, 7],
+  "ACCELERATE_SW": [1, 7],
+  "ACCELERATE_CP": [1, 7],
+  "ACCELERATE_P":  [1, 14],
+  "ACCELERATE_SS": [8, 21],
+  "ACCELERATE_PM": [22, 35],
+}};
 const PROGRAM_DAYS = {PROGRAM_DAYS};
 const PLAYBOOK_CURRIC = {{
   'welcome':                 'ACCELERATE_GS',
@@ -629,10 +653,31 @@ function pct2color(p) {{
   return {{bg:'#EAF3DE', fg:'#27500A'}};
 }}
 
+/* ── Deadline engine ──
+   Each item carries its own LMS-assigned due date (item.req, or null if the
+   item has no fixed deadline). A curriculum's days-remaining is the soonest
+   due date among its own INCOMPLETE items. */
+function itemDaysLeft(item) {{
+  if (!item.req) return null;
+  return Math.round((new Date(item.req) - TODAY) / 86400000);
+}}
+function curricDaysLeft(c) {{
+  if (!c || c.complete) return null;
+  const vals = c.items.filter(i => !i.done && i.req).map(itemDaysLeft);
+  return vals.length ? Math.min(...vals) : null;
+}}
+function curricTrackStatus(c) {{
+  if (!c) return 'Unknown';
+  if (c.complete) return 'Completed';
+  const dl = curricDaysLeft(c);
+  if (dl === null) return 'On Track';
+  return dl <= 0 ? 'Overdue' : 'On Track';
+}}
+
 function curricPillStyle(c, p) {{
   if (!c) return 'background:#6b7280;color:#fff';
   if (c.complete) return 'background:#15803d;color:#fff';
-  const dl = computedDaysLeft(p);
+  const dl = curricDaysLeft(c);
   if (dl !== null && dl <= 0) return 'background:#b91c1c;color:#fff';
   if (c.pct > 0)  return 'background:#1d4ed8;color:#fff';
   return 'background:#6b7280;color:#fff';
@@ -640,7 +685,7 @@ function curricPillStyle(c, p) {{
 function curricDotBg(c, p) {{
   if (!c) return '#6b7280';
   if (c.complete) return '#15803d';
-  const dl = computedDaysLeft(p);
+  const dl = curricDaysLeft(c);
   if (dl !== null && dl <= 0) return '#b91c1c';
   if (c.pct > 0) return '#1d4ed8';
   return '#6b7280';
@@ -648,8 +693,7 @@ function curricDotBg(c, p) {{
 
 function overallPillStyle(p) {{
   if (p.overallDone) return 'background:#15803d;color:#fff;font-weight:700';
-  const anyOverdue = !p.overallDone && computedDaysLeft(p) !== null && computedDaysLeft(p) <= 0;
-  if (anyOverdue) return 'background:#b91c1c;color:#fff;font-weight:700';
+  if (computeStatus(p) === 'Overdue') return 'background:#b91c1c;color:#fff;font-weight:700';
   if (p.overallPct > 0) return 'background:#1d4ed8;color:#fff;font-weight:700';
   return 'background:#6b7280;color:#fff;font-weight:700';
 }}
@@ -658,27 +702,25 @@ function computeStatus(p) {{
   if (p.overallDone) return 'Completed';
   const ids = Object.keys(p.curricula);
   if (!ids.length) return 'Unknown';
-  const anyOverdue = ids.some(cid => {{
-    const c = p.curricula[cid];
-    return c && !c.complete && computedDaysLeft(p) !== null && computedDaysLeft(p) <= 0;
-  }});
+  const anyOverdue = ids.some(cid => curricTrackStatus(p.curricula[cid]) === 'Overdue');
   return anyOverdue ? 'Overdue' : 'On Track';
 }}
 
 function overdueCount(p) {{
-  const dl = computedDaysLeft(p);
-  const incomplete = Object.values(p.curricula).filter(c => c && !c.complete).length;
-  return (dl !== null && dl <= 0 && incomplete > 0) ? incomplete : 0;
+  return Object.values(p.curricula).filter(c => curricTrackStatus(c) === 'Overdue').length;
 }}
 
 function soonestDaysLeft(p) {{
-  return computedDaysLeft(p);
+  const vals = Object.values(p.curricula).map(curricDaysLeft).filter(v => v !== null);
+  return vals.length ? Math.min(...vals) : null;
 }}
 
 function daysLeft(p) {{
-  return computedDaysLeft(p);
+  return soonestDaysLeft(p);
 }}
 
+/* Kept for the Expected%/Gap pacing metric only (not for Overdue/Days Left,
+   which now come from each curriculum's own LMS due dates above). */
 function daysElapsed(p) {{
   if (!p.assignDate) return 0;
   const start = new Date(p.assignDate);
@@ -694,10 +736,40 @@ function expectedPct(p) {{
 function gapPct(p) {{
   return expectedPct(p) - p.overallPct;
 }}
+/* Where they should be, curriculum-by-curriculum, per the designed weekly
+   schedule -- independent of both LMS due dates (Days Left) and raw %
+   complete (Biggest Gap). */
+function curricScheduleStatus(cid, d) {{
+  const range = CURRIC_WEEK_RANGE[cid];
+  if (!range) return 'active';
+  if (d < range[0]) return 'upcoming';
+  if (d > range[1]) return 'due';
+  return 'active';
+}}
+function expectedFocus(p) {{
+  const d = daysElapsed(p);
+  const active = [];
+  const behindSchedule = [];
+  CURRIC_IDS.forEach(cid => {{
+    const c = p.curricula[cid];
+    if (!c || c.complete) return;
+    const st = curricScheduleStatus(cid, d);
+    if (st === 'active') active.push(cid);
+    else if (st === 'due') behindSchedule.push(cid);
+  }});
+  if (behindSchedule.length) return {{mode: 'behind', ids: behindSchedule}};
+  if (active.length) return {{mode: 'active', ids: active}};
+  return {{mode: 'ahead', ids: []}};
+}}
 function gapStyle(g) {{
   if (g > 40) return 'background:#b91c1c;color:#fff;font-weight:700';
   if (g > 0)  return 'background:#b45309;color:#fff;font-weight:700';
   return 'background:#15803d;color:#fff;font-weight:700';
+}}
+function pctPillStyle(pct) {{
+  if (pct === 0)  return 'background:#b91c1c;color:#fff;font-weight:600';
+  if (pct < 50)   return 'background:#b45309;color:#fff;font-weight:600';
+  return 'background:#6b7280;color:#fff;font-weight:600';
 }}
 function urlSlug(url) {{
   const m = (url || '').match(/\/([^\/]+?)(?:\.html)?(?:\?.*)?$/);
@@ -791,7 +863,9 @@ const INFO = {{
   "market-chart": "Shows how far along each market's reps are on average. Hover over any bar to see the full picture — how many people are done, still on track, or past their deadline. A shorter bar means that market may need extra attention.",
   "curric-chart": "Shows how far along all reps are on average for each course. Hover over any bar to see how many people have finished that course, are working on it, have not started it yet, or are past its deadline. A short bar is a signal that reps are getting stuck there.",
   "heatmap": "One row per person. The Curricula column shows 6 colored squares — one per curriculum — so you can see at a glance where someone stands across the whole program. Green = done, Blue = in progress, Red = past due, Gray = not started. The playbook dot shows whether they are using the Accelerate Playbook alongside their LMS courses. Click any row to open their full detail card — every individual lesson, completion dates, curriculum breakdown, and playbook activity.",
-  "export": "Downloads a report based on whoever is currently showing on screen — so filter first, then export. Full Report: everyone with their status and overall progress. Overdue Only: a list of people who are past a course deadline, including their manager's contact info for follow-up. Manager Summary: one row per manager showing their team's headcount and progress. Example: filter to a specific market, then choose Overdue Only to get a ready-to-use outreach list for that region.",
+  "biggest-gap-info": "The curriculum this person has made the least progress on (lowest completion %), regardless of whether it's actually due yet. This is different from Days Left, which shows whichever curriculum has the soonest or most overdue deadline. A curriculum can have a big gap (0% done) without being overdue if its deadline has not arrived yet.",
+  "expected-focus-info": "Based on the designed pacing schedule (e.g. Getting Started/Sales Workflow/Core Portfolio in Week 1, Sales Skills in Weeks 2-3, Pipeline Mgmt in Weeks 4-5), this shows which curriculum someone should be working on right now given how many days they have had the program -- or which ones they should already have finished but have not. This is the same pace concept as Expected %/Gap, just broken out by curriculum instead of one overall number.",
+  "export": "Downloads a report based on whoever is currently showing on screen -- so filter first, then export. Full Report: everyone with their status and overall progress. Overdue Only: a list of people who are past a course deadline, including their manager's contact info for follow-up. Manager Summary: one row per manager showing their team's headcount and progress. Example: filter to a specific market, then choose Overdue Only to get a ready-to-use outreach list for that region.",
 }};
 function showInfo(e, key) {{
   e.stopPropagation();
@@ -905,7 +979,7 @@ function renderStats() {{
 
   document.getElementById('s-total').textContent = total;
   document.getElementById('s-overdue').textContent = overdue;
-  document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past their 35-day LMS window' : '';
+  document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past a curriculum deadline' : '';
   document.getElementById('s-ontrack').textContent = ontrack;
   document.getElementById('s-completed').textContent = completed;
 }}
@@ -924,6 +998,8 @@ function renderTable() {{
   hRow += thS('Actual %','overall','overall-col');
   hRow += thS('Expected %','expected','overall-col');
   hRow += thS('Gap','gap','overall-col');
+  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Expected Focus<span class="info-btn" onclick="showInfo(event,\'expected-focus-info\')">?</span></th>';
+  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Biggest Gap<span class="info-btn" onclick="showInfo(event,\'biggest-gap-info\')">?</span></th>';
   hRow += '<th style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;">Curricula</th>';
   hRow += '</tr>';
   thead.innerHTML = hRow;
@@ -931,7 +1007,7 @@ function renderTable() {{
   // Body
   const tbody = document.getElementById('heatmap-body');
   if (!filtered.length) {{
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">No learners match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px;">No learners match the current filters.</td></tr>';
     document.getElementById('heatmap-foot').innerHTML = '';
     return;
   }}
@@ -954,26 +1030,70 @@ function renderTable() {{
       return 0;
     }});
   }}
+  function worstCurric(p) {{
+    let worst = null, worstDl = null;
+    CURRIC_IDS.forEach(cid => {{
+      const c = p.curricula[cid];
+      const dl = curricDaysLeft(c);
+      if (dl === null) return;
+      if (worstDl === null || dl < worstDl) {{ worstDl = dl; worst = cid; }}
+    }});
+    return worst ? {{cid: worst, name: CURRIC_NAMES[worst], dl: worstDl}} : null;
+  }}
+
+  function expectedFocusCell(p) {{
+    if (p.overallDone) return '<td class="pct-cell" style="text-align:center;color:var(--muted);">&mdash;</td>';
+    const ef = expectedFocus(p);
+    const names = ef.ids.map(id => CURRIC_NAMES[id]);
+    const label = names.length <= 2 ? names.join(', ') : names[0] + ' +' + (names.length - 1) + ' more';
+    if (ef.mode === 'behind') {{
+      return '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="background:#b91c1c;color:#fff;font-weight:600;" title="Should already be done: ' + escHtml(names.join(', ')) + '">Behind: ' + escHtml(label) + '</span></td>';
+    }}
+    if (ef.mode === 'active') {{
+      return '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="background:#1d4ed8;color:#fff;font-weight:600;" title="Should be working on: ' + escHtml(names.join(', ')) + '">' + escHtml(label) + '</span></td>';
+    }}
+    return '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="background:#15803d;color:#fff;font-weight:600;">Ahead of schedule</span></td>';
+  }}
+
+  function biggestGapCurric(p) {{
+    let worst = null, worstPct = null;
+    CURRIC_IDS.forEach(cid => {{
+      const c = p.curricula[cid];
+      if (!c || c.complete) return;
+      if (worstPct === null || c.pct < worstPct) {{ worstPct = c.pct; worst = cid; }}
+    }});
+    return worst ? {{cid: worst, name: CURRIC_NAMES[worst], pct: worstPct}} : null;
+  }}
+
   function personRow(p) {{
     const status = computeStatus(p);
     const statusClass = status === 'Completed' ? 'sb-completed' : status === 'On Track' ? 'sb-ontrack' : 'sb-overdue';
     const od = overdueCount(p);
     const sdl = soonestDaysLeft(p);
+    const w = worstCurric(p);
+    const wName = w ? ' <span style="color:var(--muted);font-weight:400;">(' + escHtml(w.name) + ')</span>' : '';
     const daysStr = p.overallDone ? '&mdash;' :
-      od > 0 ? '<span style="color:var(--red);font-weight:700">' + od + ' past due</span>' :
+      od > 0 ? '<span style="color:var(--red);font-weight:700">' + od + ' past due</span>' + wName :
       sdl === null ? '&mdash;' :
-      '<span style="color:var(--green)">' + sdl + 'd left</span>';
+      '<span style="color:var(--green)">' + sdl + 'd left</span>' + wName;
     let dotsCell = '<td style="text-align:center;padding:5px 12px;"><div style="display:inline-flex;gap:3px;align-items:center;">';
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
       const bg = curricDotBg(c, p);
-      const lbl = CURRIC_NAMES[cid] + ': ' + (c ? c.pct + '%' : 'N/A');
+      const cdl = curricDaysLeft(c);
+      const statusTip = !c ? 'N/A' : c.complete ? 'Completed' : cdl === null ? 'On Track (no deadline yet)' :
+        cdl <= 0 ? Math.abs(cdl) + 'd overdue' : cdl + 'd left';
+      const lbl = CURRIC_NAMES[cid] + ': ' + (c ? c.pct + '%' : 'N/A') + ' · ' + statusTip;
       dotsCell += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + bg + ';" title="' + lbl + '"></span>';
     }});
     dotsCell += '</div></td>';
     const eng = pbEngagement(p);
     const dotColor = (eng.level === 'alert') ? '#b91c1c' : (eng.level === 'none') ? '#6b7280' : '#22c55e';
-    const dotTip  = (eng.level === 'alert') ? 'Completing courses — no playbook visits recorded' : (eng.level === 'none') ? 'No activity yet' : 'Using the playbook';
+    const dotTip  = (eng.level === 'alert') ? 'Completing courses -- no playbook visits recorded' : (eng.level === 'none') ? 'No activity yet' : 'Using the playbook';
+    const bg = biggestGapCurric(p);
+    const bgCell = bg ?
+      '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="' + pctPillStyle(bg.pct) + '">' + escHtml(bg.name) + ' &middot; ' + bg.pct + '%</span></td>' :
+      '<td class="pct-cell" style="text-align:center;color:var(--muted);">&mdash;</td>';
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
       '<td class="name-cell"><span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;" title="' + dotTip + '"></span>' + escHtml(p.name) + '</td>' +
       '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
@@ -981,6 +1101,8 @@ function renderTable() {{
       '<td class="pct-cell" style="font-weight:600;font-size:12px;">' + p.overallPct + '%</td>' +
       '<td class="pct-cell" style="font-weight:600;font-size:12px;color:var(--muted);">' + expectedPct(p) + '%</td>' +
       (function(){{ const g=gapPct(p); return '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(g) + '">' + g + '%</span></td>'; }})() +
+      expectedFocusCell(p) +
+      bgCell +
       dotsCell +
     '</tr>';
   }}
@@ -992,7 +1114,7 @@ function renderTable() {{
       if (!groups[mgr]) groups[mgr] = [];
       groups[mgr].push(p);
     }});
-    const colCount = 7;
+    const colCount = 9;
     let html = '';
     Object.keys(groups).sort().forEach(mgr => {{
       const team = groups[mgr];
@@ -1021,6 +1143,8 @@ function renderTable() {{
   const gAvg = eAvg - oAvg;
   fRow += '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(gAvg) + '">' + gAvg + '%</span></td>';
   fRow += '<td></td>';
+  fRow += '<td></td>';
+  fRow += '<td></td>';
   fRow += '</tr>';
   tfoot.innerHTML = fRow;
 }}
@@ -1045,7 +1169,7 @@ function renderMarketChart() {{
     const mp = filtered.filter(p => p.market === m);
     const total    = mp.length;
     const complete = mp.filter(p => p.overallDone).length;
-    const overdue  = mp.filter(p => !p.overallDone && computedDaysLeft(p) !== null && computedDaysLeft(p) <= 0).length;
+    const overdue  = mp.filter(p => computeStatus(p) === 'Overdue').length;
     const onTrack  = total - complete - overdue;
     return {{total, complete, onTrack, overdue}};
   }});
@@ -1115,7 +1239,7 @@ function renderCurricChart() {{
     const complete   = people.filter(c => c.complete).length;
     const inProgress = people.filter(c => !c.complete && c.pct > 0).length;
     const notStarted = people.filter(c => !c.complete && c.pct === 0).length;
-    const pastDue    = filtered.filter(p => {{ const c = p.curricula[cid]; return c && !c.complete && computedDaysLeft(p) !== null && computedDaysLeft(p) <= 0; }}).length;
+    const pastDue    = filtered.filter(p => {{ const c = p.curricula[cid]; return c && !c.complete && curricDaysLeft(c) !== null && curricDaysLeft(c) <= 0; }}).length;
     return {{total, complete, inProgress, notStarted, pastDue}};
   }});
   const ctx = document.getElementById('curricChart').getContext('2d');
@@ -1184,10 +1308,10 @@ function openModal(email) {{
 
   let daysLabel = '';
   if (p.overallDone) daysLabel = 'Program complete';
-  else if (dl === null) daysLabel = 'No assignment date';
-  else if (dl < 0) daysLabel = Math.abs(dl) + ' days past the 35-day LMS window';
-  else if (dl === 0) daysLabel = 'Due today &mdash; final day of the 35-day LMS window';
-  else daysLabel = 'Day ' + elapsed + ' of ' + PROGRAM_DAYS + ' &mdash; ' + dl + ' days remaining';
+  else if (dl === null) daysLabel = 'No upcoming deadlines on file';
+  else if (dl < 0) daysLabel = Math.abs(dl) + ' days past the nearest curriculum deadline';
+  else if (dl === 0) daysLabel = 'Due today &mdash; nearest curriculum deadline';
+  else daysLabel = dl + ' days until the nearest curriculum deadline';
 
   const statusBadge = '<span class="status-badge ' +
     (status==='Completed'?'sb-completed':status==='On Track'?'sb-ontrack':'sb-overdue') +
@@ -1198,7 +1322,7 @@ function openModal(email) {{
   CURRIC_IDS.forEach(cid => {{
     const c = p.curricula[cid];
     if (!c) return;
-    const dl = computedDaysLeft(p);
+    const dl = curricDaysLeft(c);
     const drBg = dl !== null && dl <= 0 ? 'var(--red-subtle)' : 'var(--green-subtle)';
     const drColor = dl !== null && dl <= 0 ? 'var(--red)' : 'var(--green)';
     const drLabel = dl === null ? '' :
@@ -1236,7 +1360,7 @@ function openModal(email) {{
     curricHtml += '<div class="curric-section">' +
       '<div class="curric-header" onclick="toggleCurric(this)">' +
         '<span class="curric-title">' + escHtml(c.title) + '</span>' +
-        '<span class="pct-pill" style="' + curricPillStyle(c, p) + ';font-size:11px">' + c.pct + '%</span>' +
+        '<span class="pct-pill" style="' + curricPillStyle(c, null) + ';font-size:11px">' + c.pct + '%</span>' +
         drLabel + doneBadge + missingLabel +
         '<span class="curric-chevron">&#9660;</span>' +
       '</div>' +
