@@ -16,6 +16,8 @@ Do not push to GitHub unless Jason explicitly says to. All development is tested
 
 **Never edit generated HTML files directly** — always edit the Python script and regenerate.
 
+**Exception — Resmie:** Resmie sometimes edits `onboarding.html` directly to prototype JS changes. When she does, `diff` her version against what the script generates, identify the JS changes, then port them into `update_onboarding_dashboard.py`. Her edited files appear as `onboarding (2).html` (or similar) in the repo root — these are safe to delete after porting.
+
 ---
 
 ## Snapshots — 2026-06-29
@@ -46,6 +48,23 @@ Every dashboard links to every other dashboard. When adding a new dashboard, upd
 | Healthcare Cert | Playbook, PS Cert, Accelerate Onboarding |
 | Public Sector Cert | Playbook, HC Cert, Accelerate Onboarding |
 | Accelerate Onboarding | Playbook, HC Cert, PS Cert |
+
+---
+
+## Onboarding Script — Developer Notes
+
+**`_date()` helper (critical):** LMS exports dates in two formats — datetime objects (openpyxl) and `"M/D/YYYY timezone"` strings (e.g. `"6/11/2026 US/Alaska"`). `new Date('M/D/YYYY US/Alaska')` returns Invalid Date in browsers → NaN in all math. Always run LMS cell values through `_date()` before embedding in JSON. It normalizes to `YYYY-MM-DD`.
+
+**`COL_ITEM_REQ = 30`:** "Item Required Date" column — currently blank/space in the LMS export (not yet populated). The per-curriculum deadline engine is built and waiting; it activates automatically once the LMS starts populating this column.
+
+**JS onclick escaping inside f-string:** Single quotes inside single-quoted JS strings break the template. For `onclick="showInfo(event,'key')"` patterns inside `hRow += '...'` strings, use `\\'` in Python so the output JS has `\'`:
+```python
+# CORRECT:
+hRow += '...<span onclick="showInfo(event,\\'key\\')">?</span>...';
+```
+For user-supplied values (names, etc.) use `data-*` attributes and read them in a JS handler — never trust single-quote escaping for dynamic content.
+
+**Current data file:** `onboarding-data/Accelerate-Curriculum-Report-07.07.2026.xlsx` (29 learners, 24 matched to playbook). Verify column positions against each new file from Resmie before regenerating.
 
 ---
 
