@@ -224,10 +224,10 @@
   </select>
   <span class="filter-label">Market</span>
   <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
-  <span class="filter-label" style="margin-right:2px">Date From</span>
-  <input type="date" id="f-date-from" onchange="applyFilters()">
-  <span class="filter-label" style="margin:0 2px">To</span>
-  <input type="date" id="f-date-to" onchange="applyFilters()">
+  <span class="filter-label" style="margin-right:2px;display:none">Date From</span>
+  <input type="date" id="f-date-from" onchange="applyFilters()" style="display:none">
+  <span class="filter-label" style="margin:0 2px;display:none">To</span>
+  <input type="date" id="f-date-to" onchange="applyFilters()" style="display:none">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <span class="result-count" id="result-count"></span>
 </div>
