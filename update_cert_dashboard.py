@@ -2454,10 +2454,9 @@ function pillClass(pct, total){{
 function resetFilters(){{
   sel("f-market").value = "";
   sel("f-status").value = "";
+  sel("f-date-from").value = "";
+  sel("f-date-to").value = "";
   sel("f-search").value = "";
-  var allDates = PEOPLE.map(function(p){{ return p.AssignDate; }}).filter(Boolean).sort();
-  sel("f-date-from").value = allDates.length ? allDates[0] : "";
-  sel("f-date-to").value   = allDates.length ? allDates[allDates.length - 1] : "";
   applyFilters();
 }}
 
@@ -2965,13 +2964,6 @@ function runExportXLSX(type){{
 }}
 
 // ── init ───────────────────────────────────────────────────────────────────
-(function(){{
-  var dates = PEOPLE.map(function(p){{ return p.AssignDate; }}).filter(Boolean).sort();
-  if(dates.length) {{
-    sel("f-date-from").value = dates[0];
-    sel("f-date-to").value   = dates[dates.length - 1];
-  }}
-}})();
 applyFilters();
 var firstCard = sel("roster-left").querySelector(".roster-person");
 if(firstCard) showDetail(firstCard.dataset.email);
