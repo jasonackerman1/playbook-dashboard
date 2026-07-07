@@ -2210,6 +2210,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
     .header,.filters,.stats,.charts,.section,.print-hide{{display:none!important;}}
     #print-header{{display:block!important;}}
     #print-stats{{display:flex!important;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}}
+    body.print-no-summary #print-stats{{display:none!important;}}
     #print-roster-wrap{{display:block!important;}}
     .ptable{{width:100%;border-collapse:collapse;font-size:11px;}}
     .ptable th{{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}}
@@ -2395,16 +2396,16 @@ document.addEventListener("click", function(e){{
 
 // ── Info tooltip ───────────────────────────────────────────────────────────
 var INFO_MSGS = {{
-  "total-enrolled":  "Total number of people enrolled in the Healthcare certification program. This count updates when filters are applied.",
-  "certified":       "People who have completed the full Healthcare certification — both HC Foundations (10 courses) and Layered Security (11 courses). Certification status is confirmed by the LMS.",
-  "in-progress":     "People who have completed at least one course in either curriculum but have not yet earned full certification.",
-  "not-started":     "People enrolled in the program who have not yet completed any courses in HC Foundations or Layered Security.",
-  "completion-rate": "The percentage of enrolled people who have earned full certification. Calculated as Certified divided by Total Enrolled. Updates when filters are applied.",
-  "pipeline-chart":  "The three stages of the certification journey for the people currently shown. Not Started — no courses completed yet. In Progress — at least one course done but not yet fully certified. Certified — both HC Foundations and Layered Security complete.",
-  "trend-chart":     "Number of people who earned full Healthcare certification per KM fiscal quarter. KM fiscal year runs April through March: Q1 = April to June, Q2 = July to September, Q3 = October to December, Q4 = January to March.",
-  "market-chart":    "Completion status by sales market. Each bar shows how many people in that market are Certified, In Progress, or Not Started. Hover a bar to see the full breakdown including total enrolled. Reflects your current filters.",
-  "roster":          "Full list of enrolled people matching your current filters. Each card shows status (top right), HC Foundations and Layered Security progress (bottom left), and overall completion % across all 21 courses (bottom right). Click any card to see course-by-course detail in the panel on the right.",
-  "export":          "Download a printable report for the people currently shown. Full Report includes all people and all columns. Not Certified lists uncertified people sorted by manager — useful for follow-up outreach. Manager Summary shows each manager's team size and team completion rate."
+  "total-enrolled":  "The total number of people currently assigned to the Healthcare certification program. Use the Status and Market filters above to narrow this to a specific group.",
+  "certified":       "People who have completed all required coursework and earned their Healthcare certification. Certification is confirmed by the LMS system.",
+  "in-progress":     "People who have started the program and completed at least one course, but haven't finished everything yet.",
+  "not-started":     "People who are assigned to the program but haven't completed any courses yet.",
+  "completion-rate": "The percentage of assigned people who have earned full certification so far. For example, 25% means 1 in 4 people is certified. This number updates when you apply filters.",
+  "pipeline-chart":  "A quick snapshot of where everyone stands — how many haven't started yet, how many are actively working through the courses, and how many have finished and are fully certified.",
+  "trend-chart":     "Shows how many people earned their Healthcare certification in each quarter. KM's fiscal year runs April through March — Q1 is April to June, Q2 is July to September, Q3 is October to December, and Q4 is January to March.",
+  "market-chart":    "Certification progress broken down by sales market. Each bar shows how many people in that market are Certified, In Progress, or Not Started. Hover over any bar to see the exact counts and total enrolled for that market. Updates when you apply filters.",
+  "roster":          "The full list of people in the program. Each card shows their name and job title, their progress on Layered Security and HC Foundations (bottom left), their overall completion percentage (bottom right), and their current status (top right). Click any card to see a full course-by-course breakdown in the panel on the right.",
+  "export":          "Download a report based on whoever is currently shown on screen — apply filters first to scope the report to a specific group. Full Report includes everyone with all course progress columns. Not Certified is a contact list of people still working through the program, sorted by manager — useful for follow-up. Manager Summary shows each manager's team size and how many on their team have certified."
 }};
 function showInfo(e, key){{
   var pop = sel("info-popover");
@@ -2914,6 +2915,8 @@ function runExportXLSX(type){{
     var total=filtered.length;
     var cert=filtered.filter(function(p){{ return p.Certified==="Yes"; }}).length;
     var rate=total>0?Math.round(cert/total*100):0;
+    var inprogXL  = filtered.filter(function(p){{ return p.overallPct > 0 && p.Certified !== "Yes"; }}).length;
+    var nostartXL = filtered.filter(function(p){{ return p.overallPct === 0 && p.Certified !== "Yes"; }}).length;
     var sumRows=[
       ["{name} Certification Report"],
       ["Generated:",now],
@@ -2921,6 +2924,8 @@ function runExportXLSX(type){{
       ["SUMMARY"],
       ["Total Enrolled",total],
       ["Certified",cert],
+      ["In Progress",inprogXL],
+      ["Not Started",nostartXL],
       ["Completion Rate",rate+"%"],
     ];
     XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),"Summary");
