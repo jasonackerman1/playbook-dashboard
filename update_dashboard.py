@@ -1333,12 +1333,8 @@ function renderIntelligence() {{
 }}
 
 (function(){{
-  var params = new URLSearchParams(window.location.search);
-  var pb = params.get('playbook');
-  if(pb) {{
-    var opt = Array.from(sel('f-playbook').options).find(function(o){{ return o.value === pb; }});
-    if(opt) sel('f-playbook').value = opt.value;
-  }}
+  var pb = new URLSearchParams(window.location.search).get('playbook');
+  if(pb) sel('f-playbook').value = pb;
 }})();
 
 applyFilters();
