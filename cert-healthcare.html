@@ -227,7 +227,6 @@
   <input type="date" id="f-date-from" onchange="applyFilters()">
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to" onchange="applyFilters()">
-  <span id="cert-date-range-label" style="font-size:11px;color:var(--muted);margin-left:2px;white-space:nowrap;"></span>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <span class="result-count" id="result-count"></span>
 </div>
@@ -477,18 +476,6 @@ function applyFilters(){
     return true;
   });
   sel("result-count").textContent = filtered.length + " shown";
-  var certDates = filtered.map(function(p){ return p.CertDate; }).filter(Boolean).sort();
-  var rangeLabel = sel("cert-date-range-label");
-  if(rangeLabel) {
-    if(certDates.length > 0) {
-      var fmt = function(d){ var p=d.split('-'); return p[1]+'/'+p[2]+'/'+p[0].slice(2); };
-      rangeLabel.textContent = certDates.length === 1
-        ? "(" + fmt(certDates[0]) + ")"
-        : "(" + fmt(certDates[0]) + " – " + fmt(certDates[certDates.length-1]) + ")";
-    } else {
-      rangeLabel.textContent = "";
-    }
-  }
   renderStats();
   renderCharts();
   renderRoster();
