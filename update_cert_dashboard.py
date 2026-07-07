@@ -2437,9 +2437,6 @@ function pillClass(pct, total){{
   }});
 }})();
 
-
-  applyFilters();
-}}
 function resetFilters(){{
   sel("f-market").value = "";
   sel("f-status").value = "";
