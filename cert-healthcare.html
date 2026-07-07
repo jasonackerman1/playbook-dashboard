@@ -373,11 +373,11 @@ var INFO_MSGS = {
   "in-progress":     "People who have started the program and completed at least one course, but haven't finished everything yet.",
   "not-started":     "People who are assigned to the program but haven't completed any courses yet.",
   "completion-rate": "The percentage of assigned people who have earned full certification so far. For example, 25% means 1 in 4 people is certified. This number updates when you apply filters.",
-  "pipeline-chart":  "A quick snapshot of where everyone stands — how many haven't started yet, how many are actively working through the courses, and how many have finished and are fully certified.",
-  "trend-chart":     "Shows how many people earned their Healthcare certification in each quarter. KM's fiscal year runs April through March — Q1 is April to June, Q2 is July to September, Q3 is October to December, and Q4 is January to March.",
+  "pipeline-chart":  "A quick snapshot of where everyone stands: how many haven't started yet, how many are actively working through the courses, and how many have finished and are fully certified.",
+  "trend-chart":     "Shows how many people earned their Healthcare certification in each quarter. KM's fiscal year runs April through March. Q1 is April to June, Q2 is July to September, Q3 is October to December, and Q4 is January to March.",
   "market-chart":    "Certification progress broken down by sales market. Each bar shows how many people in that market are Certified, In Progress, or Not Started. Hover over any bar to see the exact counts and total enrolled for that market. Updates when you apply filters.",
   "roster":          "The full list of people in the program. Each card shows their name and job title, their progress on Layered Security and HC Foundations (bottom left), their overall completion percentage (bottom right), and their current status (top right). Click any card to see a full course-by-course breakdown in the panel on the right.",
-  "export":          "Download a report based on whoever is currently shown on screen — apply filters first to scope the report to a specific group. Full Report includes everyone with all course progress columns. Not Certified is a contact list of people still working through the program, sorted by manager — useful for follow-up. Manager Summary shows each manager's team size and how many on their team have certified."
+  "export":          "Download a report based on whoever is currently shown on screen. Apply filters first to scope the report to a specific group. Full Report includes everyone with all course progress columns. Not Certified is a contact list of people still working through the program, sorted by manager, useful for follow-up. Manager Summary shows each manager's team size and how many on their team have certified."
 };
 function showInfo(e, key){
   var pop = sel("info-popover");
@@ -403,7 +403,7 @@ function pFiscalQtr(d){
   return "Q" + q + " FY" + String(fy).slice(2);
 }
 function fmtDate(d){
-  if(!d) return "—";
+  if(!d) return "-";
   var pts = d.split("-"), months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return months[parseInt(pts[1]) - 1] + " " + parseInt(pts[2]) + ", " + pts[0];
 }
@@ -771,13 +771,13 @@ function showDetail(email){
   detailHtml += '<span class="badge-status ' + badgeClass + '">' + badgeText + "</span>";
   detailHtml += "</div>";
   detailHtml += '<div class="detail-grid">';
-  detailHtml += '<div><div class="detail-label">Job Title</div><div class="detail-value">' + (p.JobTitle || "—") + "</div></div>";
-  detailHtml += '<div><div class="detail-label">Market</div><div class="detail-value">' + (p.Market || "—") + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Job Title</div><div class="detail-value">' + (p.JobTitle || "-") + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Market</div><div class="detail-value">' + (p.Market || "-") + "</div></div>";
   detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + "</div></div>";
-  detailHtml += '<div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:' + p.Email + '" style="color:var(--accent);text-decoration:none">' + (p.Email || "—") + "</a></div></div>";
+  detailHtml += '<div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:' + p.Email + '" style="color:var(--accent);text-decoration:none">' + (p.Email || "-") + "</a></div></div>";
   if(p.Manager){
     detailHtml += '<div><div class="detail-label">Manager</div><div class="detail-value">' + p.Manager + "</div></div>";
-    detailHtml += '<div><div class="detail-label">Manager Email</div><div class="detail-value"><a href="mailto:' + p.MgrEmail + '" style="color:var(--accent);text-decoration:none">' + (p.MgrEmail || "—") + "</a></div></div>";
+    detailHtml += '<div><div class="detail-label">Manager Email</div><div class="detail-value"><a href="mailto:' + p.MgrEmail + '" style="color:var(--accent);text-decoration:none">' + (p.MgrEmail || "-") + "</a></div></div>";
   }
   detailHtml += "</div>";
   detailHtml += '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">';
@@ -826,9 +826,9 @@ function runExport(type){
     sel("print-stats").innerHTML = pBox(total,"Total Enrolled") + pBox(cert,"Certified") + pBox(inprog,"In Progress") + pBox(rate+"%","Completion Rate");
     sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Status","HC Foundations %","Layered Security %","Overall %","Cert Date","Manager"]);
     sel("print-roster-body").innerHTML = filtered.map(function(p,i){
-      return tds([i+1, "<b>"+p.FirstName+" "+p.LastName+"</b>", p.Market||"—", p.JobTitle||"—",
+      return tds([i+1, "<b>"+p.FirstName+" "+p.LastName+"</b>", p.Market||"-", p.JobTitle||"-",
         personStatus(p), p.hcf.pct+"%", p.ls.pct+"%", p.overallPct+"%",
-        p.CertDate||"—", p.Manager||"—"]);
+        p.CertDate||"-", p.Manager||"-"]);
     }).join("");
     sel("ph-desc").style.display = "none";
     document.body.classList.remove("print-no-summary");
@@ -836,12 +836,12 @@ function runExport(type){
 
   } else if(type === "not-certified"){
     var notCert = filtered.filter(function(p){ return p.Certified !== "Yes"; });
-    setupPrintHeader("Not Certified — Healthcare", "Generated: " + now + "  |  " + notCert.length + " Employees");
+    setupPrintHeader("Not Certified: Healthcare", "Generated: " + now + "  |  " + notCert.length + " Employees");
     sel("print-stats").innerHTML = "";
     sel("print-roster-head").innerHTML = thRow(["#","Name","Email","Market","HC Foundations %","Layered Security %","Manager","Manager Email"]);
     sel("print-roster-body").innerHTML = notCert.length
       ? notCert.slice().sort(function(a,b){ return (a.Manager||"").localeCompare(b.Manager||"") || (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName); })
-          .map(function(p,i){ return tds([i+1,"<b>"+p.FirstName+" "+p.LastName+"</b>",p.Email||"—",p.Market||"—",p.hcf.pct+"%",p.ls.pct+"%",p.Manager||"—",p.MgrEmail||"—"]); }).join("")
+          .map(function(p,i){ return tds([i+1,"<b>"+p.FirstName+" "+p.LastName+"</b>",p.Email||"-",p.Market||"-",p.hcf.pct+"%",p.ls.pct+"%",p.Manager||"-",p.MgrEmail||"-"]); }).join("")
       : '<tr><td colspan="8" style="color:#999;font-style:italic;padding:10px">All enrolled people are certified.</td></tr>';
     sel("ph-desc").textContent = "Employees who have not yet earned Healthcare certification, sorted by manager.";
     sel("ph-desc").style.display = "block";
@@ -853,14 +853,14 @@ function runExport(type){
     var mgrMap = {};
     filtered.forEach(function(p){
       var k = p.Manager || "(No Manager)";
-      if(!mgrMap[k]) mgrMap[k] = { name:k, email:p.MgrEmail||"—", total:0, cert:0, avgPct:0, sumPct:0 };
+      if(!mgrMap[k]) mgrMap[k] = { name:k, email:p.MgrEmail||"-", total:0, cert:0, avgPct:0, sumPct:0 };
       mgrMap[k].total++;
       if(p.Certified === "Yes") mgrMap[k].cert++;
       mgrMap[k].sumPct += p.overallPct;
     });
     var mgrs = Object.values(mgrMap).map(function(m){ m.avgPct = m.total > 0 ? Math.round(m.sumPct / m.total) : 0; return m; })
       .sort(function(a,b){ return (b.cert/b.total) - (a.cert/a.total); });
-    setupPrintHeader("Manager Summary — Healthcare", "Generated: " + now + "  |  " + mgrs.length + " Managers");
+    setupPrintHeader("Manager Summary: Healthcare", "Generated: " + now + "  |  " + mgrs.length + " Managers");
     sel("print-stats").innerHTML = "";
     sel("print-roster-head").innerHTML = thRow(["Manager","Manager Email","Team Size","Certified","Avg Overall %"]);
     sel("print-roster-body").innerHTML = mgrs.map(function(m){ return tds(["<b>"+m.name+"</b>",m.email,m.total,m.cert,"<b>"+m.avgPct+"%</b>"]); }).join("");
@@ -903,7 +903,7 @@ function runExportXLSX(type){
     XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),"Summary");
     var rRows=[["Name","Market","Job Title","Status","HC Foundations %","Layered Security %","Overall %","Cert Date","Manager"]];
     filtered.forEach(function(p){
-      rRows.push([p.FirstName+" "+p.LastName,p.Market||"—",p.JobTitle||"—",personStatus(p),p.hcf.pct+"%",p.ls.pct+"%",p.overallPct+"%",p.CertDate||"—",p.Manager||"—"]);
+      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",personStatus(p),p.hcf.pct+"%",p.ls.pct+"%",p.overallPct+"%",p.CertDate||"-",p.Manager||"-"]);
     });
     XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,16,16,12,14,28]),"Roster");
     dlXLSX("hc-full-report",wb);
@@ -913,7 +913,7 @@ function runExportXLSX(type){
     });
     var rows=[["Name","Email","Market","HC Foundations %","Layered Security %","Manager","Manager Email"]];
     notCert.forEach(function(p){
-      rows.push([p.FirstName+" "+p.LastName,p.Email||"—",p.Market||"—",p.hcf.pct+"%",p.ls.pct+"%",p.Manager||"—",p.MgrEmail||"—"]);
+      rows.push([p.FirstName+" "+p.LastName,p.Email||"-",p.Market||"-",p.hcf.pct+"%",p.ls.pct+"%",p.Manager||"-",p.MgrEmail||"-"]);
     });
     XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,18,16,16,28,32]),"Not Certified");
     dlXLSX("hc-not-certified",wb);
@@ -921,7 +921,7 @@ function runExportXLSX(type){
     var mgrMap={};
     filtered.forEach(function(p){
       var k=p.Manager||"(No Manager)";
-      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||"—",total:0,cert:0,sumPct:0};
+      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||"-",total:0,cert:0,sumPct:0};
       mgrMap[k].total++;
       if(p.Certified==="Yes") mgrMap[k].cert++;
       mgrMap[k].sumPct+=p.overallPct;

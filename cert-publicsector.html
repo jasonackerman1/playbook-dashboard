@@ -266,7 +266,7 @@ function setupPrintHeader(title, subtitle){
   const market=sel('f-market').value||'All Markets';
   const from=sel('f-date-from').value||'', to=sel('f-date-to').value||'';
   const parts=[`Status: ${statusLabel}`,`Market: ${market}`];
-  if(from||to) parts.push(`Dates: ${from||'—'} to ${to||'—'}`);
+  if(from||to) parts.push(`Dates: ${from||'-'} to ${to||'-'}`);
   if(hideTLG) parts.push('TLG hidden');
   sel('ph-filters').textContent=parts.join('  |  ');
 }
@@ -309,22 +309,22 @@ function runExport(type){
     var qMap={};
     filtered.filter(p=>p.PublicSector==='Yes'&&p.CertDate).forEach(p=>{var q=pFiscalQtr(p.CertDate);if(q)qMap[q]=(qMap[q]||0)+1;});
     var qRows=Object.entries(qMap).sort((a,b)=>a[0].localeCompare(b[0]));
-    if(!qRows.length) qRows=[['No data','—']];
+    if(!qRows.length) qRows=[['No data','-']];
     sel('print-charts').innerHTML=pSection('Certification Pipeline',[['In Progress',pNot],['Certified',pCert]])+pSection('Certifications by Quarter',qRows);
     sel('print-roster-head').innerHTML=thRow(['#','Name','Market','Job Title','Status','Cert Date','Manager','Email']);
     sel('print-roster-body').innerHTML=filtered.map((p,i)=>{
       const status=p.PublicSector==='Yes'?'Certified':'Not Certified';
-      return tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Market||'—',p.JobTitle||'—',status,p.CertDate||'—',p.Manager||'—',`<small>${p.Email||'—'}</small>`]);
+      return tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.Market||'-',p.JobTitle||'-',status,p.CertDate||'-',p.Manager||'-',`<small>${p.Email||'-'}</small>`]);
     }).join('');
     doPrint(false);
 
   } else if(type==='not-certified'){
     const notCert=filtered.filter(p=>p.PublicSector!=='Yes');
-    setupPrintHeader('Not Certified — Public Sector',`Generated: ${now}  |  ${notCert.length} Employees`);
+    setupPrintHeader('Not Certified: Public Sector',`Generated: ${now}  |  ${notCert.length} Employees`);
     sel('print-roster-head').innerHTML=thRow(['#','Name','Job Title','Market','Email','Manager','Manager Email']);
     sel('print-roster-body').innerHTML=notCert.length
       ? notCert.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
-          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.JobTitle||'—',p.Market||'—',p.Email||'—',p.Manager||'—',p.MgrEmail||'—'])).join('')
+          .map((p,i)=>tds([i+1,`<b>${p.FirstName} ${p.LastName}</b>`,p.JobTitle||'-',p.Market||'-',p.Email||'-',p.Manager||'-',p.MgrEmail||'-'])).join('')
       : '<tr><td colspan="7" style="color:#999;font-style:italic;padding:10px 8px">All employees are certified</td></tr>';
     sel('ph-desc').textContent='Employees who have not yet earned Public Sector certification, sorted by manager. Use this list to contact employees and their managers to drive completion.';
     sel('ph-desc').style.display='block';
@@ -334,12 +334,12 @@ function runExport(type){
     const mgrMap={};
     filtered.forEach(p=>{
       const k=p.Manager||'(No Manager)';
-      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||'—',total:0,cert:0};
+      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||'-',total:0,cert:0};
       mgrMap[k].total++;
       if(p.PublicSector==='Yes') mgrMap[k].cert++;
     });
     const mgrs=Object.values(mgrMap).sort((a,b)=>(b.cert/b.total)-(a.cert/a.total));
-    setupPrintHeader('Manager Summary — Public Sector',`Generated: ${now}  |  ${mgrs.length} Managers`);
+    setupPrintHeader('Manager Summary: Public Sector',`Generated: ${now}  |  ${mgrs.length} Managers`);
     sel('print-roster-head').innerHTML=thRow(['Manager','Manager Email','Team Size','Certified','Not Certified','Completion %']);
     sel('print-roster-body').innerHTML=mgrs.map(m=>tds([
       `<b>${m.name}</b>`,m.email,m.total,m.cert,m.total-m.cert,`<b>${Math.round(m.cert/m.total*100)}%</b>`
@@ -365,10 +365,10 @@ const INFO_MSGS={
   'certified':       'People who have earned the Public Sector certification.',
   'not-certified':   'People assigned the certification who have not yet earned it.',
   'completion-rate': 'Percentage of assigned people who have earned certification. Calculated as Certified ÷ Total Assigned.',
-  'pipeline':        'Two stages of the certification journey: In Progress — assigned but not yet certified; Certified — fully certified.',
+  'pipeline':        'Two stages of the certification journey: In Progress (assigned but not yet certified) and Certified (fully certified).',
   'over-time':       'Certifications earned per KM fiscal quarter. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
   'roster':          'Full list of assigned people with their certification status. Click a name to see job title, market, cert date, and manager info. Use the View toggle to group by manager.',
-  'export':          'Export a printable report of the data currently on screen. Filter first, then export — the report only includes what passes your active filters. Examples: filter to a specific region then export for a regional snapshot; hide TLG then export to share with managers; set Status = Not Certified then export for a targeted outreach list. Full Report lists everyone with full detail. Not Certified is a contact list for outreach. Manager Summary rolls up team count and completion % per manager.',
+  'export':          'Export a printable report of the data currently on screen. Apply filters first; the report only includes what is currently shown. Examples: filter to a specific region then export for a regional snapshot; hide TLG then export to share with managers; set Status = Not Certified then export for a targeted outreach list. Full Report lists everyone with full detail. Not Certified is a contact list for outreach. Manager Summary rolls up team count and completion % per manager.',
 };
 function showInfo(e, key){
   const pop=sel('info-popover');
@@ -641,21 +641,21 @@ function runExportXLSX(type){
     const rRows=[['Name','Market','Job Title','Status','Cert Date','Manager','Email']];
     filtered.forEach(p=>{
       const status=p.PublicSector==='Yes'?'Certified':'Not Certified';
-      rRows.push([p.FirstName+' '+p.LastName,p.Market||'—',p.JobTitle||'—',status,p.CertDate||'—',p.Manager||'—',p.Email||'—']);
+      rRows.push([p.FirstName+' '+p.LastName,p.Market||'-',p.JobTitle||'-',status,p.CertDate||'-',p.Manager||'-',p.Email||'-']);
     });
     XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,28,32]),'Roster');
     dlXLSX('ps-full-report',wb);
   } else if(type==='not-certified'){
     const notCert=filtered.filter(p=>p.PublicSector!=='Yes').sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName));
     const rows=[['Name','Job Title','Market','Email','Manager','Manager Email']];
-    notCert.forEach(p=>rows.push([p.FirstName+' '+p.LastName,p.JobTitle||'—',p.Market||'—',p.Email||'—',p.Manager||'—',p.MgrEmail||'—']));
+    notCert.forEach(p=>rows.push([p.FirstName+' '+p.LastName,p.JobTitle||'-',p.Market||'-',p.Email||'-',p.Manager||'-',p.MgrEmail||'-']));
     XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,28,18,32,28,32]),'Not Certified');
     dlXLSX('ps-not-certified',wb);
   } else if(type==='manager-summary'){
     const mgrMap={};
     filtered.forEach(p=>{
       const k=p.Manager||'(No Manager)';
-      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||'—',total:0,cert:0};
+      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||'-',total:0,cert:0};
       mgrMap[k].total++;
       if(p.PublicSector==='Yes') mgrMap[k].cert++;
     });
