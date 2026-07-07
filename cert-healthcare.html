@@ -195,6 +195,15 @@
 <!-- ── Header ──────────────────────────────────────────────────────────── -->
 <div class="header">
   <div class="header-left">
+    <div style="position:relative;">
+      <button id="ham-btn" onclick="toggleHamMenu()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 10px;font-size:16px;cursor:pointer;line-height:1;margin-right:8px;" title="Navigate">&#9776;</button>
+      <div id="ham-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 0;min-width:200px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.3);">
+        <div style="padding:6px 14px 4px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">Dashboards</div>
+        <a href="index.html"          style="display:block;padding:8px 14px;color:var(--text);text-decoration:none;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">&#128202; Analytical Data Hub</a>
+        <a href="cert-publicsector.html" style="display:block;padding:8px 14px;color:var(--text);text-decoration:none;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">&#127963; Public Sector Curriculum</a>
+        <a href="onboarding.html"     style="display:block;padding:8px 14px;color:var(--text);text-decoration:none;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">&#128640; Accelerate Onboarding</a>
+      </div>
+    </div>
     <div>
       <h1>Healthcare <span>Certification Dashboard</span></h1>
       <div class="header-date">Data as of July 2026</div>
@@ -224,7 +233,7 @@
   </select>
   <span class="filter-label">Market</span>
   <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
-  <span class="filter-label" style="margin-right:2px">From</span>
+  <span class="filter-label" style="margin-right:2px">Cert Date From</span>
   <input type="date" id="f-date-from" onchange="applyFilters()">
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to" onchange="applyFilters()">
@@ -270,7 +279,7 @@
   </div>
   <div class="chart-card">
     <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'trend-chart')">?</span></div>
-    <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    <div class="chart-wrap" style="position:relative;"><canvas id="trendChart"></canvas><div id="trend-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;pointer-events:none;"><span style="font-size:28px;">📋</span><span style="font-size:12px;color:var(--muted);">No certifications yet</span></div></div>
   </div>
 </div>
 
@@ -388,6 +397,16 @@ function showInfo(e, key){
   e.stopPropagation();
 }
 
+// ── Hamburger nav ──────────────────────────────────────────────────────────
+function toggleHamMenu(){
+  var m = sel("ham-menu");
+  m.style.display = m.style.display === "none" ? "block" : "none";
+}
+document.addEventListener("click", function(e){
+  var btn = sel("ham-btn"), menu = sel("ham-menu");
+  if(menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) menu.style.display = "none";
+});
+
 // ── JS helpers ─────────────────────────────────────────────────────────────
 function escHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function personStatus(p){
@@ -480,8 +499,8 @@ function applyFilters(){
     if(hideTLG && TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
     if(market && p.Market !== market) return false;
     if(status && personStatus(p) !== status) return false;
-    if(from && p.HireDate && p.HireDate < from) return false;
-    if(to && p.HireDate && p.HireDate > to) return false;
+    if(from && p.CertDate && p.CertDate < from) return false;
+    if(to && p.CertDate && p.CertDate > to) return false;
     if(q && !(p.FirstName + " " + p.LastName).toLowerCase().includes(q)) return false;
     return true;
   });
@@ -553,6 +572,8 @@ function renderCharts(){
   function parseQtr(s){ var m = s.match(/FY(\d+)\s+Q(\d)/); return m ? +m[1] * 10 + +m[2] : 0; }
   var trendLabels = Object.keys(qtrMap).sort(function(a,b){ return parseQtr(a) - parseQtr(b); });
   var trendData   = trendLabels.map(function(q){ return qtrMap[q]; });
+  var trendEmpty = sel("trend-empty");
+  if(trendEmpty) trendEmpty.style.display = trendLabels.length === 0 ? "flex" : "none";
 
   if(trendChart) trendChart.destroy();
   trendChart = new Chart(sel("trendChart"), {
@@ -725,8 +746,8 @@ function showDetail(email){
   });
   var status  = personStatus(p);
   var isCert  = status === "Certified";
-  var badgeClass = isCert ? "certified" : "not-certified";
-  var badgeText  = isCert ? ("✓ Certified" + (p.CertDate ? " · " + fmtDate(p.CertDate) : "")) : "Not Certified";
+  var badgeClass = status === "Certified" ? "certified" : status === "In Progress" ? "in-progress" : "not-certified";
+  var badgeText  = status === "Certified" ? ("✓ Certified" + (p.CertDate ? " · " + fmtDate(p.CertDate) : "")) : status === "In Progress" ? "In Progress" : "Not Started";
 
   function progBar(pct, cls){
     return '<div class="prog-wrap"><div class="prog-bar ' + cls + '" style="width:' + pct + '%"></div></div>';
