@@ -195,15 +195,6 @@
 <!-- ── Header ──────────────────────────────────────────────────────────── -->
 <div class="header">
   <div class="header-left">
-    <div style="position:relative;">
-      <button id="ham-btn" onclick="toggleHamMenu()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 10px;font-size:16px;cursor:pointer;line-height:1;margin-right:8px;" title="Navigate">&#9776;</button>
-      <div id="ham-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 0;min-width:200px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.3);">
-        <div style="padding:6px 14px 4px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">Dashboards</div>
-        <a href="index.html"          style="display:block;padding:8px 14px;color:var(--text);text-decoration:none;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">&#128202; Analytical Data Hub</a>
-        <a href="cert-publicsector.html" style="display:block;padding:8px 14px;color:var(--text);text-decoration:none;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">&#127963; Public Sector Curriculum</a>
-        <a href="onboarding.html"     style="display:block;padding:8px 14px;color:var(--text);text-decoration:none;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">&#128640; Accelerate Onboarding</a>
-      </div>
-    </div>
     <div>
       <h1>Healthcare <span>Certification Dashboard</span></h1>
       <div class="header-date">Data as of July 2026</div>
@@ -396,16 +387,6 @@ function showInfo(e, key){
   pop.style.left = Math.min(r.left, window.innerWidth - 280) + "px";
   e.stopPropagation();
 }
-
-// ── Hamburger nav ──────────────────────────────────────────────────────────
-function toggleHamMenu(){
-  var m = sel("ham-menu");
-  m.style.display = m.style.display === "none" ? "block" : "none";
-}
-document.addEventListener("click", function(e){
-  var btn = sel("ham-btn"), menu = sel("ham-menu");
-  if(menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) menu.style.display = "none";
-});
 
 // ── JS helpers ─────────────────────────────────────────────────────────────
 function escHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
