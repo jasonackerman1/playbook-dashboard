@@ -2232,6 +2232,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
         <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
       </div>
     </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
+    <a href="index.html?playbook=Healthcare" class="btn-theme print-hide" style="text-decoration:none;white-space:nowrap;">&#128200; Healthcare Playbook Metrics</a>
     <button class="btn-theme print-hide" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
   </div>
 </div>
