@@ -84,13 +84,19 @@ def pkey(first, last):
 
 
 def _date(val):
-    """Return YYYY-MM-DD string from a datetime object or None/empty."""
+    """Return YYYY-MM-DD string from a datetime object, YYYY-MM-DD string, or LMS M/D/YYYY format."""
     if not val:
         return None
     if hasattr(val, 'strftime'):
         return val.strftime('%Y-%m-%d')
     s = str(val).strip()
-    return s if s else None
+    if not s:
+        return None
+    # LMS exports dates as "M/D/YYYY timezone" e.g. "6/11/2026 US/Alaska"
+    m = re.match(r'(\d{1,2})/(\d{1,2})/(\d{4})', s)
+    if m:
+        return f'{int(m.group(3)):04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}'
+    return s
 
 
 def extract_date(fname):
