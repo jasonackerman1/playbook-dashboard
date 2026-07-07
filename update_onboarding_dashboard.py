@@ -772,7 +772,7 @@ function toggleTheme() {{
 }}
 (function() {{
   const t = localStorage.getItem('pb-theme');
-  if (t === 'light') {{
+  if (t !== 'dark') {{
     document.body.classList.add('light-mode');
     document.getElementById('btn-theme').innerHTML = '&#9790; Dark';
   }}

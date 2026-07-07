@@ -446,7 +446,7 @@ function cv(v){{ return getComputedStyle(document.body).getPropertyValue(v).trim
 
 // Theme
 (function(){{
-  if(localStorage.getItem('pb-theme')==='light') document.body.classList.add('light-mode');
+  if(localStorage.getItem('pb-theme')!=='dark') document.body.classList.add('light-mode');
   sel('btn-theme').textContent = document.body.classList.contains('light-mode') ? '🌙 Dark' : '☀ Light';
 }})();
 function toggleTheme(){{
@@ -1294,7 +1294,7 @@ function sel(id){{ return document.getElementById(id); }}
 function cv(v){{ return getComputedStyle(document.body).getPropertyValue(v).trim(); }}
 
 (function(){{
-  if(localStorage.getItem('pb-theme')==='light') document.body.classList.add('light-mode');
+  if(localStorage.getItem('pb-theme')!=='dark') document.body.classList.add('light-mode');
   sel('btn-theme').textContent = document.body.classList.contains('light-mode') ? '🌙 Dark' : '☀ Light';
 }})();
 function toggleTheme(){{
@@ -2373,7 +2373,7 @@ function cv(v)  {{ return getComputedStyle(document.body).getPropertyValue(v).tr
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 (function(){{
-  if(localStorage.getItem("pb-theme") === "light") document.body.classList.add("light-mode");
+  if(localStorage.getItem("pb-theme") !== "dark") document.body.classList.add("light-mode");
   sel("btn-theme").textContent = document.body.classList.contains("light-mode") ? "🌙 Dark" : "☀ Light";
 }})();
 function toggleTheme(){{

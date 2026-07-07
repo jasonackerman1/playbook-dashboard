@@ -209,7 +209,7 @@
     <div>
       <h1>Accelerate Onboarding</h1>
     </div>
-    <span class="data-badge" id="data-badge">33 learners &middot; updated July 06, 2026</span>
+    <span class="data-badge" id="data-badge">33 learners &middot; updated July 07, 2026</span>
   </div>
   <div class="header-right">
     <div class="export-drop print-hide" id="export-drop">
@@ -535,7 +535,7 @@ function toggleTheme() {
 }
 (function() {
   const t = localStorage.getItem('pb-theme');
-  if (t === 'light') {
+  if (t !== 'dark') {
     document.body.classList.add('light-mode');
     document.getElementById('btn-theme').innerHTML = '&#9790; Dark';
   }

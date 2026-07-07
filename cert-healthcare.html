@@ -341,7 +341,7 @@ function cv(v)  { return getComputedStyle(document.body).getPropertyValue(v).tri
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 (function(){
-  if(localStorage.getItem("pb-theme") === "light") document.body.classList.add("light-mode");
+  if(localStorage.getItem("pb-theme") !== "dark") document.body.classList.add("light-mode");
   sel("btn-theme").textContent = document.body.classList.contains("light-mode") ? "🌙 Dark" : "☀ Light";
 })();
 function toggleTheme(){
