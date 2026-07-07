@@ -52,9 +52,6 @@
   select:focus,input:focus{border-color:var(--accent);}
   .btn-reset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}
   .btn-reset:hover{border-color:var(--accent);color:var(--text);}
-  .btn-tlg{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}
-  .btn-tlg:hover{border-color:var(--red);color:var(--red);}
-  .btn-tlg.active{background:var(--red-subtle);border-color:var(--red);color:var(--red);}
   .result-count{margin-left:auto;font-size:12px;color:var(--muted);}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
@@ -158,7 +155,6 @@
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -235,7 +231,7 @@ const RAW = [{"FirstName": "Andrew", "LastName": "Davidson", "Email": "ADavidson
 const TLG_SET = new Set(["Bianca Davis", "Bianca DiPasquale", "Bradley Pierce", "CJ Homer", "Chris Curtis", "Dale Kinsey", "Doug Falk", "James Parker", "Jason Ackerman", "Jeremy MacBean", "John Lechner", "Laura Sefcik", "Resmie Biba", "Resmie Nesimi", "Rich Moore", "Samantha D'Angelo", "Samantha Maresca", "Sara Thompson", "Staci Musco"]);
 
 let filtered = [];
-let hideTLG = true;
+
 let pipelineChart, trendChart;
 let rosterSortField = 'status';
 let rosterSortDir   = 'desc';

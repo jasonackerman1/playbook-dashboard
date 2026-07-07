@@ -243,9 +243,6 @@ def generate_html(slug, name, rows):
   select:focus,input:focus{{border-color:var(--accent);}}
   .btn-reset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}}
   .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
-  .btn-tlg{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}}
-  .btn-tlg:hover{{border-color:var(--red);color:var(--red);}}
-  .btn-tlg.active{{background:var(--red-subtle);border-color:var(--red);color:var(--red);}}
   .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
 
   .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}}
@@ -356,7 +353,6 @@ def generate_html(slug, name, rows):
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
   <span id="in-progress-box" style="display:none;align-items:center;gap:6px;background:var(--accent)11;border:1px solid var(--accent)44;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--accent);margin-left:4px;">
     <span id="in-progress-count">0</span> In Progress
@@ -435,7 +431,7 @@ const RAW = {raw_json};
 const TLG_SET = new Set({tlg_json});
 
 let filtered = [];
-let hideTLG = true;
+
 let regionChart, trendChart, marketChart;
 let rosterSortField = 'status';
 let rosterSortDir   = 'desc';
@@ -1105,9 +1101,6 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   select:focus,input:focus{{border-color:var(--accent);}}
   .btn-reset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}}
   .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
-  .btn-tlg{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}}
-  .btn-tlg:hover{{border-color:var(--red);color:var(--red);}}
-  .btn-tlg.active{{background:var(--red-subtle);border-color:var(--red);color:var(--red);}}
   .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
   .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}}
   .stat{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}}
@@ -1211,7 +1204,6 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -1288,7 +1280,7 @@ const RAW = {raw_json};
 const TLG_SET = new Set({tlg_json});
 
 let filtered = [];
-let hideTLG = true;
+
 let pipelineChart, trendChart;
 let rosterSortField = 'status';
 let rosterSortDir   = 'desc';
@@ -2088,9 +2080,6 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   select:focus,input:focus{{border-color:var(--accent);}}
   .btn-reset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}}
   .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
-  .btn-tlg{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}}
-  .btn-tlg:hover{{border-color:var(--red);color:var(--red);}}
-  .btn-tlg.active{{background:var(--red-subtle);border-color:var(--red);color:var(--red);}}
   .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
 
   /* ── Stat cards ────────────────────────────────────────────────────── */
@@ -2258,7 +2247,6 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to" onchange="applyFilters()">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -2359,7 +2347,7 @@ const PEOPLE = {raw_json};
 const TLG_SET = new Set({tlg_json});
 
 let filtered = [];
-let hideTLG = true;
+
 let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
@@ -2449,11 +2437,7 @@ function pillClass(pct, total){{
   }});
 }})();
 
-// ── TLG toggle ─────────────────────────────────────────────────────────────
-function toggleTLG(){{
-  hideTLG = !hideTLG;
-  sel("btn-tlg").classList.toggle("active", hideTLG);
-  sel("btn-tlg").textContent = hideTLG ? "Show TLG" : "Hide TLG";
+
   applyFilters();
 }}
 function resetFilters(){{
@@ -2462,7 +2446,6 @@ function resetFilters(){{
   sel("f-date-from").value = "";
   sel("f-date-to").value = "";
   sel("f-search").value = "";
-  if(!hideTLG){{ hideTLG = true; sel("btn-tlg").classList.add("active"); sel("btn-tlg").textContent = "Show TLG"; }}
   applyFilters();
 }}
 
@@ -2506,7 +2489,7 @@ function applyFilters(){{
   var to     = sel("f-date-to").value;
   var q      = (sel("f-search").value || "").toLowerCase();
   filtered = PEOPLE.filter(function(p){{
-    if(hideTLG && TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
+    if(TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
     if(market && p.Market !== market) return false;
     if(status && personStatus(p) !== status) return false;
     if(from && p.CertDate && p.CertDate < from) return false;
@@ -2831,7 +2814,6 @@ function setupPrintHeader(title, subtitle){{
   var search = sel("f-search").value;
   var parts  = ["Status: " + status, "Market: " + market];
   if(search) parts.push("Search: " + search);
-  if(hideTLG) parts.push("TLG hidden");
   sel("ph-filters").textContent = parts.join("  |  ");
 }}
 function pBox(n, l){{
