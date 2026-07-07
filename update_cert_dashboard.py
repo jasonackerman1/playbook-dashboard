@@ -2248,7 +2248,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   </select>
   <span class="filter-label">Market</span>
   <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
-  <span class="filter-label" style="margin-right:2px">Cert Date From</span>
+  <span class="filter-label" style="margin-right:2px">Hire Date From</span>
   <input type="date" id="f-date-from" onchange="applyFilters()">
   <span class="filter-label" style="margin:0 2px">To</span>
   <input type="date" id="f-date-to" onchange="applyFilters()">
@@ -2495,8 +2495,8 @@ function applyFilters(){{
     if(TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
     if(market && p.Market !== market) return false;
     if(status && personStatus(p) !== status) return false;
-    if(from && p.CertDate && p.CertDate < from) return false;
-    if(to && p.CertDate && p.CertDate > to) return false;
+    if(from && p.HireDate && p.HireDate < from) return false;
+    if(to && p.HireDate && p.HireDate > to) return false;
     if(q && !(p.FirstName + " " + p.LastName).toLowerCase().includes(q)) return false;
     return true;
   }});
@@ -2725,7 +2725,7 @@ function renderRoster(){{
   if(!html) {{
     var _df = sel("f-date-from").value, _dt = sel("f-date-to").value;
     if(_df || _dt) {{
-      html = '<div class="no-data">No certifications found in this date range.<br><span style="font-size:0.85em;opacity:0.75">Try a different range or click Reset to clear all filters.</span></div>';
+      html = '<div class="no-data">No people found in this date range.<br><span style="font-size:0.85em;opacity:0.75">Try a different range or click Reset to clear all filters.</span></div>';
     }} else {{
       html = '<div class="no-data">No people match the selected filters.</div>';
     }}
