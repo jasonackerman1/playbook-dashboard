@@ -1336,7 +1336,7 @@ function renderIntelligence() {{
   var params = new URLSearchParams(window.location.search);
   var pb = params.get('playbook');
   if(pb) {{
-    var opt = Array.from(sel('f-playbook').options).find(function(o){{ return o.value.toLowerCase() === pb.toLowerCase(); }});
+    var opt = Array.from(sel('f-playbook').options).find(function(o){{ return o.value === pb; }});
     if(opt) sel('f-playbook').value = opt.value;
   }}
 }})();
