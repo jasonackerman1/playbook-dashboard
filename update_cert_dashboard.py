@@ -116,6 +116,10 @@ def detect_vertical(fname):
     m = re.match(r'fy\d+-([a-z]+)-', fn)
     if m:
         return m.group(1).lower()
+    # Healthcare=Certification-Report-07.06.2026.xlsx / Healthcare-Certification-Foundations-...
+    for slug in VERTICAL_MAP:
+        if fn.startswith(slug):
+            return slug
     return None
 
 
@@ -2716,7 +2720,14 @@ function renderRoster(){{
     sorted.forEach(function(p){{ html += buildPersonCard(p); }});
   }}
 
-  if(!html) html = '<div class="no-data">No people match filters</div>';
+  if(!html) {{
+    var _df = sel("f-date-from").value, _dt = sel("f-date-to").value;
+    if(_df || _dt) {{
+      html = '<div class="no-data">No certifications found in this date range.<br><span style="font-size:0.85em;opacity:0.75">Try a different range or click Reset to clear all filters.</span></div>';
+    }} else {{
+      html = '<div class="no-data">No people match the selected filters.</div>';
+    }}
+  }}
   sel("roster-left").innerHTML = html;
 
   if(selectedEmail){{
