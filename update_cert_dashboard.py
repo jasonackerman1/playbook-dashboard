@@ -2155,8 +2155,8 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   .roster-key{{display:flex;gap:16px;align-items:center;padding:6px 12px;background:var(--surface2);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--muted);}}
   .key-stripe{{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px;}}
   .key-stripe.green{{background:var(--green);}}
-  .key-stripe.blue{{background:var(--accent);}}
-  .key-stripe.gray{{background:var(--border);}}
+  .key-stripe.yellow{{background:#f59e0b;}}
+  .key-stripe.red{{background:var(--red);}}
 
   /* Sort buttons */
   .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
@@ -2318,8 +2318,8 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   </div>
   <div class="roster-key">
     <span><span class="key-stripe green"></span>Certified</span>
-    <span><span class="key-stripe blue"></span>In Progress</span>
-    <span><span class="key-stripe gray"></span>Not Started</span>
+    <span><span class="key-stripe yellow"></span>In Progress</span>
+    <span><span class="key-stripe red"></span>Not Started</span>
   </div>
   <div class="roster-wrap">
     <div class="roster-left" id="roster-left"></div>
@@ -2550,7 +2550,7 @@ function renderCharts(){{
       labels: ["Not Started", "In Progress", "Certified"],
       datasets: [{{
         data: [pipelineNotStarted, pipelineInProgress, pipelineCertified],
-        backgroundColor: [cv("--muted") + "88", cv("--accent") + "cc", cv("--green") + "cc"],
+        backgroundColor: [cv("--red") + "cc", "#f59e0b" + "cc", cv("--green") + "cc"],
         borderRadius: 4,
         borderSkipped: false
       }}]
@@ -2628,8 +2628,8 @@ function renderCharts(){{
       labels: mktLabels,
       datasets: [
         {{ label: "Certified",    data: mktLabels.map(function(m){{ return mktMap[m].Certified;      }}), backgroundColor: cv("--green") + "cc", borderWidth: 0, borderRadius: 2 }},
-        {{ label: "In Progress",  data: mktLabels.map(function(m){{ return mktMap[m]["In Progress"]; }}), backgroundColor: cv("--accent") + "cc", borderWidth: 0, borderRadius: 2 }},
-        {{ label: "Not Started",  data: mktLabels.map(function(m){{ return mktMap[m]["Not Started"]; }}), backgroundColor: cv("--muted")  + "44", borderWidth: 0, borderRadius: 2 }}
+        {{ label: "In Progress",  data: mktLabels.map(function(m){{ return mktMap[m]["In Progress"]; }}), backgroundColor: "#f59e0b"       + "cc", borderWidth: 0, borderRadius: 2 }},
+        {{ label: "Not Started",  data: mktLabels.map(function(m){{ return mktMap[m]["Not Started"]; }}), backgroundColor: cv("--red")     + "cc", borderWidth: 0, borderRadius: 2 }}
       ]
     }},
     options: {{
