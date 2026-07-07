@@ -712,7 +712,8 @@ function overdueCount(p) {{
 
 function soonestDaysLeft(p) {{
   const vals = Object.values(p.curricula).map(curricDaysLeft).filter(v => v !== null);
-  return vals.length ? Math.min(...vals) : null;
+  if (vals.length) return Math.min(...vals);
+  return computedDaysLeft(p);
 }}
 
 function daysLeft(p) {{
@@ -1308,10 +1309,10 @@ function openModal(email) {{
 
   let daysLabel = '';
   if (p.overallDone) daysLabel = 'Program complete';
-  else if (dl === null) daysLabel = 'No upcoming deadlines on file';
-  else if (dl < 0) daysLabel = Math.abs(dl) + ' days past the nearest curriculum deadline';
-  else if (dl === 0) daysLabel = 'Due today &mdash; nearest curriculum deadline';
-  else daysLabel = dl + ' days until the nearest curriculum deadline';
+  else if (dl === null) daysLabel = 'No assignment date on file';
+  else if (dl < 0) daysLabel = Math.abs(dl) + ' days past deadline';
+  else if (dl === 0) daysLabel = 'Due today';
+  else daysLabel = dl + ' days remaining';
 
   const statusBadge = '<span class="status-badge ' +
     (status==='Completed'?'sb-completed':status==='On Track'?'sb-ontrack':'sb-overdue') +
