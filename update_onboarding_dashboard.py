@@ -129,7 +129,7 @@ def load_lms():
             parent = next((r for r in prows if r[COL_CURRIC_ID] == 'ACCELERATE'), None)
             assign_date  = parent[COL_ASSIGN_DT]  if parent else None
             overall_done = (parent[COL_CURRIC_CMP] == 'Yes') if parent else False
-            days_rem_lms = int(parent[COL_DAYS_REM]) if parent and parent[COL_DAYS_REM] is not None else None
+            days_rem_lms = None  # computed in JS from assignDate
 
             # Per sub-curriculum data
             curricula_data = {}
@@ -138,7 +138,6 @@ def load_lms():
                 if not crows:
                     continue
 
-                days_rem       = crows[0][COL_DAYS_REM]
                 curric_done    = crows[0][COL_CURRIC_CMP] == 'Yes'
                 item_rows      = [r for r in crows if r[COL_ITEM_TTL]]
 
@@ -161,7 +160,6 @@ def load_lms():
                 curricula_data[cid] = {
                     'title':    cname,
                     'complete': curric_done,
-                    'daysRem':  days_rem,
                     'pct':      pct,
                     'done':     done,
                     'total':    total,
@@ -631,24 +629,26 @@ function pct2color(p) {{
   return {{bg:'#EAF3DE', fg:'#27500A'}};
 }}
 
-function curricPillStyle(c) {{
+function curricPillStyle(c, p) {{
   if (!c) return 'background:#6b7280;color:#fff';
   if (c.complete) return 'background:#15803d;color:#fff';
-  if (c.daysRem !== null && c.daysRem <= 0) return 'background:#b91c1c;color:#fff';
+  const dl = computedDaysLeft(p);
+  if (dl !== null && dl <= 0) return 'background:#b91c1c;color:#fff';
   if (c.pct > 0)  return 'background:#1d4ed8;color:#fff';
   return 'background:#6b7280;color:#fff';
 }}
-function curricDotBg(c) {{
+function curricDotBg(c, p) {{
   if (!c) return '#6b7280';
   if (c.complete) return '#15803d';
-  if (c.daysRem !== null && c.daysRem <= 0) return '#b91c1c';
+  const dl = computedDaysLeft(p);
+  if (dl !== null && dl <= 0) return '#b91c1c';
   if (c.pct > 0) return '#1d4ed8';
   return '#6b7280';
 }}
 
 function overallPillStyle(p) {{
   if (p.overallDone) return 'background:#15803d;color:#fff;font-weight:700';
-  const anyOverdue = Object.values(p.curricula).some(c => c && !c.complete && c.daysRem !== null && c.daysRem <= 0);
+  const anyOverdue = !p.overallDone && computedDaysLeft(p) !== null && computedDaysLeft(p) <= 0;
   if (anyOverdue) return 'background:#b91c1c;color:#fff;font-weight:700';
   if (p.overallPct > 0) return 'background:#1d4ed8;color:#fff;font-weight:700';
   return 'background:#6b7280;color:#fff;font-weight:700';
@@ -660,30 +660,33 @@ function computeStatus(p) {{
   if (!ids.length) return 'Unknown';
   const anyOverdue = ids.some(cid => {{
     const c = p.curricula[cid];
-    return c && !c.complete && c.daysRem !== null && c.daysRem <= 0;
+    return c && !c.complete && computedDaysLeft(p) !== null && computedDaysLeft(p) <= 0;
   }});
   return anyOverdue ? 'Overdue' : 'On Track';
 }}
 
 function overdueCount(p) {{
-  return Object.values(p.curricula).filter(c => c && !c.complete && c.daysRem !== null && c.daysRem <= 0).length;
+  const dl = computedDaysLeft(p);
+  const incomplete = Object.values(p.curricula).filter(c => c && !c.complete).length;
+  return (dl !== null && dl <= 0 && incomplete > 0) ? incomplete : 0;
 }}
 
 function soonestDaysLeft(p) {{
-  const pending = Object.values(p.curricula).filter(c => c && !c.complete && c.daysRem !== null);
-  if (!pending.length) return null;
-  return Math.min(...pending.map(c => c.daysRem));
+  return computedDaysLeft(p);
 }}
 
 function daysLeft(p) {{
-  if (p.daysRem === null || p.daysRem === undefined) return null;
-  return p.daysRem;
+  return computedDaysLeft(p);
 }}
 
 function daysElapsed(p) {{
   if (!p.assignDate) return 0;
   const start = new Date(p.assignDate);
   return Math.max(0, Math.round((TODAY - start) / 86400000));
+}}
+function computedDaysLeft(p) {{
+  if (!p.assignDate) return null;
+  return PROGRAM_DAYS - daysElapsed(p);
 }}
 function expectedPct(p) {{
   return Math.min(100, Math.round(daysElapsed(p) / PROGRAM_DAYS * 100));
@@ -963,7 +966,7 @@ function renderTable() {{
     let dotsCell = '<td style="text-align:center;padding:5px 12px;"><div style="display:inline-flex;gap:3px;align-items:center;">';
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
-      const bg = curricDotBg(c);
+      const bg = curricDotBg(c, p);
       const lbl = CURRIC_NAMES[cid] + ': ' + (c ? c.pct + '%' : 'N/A');
       dotsCell += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + bg + ';" title="' + lbl + '"></span>';
     }});
@@ -1042,7 +1045,7 @@ function renderMarketChart() {{
     const mp = filtered.filter(p => p.market === m);
     const total    = mp.length;
     const complete = mp.filter(p => p.overallDone).length;
-    const overdue  = mp.filter(p => !p.overallDone && Object.values(p.curricula).some(c => c && !c.complete && c.daysRem !== null && c.daysRem <= 0)).length;
+    const overdue  = mp.filter(p => !p.overallDone && computedDaysLeft(p) !== null && computedDaysLeft(p) <= 0).length;
     const onTrack  = total - complete - overdue;
     return {{total, complete, onTrack, overdue}};
   }});
@@ -1112,7 +1115,7 @@ function renderCurricChart() {{
     const complete   = people.filter(c => c.complete).length;
     const inProgress = people.filter(c => !c.complete && c.pct > 0).length;
     const notStarted = people.filter(c => !c.complete && c.pct === 0).length;
-    const pastDue    = people.filter(c => !c.complete && c.daysRem !== null && c.daysRem <= 0).length;
+    const pastDue    = filtered.filter(p => {{ const c = p.curricula[cid]; return c && !c.complete && computedDaysLeft(p) !== null && computedDaysLeft(p) <= 0; }}).length;
     return {{total, complete, inProgress, notStarted, pastDue}};
   }});
   const ctx = document.getElementById('curricChart').getContext('2d');
@@ -1195,11 +1198,12 @@ function openModal(email) {{
   CURRIC_IDS.forEach(cid => {{
     const c = p.curricula[cid];
     if (!c) return;
-    const drBg = c.daysRem <= 0 ? 'var(--red-subtle)' : 'var(--green-subtle)';
-    const drColor = c.daysRem <= 0 ? 'var(--red)' : 'var(--green)';
-    const drLabel = c.daysRem === null ? '' :
+    const dl = computedDaysLeft(p);
+    const drBg = dl !== null && dl <= 0 ? 'var(--red-subtle)' : 'var(--green-subtle)';
+    const drColor = dl !== null && dl <= 0 ? 'var(--red)' : 'var(--green)';
+    const drLabel = dl === null ? '' :
       '<span class="days-badge" style="background:' + drBg + ';color:' + drColor + '">' +
-      (c.daysRem < 0 ? Math.abs(c.daysRem) + 'd overdue' : c.daysRem === 0 ? 'Due today' : c.daysRem + 'd left') + '</span>';
+      (dl < 0 ? Math.abs(dl) + 'd overdue' : dl === 0 ? 'Due today' : dl + 'd left') + '</span>';
     const doneBadge = c.complete ?
       '<span class="status-badge sb-completed" style="font-size:10px">Done</span>' : '';
 
@@ -1232,7 +1236,7 @@ function openModal(email) {{
     curricHtml += '<div class="curric-section">' +
       '<div class="curric-header" onclick="toggleCurric(this)">' +
         '<span class="curric-title">' + escHtml(c.title) + '</span>' +
-        '<span class="pct-pill" style="' + curricPillStyle(c) + ';font-size:11px">' + c.pct + '%</span>' +
+        '<span class="pct-pill" style="' + curricPillStyle(c, p) + ';font-size:11px">' + c.pct + '%</span>' +
         drLabel + doneBadge + missingLabel +
         '<span class="curric-chevron">&#9660;</span>' +
       '</div>' +
