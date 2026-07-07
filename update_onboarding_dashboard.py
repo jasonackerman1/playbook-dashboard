@@ -998,8 +998,8 @@ function renderTable() {{
   hRow += thS('Actual %','overall','overall-col');
   hRow += thS('Expected %','expected','overall-col');
   hRow += thS('Gap','gap','overall-col');
-  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Expected Focus<span class="info-btn" onclick="showInfo(event,\'expected-focus-info\')">?</span></th>';
-  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Biggest Gap<span class="info-btn" onclick="showInfo(event,\'biggest-gap-info\')">?</span></th>';
+  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Expected Focus<span class="info-btn" onclick="showInfo(event,\\'expected-focus-info\\')">?</span></th>';
+  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Biggest Gap<span class="info-btn" onclick="showInfo(event,\\'biggest-gap-info\\')">?</span></th>';
   hRow += '<th style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;">Curricula</th>';
   hRow += '</tr>';
   thead.innerHTML = hRow;
