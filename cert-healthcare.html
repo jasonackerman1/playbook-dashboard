@@ -104,7 +104,8 @@
   .roster-person:hover{background:var(--surface2);}
   .roster-person.active{background:#4f8ef711;}
   .roster-person.stripe-green{border-left-color:var(--green);}
-  .roster-person.stripe-blue{border-left-color:var(--accent);}
+  .roster-person.stripe-yellow{border-left-color:#f59e0b;}
+  .roster-person.stripe-red{border-left-color:var(--red);}
   .roster-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
   .roster-name-block{flex:1;min-width:0;}
   .roster-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -113,10 +114,10 @@
   .roster-pills{display:flex;gap:5px;flex-wrap:wrap;}
   .pill{font-size:8px;font-weight:700;border-radius:10px;padding:2px 7px;white-space:nowrap;letter-spacing:.03em;}
   .pill.green{color:var(--green);background:var(--green-subtle);border:1px solid var(--green)44;}
-  .pill.blue{color:var(--accent);background:var(--accent)18;border:1px solid var(--accent)44;}
-  .pill.gray{color:var(--muted);background:var(--surface2);border:1px solid var(--border);}
+  .pill.yellow{color:#b45309;background:#fef3c7;border:1px solid #f59e0b44;}
+  .pill.red{color:var(--red);background:var(--red-subtle);border:1px solid var(--red)44;}
   .roster-pct{font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;margin-left:8px;}
-  .roster-pct.pct-progress{color:var(--accent);}
+  .roster-pct.pct-progress{color:#f59e0b;}
   .roster-pct.pct-done{color:var(--green);}
 
   /* Manager group view */
@@ -145,8 +146,8 @@
   .detail-value{font-size:14px;font-weight:500;}
   .badge-status{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}
   .badge-status.certified{background:var(--green-subtle);color:var(--green);}
-  .badge-status.in-progress{background:rgba(79,142,247,0.10);color:var(--accent);border:1px solid rgba(79,142,247,0.27);}
-  .badge-status.not-certified{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+  .badge-status.in-progress{background:#fef3c7;color:#b45309;border:1px solid #f59e0b44;}
+  .badge-status.not-certified{background:var(--red-subtle);color:var(--red);border:1px solid var(--red)44;}
   .roster-bottom .badge-status{font-size:10px;padding:2px 8px;}
 
   /* Progress bars */
@@ -406,8 +407,8 @@ function fmtDate(d){
 }
 function pillClass(pct, total){
   if(pct === 100 || (total > 0 && pct >= 100)) return "green";
-  if(pct > 0) return "blue";
-  return "gray";
+  if(pct > 0) return "yellow";
+  return "red";
 }
 
 // ── Populate market dropdown ───────────────────────────────────────────────
@@ -637,7 +638,7 @@ function renderCharts(){
 function buildPersonCard(p){
   var fullName       = p.FirstName + " " + p.LastName;
   var status         = personStatus(p);
-  var stripe         = status === "Certified" ? " stripe-green" : status === "In Progress" ? " stripe-blue" : "";
+  var stripe         = status === "Certified" ? " stripe-green" : status === "In Progress" ? " stripe-yellow" : " stripe-red";
   var hcfClass       = pillClass(p.hcf.pct, p.hcf.total);
   var lsClass        = pillClass(p.ls.pct,  p.ls.total);
   var pctClass       = status === "Certified" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
