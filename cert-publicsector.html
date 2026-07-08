@@ -23,8 +23,13 @@
   body.light-mode select,body.light-mode input[type=date]{color-scheme:light;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}
-  .header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}
   .header-left{display:flex;align-items:center;gap:16px;}
+  .header-center{display:flex;justify-content:center;align-items:center;}
+  .kma-logo{height:38px;width:auto;display:block;}
+  .kma-logo-light{display:none;}
+  .light-mode .kma-logo-dark{display:none;}
+  .light-mode .kma-logo-light{display:block;}
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}
   .info-btn:hover{border-color:var(--accent);color:var(--accent);}
   .info-popover{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}
@@ -125,10 +130,14 @@
   <div class="header-left">
     <div>
       <h1>Public Sector <span>Certification Dashboard</span></h1>
-      <div class="header-date">Data as of May 2026</div>
+      <div class="header-date">Data as of June 25, 2026</div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;">
+  <div class="header-center">
+    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;">
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
