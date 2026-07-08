@@ -290,7 +290,7 @@ def generate_html(pb, hc, ps, ob):
     <div class="header-sub">Powered by TLG &middot; {today}</div>
   </div>
   <div class="header-center">
-    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
     <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div class="header-right">

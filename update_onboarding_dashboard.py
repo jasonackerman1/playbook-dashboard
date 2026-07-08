@@ -323,8 +323,7 @@ def generate_html(records):
   select:focus,input:focus{{border-color:var(--accent);}}
   .btn-reset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}}
   .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
-  .btn-tlg{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s;}}
-  .btn-tlg.active{{background:var(--red-subtle);border-color:var(--red);color:var(--red);}}
+
   .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
   .sort-btn:hover{{border-color:var(--accent);color:var(--text);}}
   .sort-btn.active{{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}}
@@ -474,7 +473,7 @@ def generate_html(records):
     <span class="data-badge" id="data-badge">{total} learners &middot; updated {file_date}</span>
   </div>
   <div class="header-center">
-    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
     <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div class="header-right">
@@ -508,9 +507,7 @@ def generate_html(records):
     <option value="pct-asc">Completion Low→High</option>
     <option value="days-asc">Most Urgent First</option>
   </select>
-  <input type="text" id="f-search" placeholder="Search name or manager..." oninput="applyFilters()" style="width:200px;">
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
-  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -569,15 +566,6 @@ def generate_html(records):
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);">
     <div>
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Curricula &#9632;</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;margin-right:4px;flex-shrink:0;"></span>Done</span>
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1d4ed8;margin-right:4px;flex-shrink:0;"></span>In Progress</span>
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Past Due</span>
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#6b7280;margin-right:4px;flex-shrink:0;"></span>Not Started</span>
-      </div>
-    </div>
-    <div>
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Playbook &#9679;</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
         <span class="leg"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px;flex-shrink:0;"></span>Using playbook</span>
@@ -591,6 +579,15 @@ def generate_html(records):
         <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;margin-right:4px;flex-shrink:0;"></span>On pace or ahead (0% or less)</span>
         <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b45309;margin-right:4px;flex-shrink:0;"></span>Check-in (1&ndash;40%)</span>
         <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Coaching needed (41%+)</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Curricula &#9632;</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;margin-right:4px;flex-shrink:0;"></span>Done</span>
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1d4ed8;margin-right:4px;flex-shrink:0;"></span>In Progress</span>
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Past Due</span>
+        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#6b7280;margin-right:4px;flex-shrink:0;"></span>Not Started</span>
       </div>
     </div>
   </div>
@@ -909,16 +906,30 @@ function toggleExportDrop() {{
 /* ── Table search ── */
 function filterTableRows() {{
   const q = (document.getElementById('table-search').value || '').toLowerCase();
-  document.querySelectorAll('#heatmap-body tr').forEach(row => {{
-    if (row.classList.contains('mgr-group-hdr-row')) return;
-    row.style.display = (!q || (row.dataset.name || '').includes(q)) ? '' : 'none';
-  }});
+  if (tableView === 'manager') {{
+    let showGroup = true;
+    document.querySelectorAll('#heatmap-body tr').forEach(row => {{
+      if (row.classList.contains('mgr-group-hdr-row')) {{
+        showGroup = !q || (row.dataset.manager || '').includes(q);
+        row.style.display = showGroup ? '' : 'none';
+      }} else {{
+        row.style.display = showGroup ? '' : 'none';
+      }}
+    }});
+  }} else {{
+    document.querySelectorAll('#heatmap-body tr').forEach(row => {{
+      row.style.display = (!q || (row.dataset.name || '').includes(q)) ? '' : 'none';
+    }});
+  }}
 }}
 
 function setTableView(v) {{
   tableView = v;
   document.getElementById('view-individual').classList.toggle('active', v === 'individual');
   document.getElementById('view-manager').classList.toggle('active', v === 'manager');
+  const searchEl = document.getElementById('table-search');
+  searchEl.placeholder = v === 'manager' ? 'Search manager...' : 'Search name...';
+  searchEl.value = '';
   renderTable();
 }}
 
@@ -943,19 +954,12 @@ function sortByCol(col) {{
   renderTable();
 }}
 
-/* ── TLG ── */
-function toggleTLG() {{
-  hideTLG = !hideTLG;
-  document.getElementById('btn-tlg').classList.toggle('active', hideTLG);
-  applyFilters();
-}}
 
 /* ── Filters ── */
 function resetFilters() {{
   document.getElementById('f-market').value = '';
   document.getElementById('f-status').value = '';
   document.getElementById('f-sort').value = 'name';
-  document.getElementById('f-search').value = '';
   document.getElementById('table-search').value = '';
   filterTableRows();
   applyFilters();
@@ -965,24 +969,19 @@ function applyFilters() {{
   const mkt    = document.getElementById('f-market').value;
   const status = document.getElementById('f-status').value;
   const sort   = document.getElementById('f-sort').value;
-  const search = document.getElementById('f-search').value.toLowerCase();
 
   filtered = PEOPLE.filter(p => {{
     if (hideTLG && TLG_SET.has(p.name.toLowerCase())) return false;
     if (mkt && p.market !== mkt) return false;
     const st = computeStatus(p);
     if (status && st !== status) return false;
-    if (search && !p.name.toLowerCase().includes(search) && !p.manager.toLowerCase().includes(search)) return false;
     return true;
   }});
 
-  if (sort === 'pct-desc') filtered.sort((a,b) => b.overallPct - a.overallPct);
-  else if (sort === 'pct-asc') filtered.sort((a,b) => a.overallPct - b.overallPct);
-  else if (sort === 'days-asc') filtered.sort((a,b) => {{
-    const da = daysLeft(a) ?? 999, db = daysLeft(b) ?? 999;
-    return da - db;
-  }});
-  else filtered.sort((a,b) => a.name.localeCompare(b.name));
+  if (sort === 'pct-desc') {{ filtered.sort((a,b) => b.overallPct - a.overallPct); tableSort = {{col:'overall', dir:'desc'}}; }}
+  else if (sort === 'pct-asc') {{ filtered.sort((a,b) => a.overallPct - b.overallPct); tableSort = {{col:'overall', dir:'asc'}}; }}
+  else if (sort === 'days-asc') {{ filtered.sort((a,b) => {{ const da = daysLeft(a) ?? 999, db = daysLeft(b) ?? 999; return da - db; }}); tableSort = {{col:'days', dir:'asc'}}; }}
+  else {{ filtered.sort((a,b) => a.name.localeCompare(b.name)); tableSort = {{col:'name', dir:'asc'}}; }}
 
   renderStats();
   renderTable();
@@ -1141,7 +1140,7 @@ function renderTable() {{
       const avg = Math.round(team.reduce((s, p) => s + p.overallPct, 0) / team.length);
       const od = team.filter(p => computeStatus(p) === 'Overdue').length;
       const odStr = od > 0 ? ' &nbsp;·&nbsp; <span style="color:var(--red);font-weight:600">' + od + ' overdue</span>' : '';
-      html += '<tr class="mgr-group-hdr-row"><td colspan="' + colCount + '">' +
+      html += '<tr class="mgr-group-hdr-row" data-manager="' + escHtml(mgr.toLowerCase()) + '"><td colspan="' + colCount + '">' +
         '<div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">' +
         '<span style="font-weight:700;font-size:13px;">' + escHtml(mgr) + '</span>' +
         '<span style="font-size:11px;color:var(--muted);">' + team.length + ' learner' + (team.length !== 1 ? 's' : '') + ' &nbsp;·&nbsp; avg ' + avg + '%' + odStr + ' &nbsp;<span class="mgr-chevron">&#9660;</span></span>' +

@@ -655,7 +655,7 @@ html = f"""<!DOCTYPE html>
     </div>
   </div>
   <div class="header-center">
-    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
     <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;">

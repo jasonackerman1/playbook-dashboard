@@ -1193,7 +1193,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
     </div>
   </div>
   <div class="header-center">
-    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
     <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;">
@@ -2241,7 +2241,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
     </div>
   </div>
   <div class="header-center">
-    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
     <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;">
