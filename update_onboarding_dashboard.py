@@ -246,6 +246,8 @@ def generate_html(records):
     people_json = json.dumps(people, default=str)
     today_str   = date.today().isoformat()
     file_date   = date.today().strftime('%B %d, %Y')
+    _od = date.today()
+    header_date_label = f'{_od.strftime("%B")} {_od.day}, {_od.year}'
     total       = len(people)
 
     curric_ids   = json.dumps([c[0] for c in CURRICULA])
@@ -279,11 +281,17 @@ def generate_html(records):
   body{{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}}
 
   /* ── Header ── */
-  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
+  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}}
   .header-left{{display:flex;align-items:center;gap:16px;}}
-  .header-right{{display:flex;align-items:center;gap:8px;}}
+  .header-center{{display:flex;justify-content:center;align-items:center;}}
+  .header-right{{display:flex;justify-content:flex-end;align-items:center;gap:8px;}}
+  .kma-logo{{height:38px;width:auto;display:block;}}
+  .kma-logo-light{{display:none;}}
+  .light-mode .kma-logo-dark{{display:none;}}
+  .light-mode .kma-logo-light{{display:block;}}
   .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
   .header h1 span{{color:var(--muted);font-weight:400;}}
+  .header-date{{font-size:11px;color:var(--muted);margin-top:2px;}}
   .data-badge{{font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;white-space:nowrap;}}
 
   /* ── Buttons ── */
@@ -461,8 +469,13 @@ def generate_html(records):
   <div class="header-left">
     <div>
       <h1>Accelerate Onboarding</h1>
+      <div class="header-date">Data as of {header_date_label}</div>
     </div>
     <span class="data-badge" id="data-badge">{total} learners &middot; updated {file_date}</span>
+  </div>
+  <div class="header-center">
+    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div class="header-right">
     <div class="export-drop print-hide" id="export-drop">

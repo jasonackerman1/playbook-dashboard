@@ -15,6 +15,7 @@ import os
 import re
 import json
 import sys
+import datetime
 import pandas as pd
 from pathlib import Path
 
@@ -97,6 +98,9 @@ total_rows = len(records)
 months     = sorted(set(r['Month'] for r in records))
 print(f"\nTotal rows combined: {total_rows:,}")
 print(f"Months covered: {', '.join(months)}")
+
+_pb_dt = datetime.datetime.fromtimestamp(os.path.getmtime(str(files[-1][1])))
+pb_date_label = f'{_pb_dt.strftime("%B")} {_pb_dt.day}, {_pb_dt.year}'
 
 # ── Playbook Intelligence: static analysis content ────────────────────────────
 PLAYBOOK_ANALYSIS = {
@@ -479,10 +483,16 @@ html = f"""<!DOCTYPE html>
   *{{box-sizing:border-box;margin:0;padding:0;}}
   body{{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}}
 
-  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
+  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}}
   .header-left{{display:flex;align-items:center;gap:16px;}}
+  .header-center{{display:flex;justify-content:center;align-items:center;}}
+  .kma-logo{{height:38px;width:auto;display:block;}}
+  .kma-logo-light{{display:none;}}
+  .light-mode .kma-logo-dark{{display:none;}}
+  .light-mode .kma-logo-light{{display:block;}}
   .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
   .header h1 span{{color:var(--muted);font-weight:400;}}
+  .header-date{{font-size:11px;color:var(--muted);margin-top:2px;}}
   .badges{{display:flex;gap:8px;flex-wrap:wrap;}}
   .badge{{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--muted);}}
 
@@ -639,9 +649,16 @@ html = f"""<!DOCTYPE html>
 
 <div class="header">
   <div class="header-left">
-    <h1>Playbook Traffic Dashboard</h1>
+    <div>
+      <h1>Playbook Traffic Dashboard</h1>
+      <div class="header-date">Data as of {pb_date_label}</div>
+    </div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+  <div class="header-center">
+    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+  </div>
+  <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;">
     <span class="badge" id="badge-asof"></span>
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>

@@ -263,7 +263,6 @@ function setupPrintHeader(title, subtitle){
   const from=sel('f-date-from').value||'', to=sel('f-date-to').value||'';
   const parts=[`Status: ${statusLabel}`,`Market: ${market}`];
   if(from||to) parts.push(`Dates: ${from||'-'} to ${to||'-'}`);
-  if(hideTLG) parts.push('TLG hidden');
   sel('ph-filters').textContent=parts.join('  |  ');
 }
 function doPrint(noSummary){
@@ -375,15 +374,8 @@ function showInfo(e, key){
   pop.style.left=Math.min(r.left, window.innerWidth-280)+'px';
   e.stopPropagation();
 }
-function toggleTLG(){
-  hideTLG=!hideTLG;
-  sel('btn-tlg').classList.toggle('active', hideTLG);
-  sel('btn-tlg').textContent=hideTLG?'Show TLG':'Hide TLG';
-  applyFilters();
-}
 function resetFilters(){
   ['f-status','f-market','f-date-from','f-date-to'].forEach(id=>sel(id).value='');
-  if(!hideTLG){ hideTLG=true; sel('btn-tlg').classList.add('active'); sel('btn-tlg').textContent='Show TLG'; }
   applyFilters();
 }
 function applyFilters(){
@@ -392,7 +384,7 @@ function applyFilters(){
   const from=sel('f-date-from').value;
   const to=sel('f-date-to').value;
   filtered=RAW.filter(r=>{
-    if(hideTLG&&TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
+    if(TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
     if(status&&r.PublicSector!==status) return false;
     if(market&&r.Market!==market) return false;
     if(from&&r.Date&&r.Date<from) return false;

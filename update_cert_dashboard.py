@@ -6,6 +6,7 @@ import openpyxl
 import os
 import re
 import json
+import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -217,8 +218,13 @@ def generate_html(slug, name, rows):
   *{{box-sizing:border-box;margin:0;padding:0;}}
   body{{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}}
 
-  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
+  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}}
   .header-left{{display:flex;align-items:center;gap:16px;}}
+  .header-center{{display:flex;justify-content:center;align-items:center;}}
+  .kma-logo{{height:38px;width:auto;display:block;}}
+  .kma-logo-light{{display:none;}}
+  .light-mode .kma-logo-dark{{display:none;}}
+  .light-mode .kma-logo-light{{display:block;}}
   .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
   .info-btn:hover{{border-color:var(--accent);color:var(--accent);}}
   .info-popover{{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}}
@@ -1076,8 +1082,13 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   body.light-mode select,body.light-mode input[type=date]{{color-scheme:light;}}
   *{{box-sizing:border-box;margin:0;padding:0;}}
   body{{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}}
-  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
+  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}}
   .header-left{{display:flex;align-items:center;gap:16px;}}
+  .header-center{{display:flex;justify-content:center;align-items:center;}}
+  .kma-logo{{height:38px;width:auto;display:block;}}
+  .kma-logo-light{{display:none;}}
+  .light-mode .kma-logo-dark{{display:none;}}
+  .light-mode .kma-logo-light{{display:block;}}
   .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
   .info-btn:hover{{border-color:var(--accent);color:var(--accent);}}
   .info-popover{{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}}
@@ -1181,7 +1192,11 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
       <div class="header-date">Data as of {date_label}</div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;">
+  <div class="header-center">
+    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;">
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
@@ -1316,7 +1331,6 @@ function setupPrintHeader(title, subtitle){{
   const from=sel('f-date-from').value||'', to=sel('f-date-to').value||'';
   const parts=[`Status: ${{statusLabel}}`,`Market: ${{market}}`];
   if(from||to) parts.push(`Dates: ${{from||'-'}} to ${{to||'-'}}`);
-  if(hideTLG) parts.push('TLG hidden');
   sel('ph-filters').textContent=parts.join('  |  ');
 }}
 function doPrint(noSummary){{
@@ -1428,15 +1442,8 @@ function showInfo(e, key){{
   pop.style.left=Math.min(r.left, window.innerWidth-280)+'px';
   e.stopPropagation();
 }}
-function toggleTLG(){{
-  hideTLG=!hideTLG;
-  sel('btn-tlg').classList.toggle('active', hideTLG);
-  sel('btn-tlg').textContent=hideTLG?'Show TLG':'Hide TLG';
-  applyFilters();
-}}
 function resetFilters(){{
   ['f-status','f-market','f-date-from','f-date-to'].forEach(id=>sel(id).value='');
-  if(!hideTLG){{ hideTLG=true; sel('btn-tlg').classList.add('active'); sel('btn-tlg').textContent='Show TLG'; }}
   applyFilters();
 }}
 function applyFilters(){{
@@ -1445,7 +1452,7 @@ function applyFilters(){{
   const from=sel('f-date-from').value;
   const to=sel('f-date-to').value;
   filtered=RAW.filter(r=>{{
-    if(hideTLG&&TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
+    if(TLG_SET.has(r.FirstName+' '+r.LastName)) return false;
     if(status&&r.PublicSector!==status) return false;
     if(market&&r.Market!==market) return false;
     if(from&&r.Date&&r.Date<from) return false;
@@ -1781,7 +1788,8 @@ def main():
         print(f'  → {len(rows)} people  ({cert_count} certified, {ip_count} in progress, {len(rows)-cert_count-ip_count} not started)')
         import datetime, time
         latest_mtime = max(os.path.getmtime(hc_cert_path), os.path.getmtime(hc_learn_path))
-        hc_date_label = datetime.datetime.fromtimestamp(latest_mtime).strftime('%B %Y')
+        _dt = datetime.datetime.fromtimestamp(latest_mtime)
+        hc_date_label = f'{_dt.strftime("%B")} {_dt.day}, {_dt.year}'
         html = generate_html_healthcare_v2('healthcare', 'Healthcare', rows, hc_date_label)
         out  = 'cert-healthcare.html'
         with open(out, 'w', encoding='utf-8') as fh:
@@ -1848,7 +1856,8 @@ def main():
         elif slug == 'publicsector':
             ps_cert = sum(1 for r in deduped if r['PublicSector'] == 'Yes')
             print(f'  → {len(deduped)} unique people  ({ps_cert} certified, {len(deduped)-ps_cert} not yet)')
-            ps_date_label = fmt_date_label(extract_file_date(fnames[-1]))
+            _ps_dt = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(cert_dir, fnames[-1])))
+            ps_date_label = f'{_ps_dt.strftime("%B")} {_ps_dt.day}, {_ps_dt.year}'
             html = generate_html_publicsector(slug, vert_name, deduped, ps_date_label)
 
         out  = f'cert-{slug}.html'
@@ -2231,7 +2240,11 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
       <div class="header-date">Data as of {date_label}</div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;">
+  <div class="header-center">
+    <img src="https://cdn.jsdelivr.net/gh/BradleyAPierce/RTDX_Images/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;">
     <a href="playbook.html?playbook=Healthcare+Playbook" target="_blank" class="btn-theme print-hide" style="text-decoration:none;white-space:nowrap;">&#128200; Healthcare Playbook Metrics</a>
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
