@@ -737,15 +737,15 @@ function renderOnDeck(){
     document.getElementById('onDeckBody').innerHTML = '<div class="empty-state" style="padding:32px 0;"><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Nothing on deck</div><div style="font-size:13px;">All in-window reps are either on the leaderboard or have no cohort deals yet.</div></div>';
     return;
   }
-  let html = '<div class="table-scroll"><table><thead><tr><th>Rep</th><th>Account</th><th>Close Date</th><th>Program Day</th><th>Curriculum</th><th>Sales Qualified By</th><th>Engage By</th><th>Amount</th></tr></thead><tbody>';
+  let html = '<div class="table-scroll"><table><thead><tr><th>Rep</th><th>Account</th><th>Close Date</th><th>Program Day</th><th>What\'s Missing</th><th>Sales Qualified By</th><th>Engage By</th><th>Amount</th></tr></thead><tbody>';
   Object.entries(byRep).forEach(function([name, deals]){
     deals.sort((a,b) => b.amount - a.amount);
     deals.forEach(function(d, i){
       const missing = [];
-      if(d.curriculumComplete !== 'Yes') missing.push('<span class="badge badge-no">Curriculum</span>');
-      if(d.assignToCloseDays === null || d.assignToCloseDays > WINDOW_DAYS) missing.push('<span class="badge badge-out">Outside window</span>');
-      if(d.salesQualifiedBy && d.salesQualifiedBy !== d.name) missing.push('<span class="badge" style="background:rgba(255,160,0,.18);color:var(--accent3);">SQ handed off</span>');
-      if(!d.salesQualifiedBy) missing.push('<span class="badge" style="background:rgba(255,160,0,.18);color:var(--accent3);">SQ not recorded</span>');
+      if(d.curriculumComplete !== 'Yes') missing.push('<span class="badge badge-no">Curriculum not done</span>');
+      if(d.assignToCloseDays === null || d.assignToCloseDays > WINDOW_DAYS) missing.push('<span class="badge badge-out">Outside 45-day window</span>');
+      if(d.salesQualifiedBy && d.salesQualifiedBy !== d.name) missing.push('<span class="badge" style="background:rgba(255,160,0,.18);color:var(--accent3);">Sales Qualified handed off</span>');
+      if(!d.salesQualifiedBy) missing.push('<span class="badge" style="background:rgba(255,160,0,.18);color:var(--accent3);">Sales Qualified not recorded</span>');
       if(d.engageBy && d.engageBy !== d.name) missing.push('<span class="badge" style="background:rgba(255,100,80,.18);color:var(--red);">Engage handed off</span>');
       if(!d.engageBy) missing.push('<span class="badge" style="background:rgba(255,100,80,.18);color:var(--red);">Engage not recorded</span>');
       html +=
