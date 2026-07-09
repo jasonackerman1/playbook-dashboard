@@ -603,17 +603,17 @@ const leaderboardRows = DEALS.filter(d =>
 const totalAmount = leaderboardRows.reduce((s,d) => s+d.amount, 0);
 const onBoardReps = new Set(leaderboardRows.map(d => d.name)).size;
 const stats = [
-  {label:'Reps In '+WINDOW_DAYS+'-Day Window',     value:HIRES.filter(h=>h.eligible).length,            sub:'of '+HIRES.length+' cohort members'},
-  {label:'Curriculum Complete + In Window',          value:HIRES.filter(h=>h.leaderboardEligible).length, sub:'eligible to appear on the board'},
-  {label:'Reps On The Board',                        value:onBoardReps,                                    sub:'eligible with a qualifying Closed Won deal'},
-  {label:'Qualifying Deals',                         value:leaderboardRows.length,                         sub:'in-window, curriculum complete, self-progressed'},
-  {label:'Leaderboard Revenue',                      value:fmtMoney(totalAmount),                          sub:'total across qualifying deals'},
-  {label:'Salesforce-Verified',                      value:VERIFICATION.filter(v=>v.isCreatedBy).length+' / '+VERIFICATION.length, sub:'cohort members with a created opportunity'},
+  {label:'Reps In '+WINDOW_DAYS+'-Day Window',     value:HIRES.filter(h=>h.eligible).length,            sub:'of '+HIRES.length+' cohort members',              color:'var(--teal)'},
+  {label:'Curriculum Complete + In Window',          value:HIRES.filter(h=>h.leaderboardEligible).length, sub:'eligible to appear on the board',                 color:'var(--accent3)'},
+  {label:'Reps On The Board',                        value:onBoardReps,                                    sub:'eligible with a qualifying Closed Won deal',      color:'var(--green)'},
+  {label:'Qualifying Deals',                         value:leaderboardRows.length,                         sub:'in-window, curriculum complete, self-progressed', color:'var(--accent)'},
+  {label:'Leaderboard Revenue',                      value:fmtMoney(totalAmount),                          sub:'total across qualifying deals',                   color:'var(--accent2)'},
+  {label:'Salesforce-Verified',                      value:VERIFICATION.filter(v=>v.isCreatedBy).length+' / '+VERIFICATION.length, sub:'cohort members with a created opportunity', color:'var(--teal)'},
 ];
 document.getElementById('statStrip').innerHTML = stats.map(s =>
   '<div class="stat">' +
     '<div class="stat-label">'+s.label+'</div>' +
-    '<div class="stat-value">'+s.value+'</div>' +
+    '<div class="stat-value" style="color:'+s.color+'">'+s.value+'</div>' +
     '<div class="stat-sub">'+s.sub+'</div>' +
   '</div>'
 ).join('');
