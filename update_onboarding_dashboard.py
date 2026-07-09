@@ -297,6 +297,16 @@ def _load_salesforce(records):
         raw_date = str(row.get('Close Date', ''))
         m = re.match(r'(\d{1,2})/(\d{1,2})/(\d{4})', raw_date)
         close_date = f'{int(m.group(3)):04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}' if m else raw_date[:10]
+        # Only count deals closed within the rep's first 45 days of the program
+        assign_date = records[email].get('assignDate')
+        if assign_date and close_date:
+            try:
+                from datetime import date as _d
+                atc = (_d.fromisoformat(close_date) - _d.fromisoformat(assign_date)).days
+                if atc < 0 or atc > 45:
+                    continue
+            except Exception:
+                continue
         account = row.get('Account Name', '').strip().title()
         # Keep the earliest closed deal (true "first sale")
         if email not in sales or close_date < sales[email]['closeDate']:
