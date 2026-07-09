@@ -146,6 +146,7 @@ def _parse_lms(path):
             'branch':            str(row[COL_BRANCH]   or '').strip(),
             'email':             email,
             'hireDate':          hire_date,
+            'assignDate':        assign_dt,
             'curriculumComplete': 'Yes' if str(row[COL_CURRIC_COMPLETE] or '').strip().lower() == 'yes' else 'No',
         }
 
@@ -245,6 +246,12 @@ def _build_data(cw_rows, stage_idx, hires, cohort_start):
         except Exception:
             htc = None
 
+        try:
+            ad = hire.get('assignDate')
+            atc = (_d.fromisoformat(close_date) - _d.fromisoformat(ad)).days if ad and close_date else None
+        except Exception:
+            atc = None
+
         si = stage_idx.get(opp_id, {})
         deals.append({
             'name':               hire['name'],
@@ -255,8 +262,10 @@ def _build_data(cw_rows, stage_idx, hires, cohort_start):
             'revenueType':        row.get('Revenue Type', '').strip(),
             'accountName':        row.get('Account Name', '').strip(),
             'hireDate':           hire['hireDate'],
+            'assignDate':         hire.get('assignDate'),
             'closeDate':          close_date,
             'hireToCloseDays':    htc,
+            'assignToCloseDays':  atc,
             'curriculumComplete': hire['curriculumComplete'],
             'amount':             round(amount, 2),
             'oppId':              opp_id,
@@ -451,7 +460,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   <div class="data-note">
     <span style="font-size:15px;flex-shrink:0;">&#9432;</span>
-    <span>To appear on this board, a rep must close a deal within their first 45 days on the job, complete the Accelerate curriculum, and personally move that deal through both Sales Qualified and Engage. Deals handed off to a manager or teammate do not count.</span>
+    <span>To appear on this board, a rep must close a deal within their first 45 days of the Accelerate program, complete the curriculum, and personally move that deal through both Sales Qualified and Engage. Deals handed off to a manager or teammate do not count.</span>
   </div>
 
   <div class="data-note" id="dataNote"></div>
@@ -463,7 +472,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="section-head">
       <div>
         <h2>Closed-Won Revenue by Market <span class="count" id="marketCount">0</span></h2>
-        <p>Closed Won revenue for the Accelerate cohort from __COHORT_LABEL_LONG__ onward, rolled up by market.</p>
+        <p>Closed Won revenue for the Accelerate cohort from __COHORT_LABEL_LONG__ onward, rolled up by market. Includes all cohort deals, not just leaderboard-qualifying wins.</p>
       </div>
     </div>
     <div id="marketChart" class="market-chart"></div>
@@ -474,19 +483,30 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="section-head">
       <div>
         <h2>Closed-Won Leaderboard <span class="count" id="leaderboardCount">0</span></h2>
-        <p>Reps hired in the last __WINDOW_DAYS__ days who have <strong>completed the Accelerate curriculum</strong>, have at least one Closed Won opportunity carrying a dollar amount, and <strong>personally moved that opportunity through Sales Qualified and Engage themselves</strong>. Each qualifying win is its own row.</p>
+        <p>Reps who closed a deal within their first __WINDOW_DAYS__ days of the Accelerate program, completed the curriculum, and personally moved the deal through Sales Qualified and Engage. Each qualifying win is its own row.</p>
       </div>
       <input class="search-box" id="leaderboardSearch" placeholder="Filter by rep or account&hellip;" oninput="renderLeaderboard()">
     </div>
     <div id="leaderboardBody"></div>
   </div>
 
+  <!-- ON DECK -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>On Deck <span class="count" id="onDeckCount">0</span></h2>
+        <p>Reps currently inside their __WINDOW_DAYS__-day window with deals that don't yet qualify for the leaderboard. Shows what each deal is still missing.</p>
+      </div>
+    </div>
+    <div id="onDeckBody"></div>
+  </div>
+
   <!-- WINDOW TRACKER -->
   <div class="section">
     <div class="section-head">
       <div>
-        <h2>New Hire Window Tracker <span class="count" id="trackerCount">0</span></h2>
-        <p>Every Accelerate cohort member and where they sit against the __WINDOW_DAYS__-day clock, from hire date to today. Leaderboard eligibility requires both an open window and a completed curriculum.</p>
+        <h2>Program Window Tracker <span class="count" id="trackerCount">0</span></h2>
+        <p>Every Accelerate cohort member and where they sit against the __WINDOW_DAYS__-day clock, from program start to today. Leaderboard eligibility requires both an open window and a completed curriculum. Reps past day __WINDOW_DAYS__ are grouped separately below.</p>
       </div>
       <input class="search-box" id="trackerSearch" placeholder="Filter by rep&hellip;" oninput="renderTracker()">
     </div>
@@ -496,13 +516,28 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
           <th data-key="name" data-type="string">Rep</th>
           <th data-key="jobTitle" data-type="string">Job Title</th>
           <th data-key="market" data-type="string">Market</th>
-          <th data-key="hireDate" data-type="date">Hire Date</th>
-          <th data-key="daysSince" data-type="number">Days Since Hire</th>
+          <th data-key="assignDate" data-type="date">Program Start</th>
+          <th data-key="daysSince" data-type="number">Days in Program</th>
           <th data-key="eligible" data-type="string">__WINDOW_DAYS__-Day Window</th>
           <th data-key="curriculumComplete" data-type="string">Curriculum</th>
         </tr></thead>
         <tbody id="trackerTbody"></tbody>
       </table>
+    </div>
+    <div id="expiredTrackerWrap" style="margin-top:8px;">
+      <button id="expiredToggle" onclick="toggleExpired()" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:6px 14px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <span id="expiredToggleIcon">&#9660;</span> Show expired reps (<span id="expiredCount">0</span> past day __WINDOW_DAYS__)
+      </button>
+      <div id="expiredTrackerBody" style="display:none;margin-top:8px;">
+        <div class="table-scroll">
+          <table id="expiredTable">
+            <thead><tr>
+              <th>Rep</th><th>Job Title</th><th>Market</th><th>Program Start</th><th>Days in Program</th><th>Status</th><th>Curriculum</th>
+            </tr></thead>
+            <tbody id="expiredTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -522,9 +557,9 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
           <th data-key="accountName" data-type="string">Account</th>
           <th data-key="accountDesignation" data-type="string">Designation</th>
           <th data-key="revenueType" data-type="string">Revenue Type</th>
-          <th data-key="hireDate" data-type="date">Hire Date</th>
+          <th data-key="assignDate" data-type="date">Program Start</th>
           <th data-key="closeDate" data-type="date">Close Date</th>
-          <th data-key="hireToCloseDays" data-type="number">Hire&rarr;Close (days)</th>
+          <th data-key="assignToCloseDays" data-type="number">Program Day</th>
           <th data-key="salesQualifiedBy" data-type="string">Sales Qualified</th>
           <th data-key="engageBy" data-type="string">Engage</th>
           <th data-key="amount" data-type="number">Amount</th>
@@ -585,16 +620,20 @@ document.getElementById('dataNote').innerHTML =
   '. Closed Won and opportunity data is scoped to deals closed on or after __COHORT_LABEL_LONG__.</strong></span>';
 
 // ---- Augment hires ----
+const hireMap = {};
 HIRES.forEach(h => {
-  h.daysSince = h.hireDate ? daysBetween(parseDate(h.hireDate), TODAY) : 999;
+  h.daysSince = h.assignDate ? daysBetween(parseDate(h.assignDate), TODAY) : 999;
   h.eligible  = h.daysSince >= 0 && h.daysSince <= WINDOW_DAYS;
   h.curriculumOk = h.curriculumComplete === 'Yes';
   h.leaderboardEligible = h.eligible && h.curriculumOk;
+  hireMap[h.name] = h;
 });
 
-const eligibleNames = new Set(HIRES.filter(h => h.leaderboardEligible).map(h => h.name));
 const leaderboardRows = DEALS.filter(d =>
-  eligibleNames.has(d.name) &&
+  d.assignToCloseDays !== null &&
+  d.assignToCloseDays >= 0 &&
+  d.assignToCloseDays <= WINDOW_DAYS &&
+  d.curriculumComplete === 'Yes' &&
   d.salesQualifiedBy === d.name &&
   d.engageBy === d.name
 );
@@ -658,12 +697,12 @@ function renderLeaderboard(){
     el.innerHTML = '<div class="empty-state">' +
       '<div style="font-size:22px;margin-bottom:10px;">&#8212;</div>' +
       '<div style="font-size:14px;font-weight:600;margin-bottom:8px;">No qualifying wins yet</div>' +
-      '<div style="font-size:13px;max-width:560px;margin:0 auto;line-height:1.6;">No rep currently inside the '+WINDOW_DAYS+'-day hire window is curriculum-complete, sitting on a Closed Won deal with a dollar amount, and shown as having personally moved that deal through Sales Qualified and Engage. This panel updates itself the moment all three line up &mdash; check the Window Tracker and Closed-Won History below for where each rep and deal currently stand.</div>' +
+      '<div style="font-size:13px;max-width:560px;margin:0 auto;line-height:1.6;">No rep has yet closed a deal within their first '+WINDOW_DAYS+' days of the Accelerate program while also being curriculum-complete and having personally moved the deal through Sales Qualified and Engage. Check the On Deck and Program Window Tracker sections below for current standings.</div>' +
     '</div>';
     return;
   }
   el.innerHTML = '<div class="table-scroll"><table>' +
-    '<thead><tr><th>Rep</th><th>Job Title</th><th>Market</th><th>Designation</th><th>Revenue Type</th><th>Hire Date</th><th>Close Date</th><th>Hire&rarr;Close</th><th>Curriculum</th><th>Amount</th></tr></thead>' +
+    '<thead><tr><th>Rep</th><th>Job Title</th><th>Market</th><th>Designation</th><th>Revenue Type</th><th>Program Start</th><th>Close Date</th><th>Program Day</th><th>Curriculum</th><th>Amount</th></tr></thead>' +
     '<tbody>' + rows.map(d =>
       '<tr>' +
         '<td class="td-name">'+d.name+'</td>' +
@@ -671,9 +710,9 @@ function renderLeaderboard(){
         '<td class="td-muted">'+d.market.replace(' Sls','')+'</td>' +
         '<td><span class="badge '+(d.accountDesignation.toLowerCase()==='growth'?'badge-growth':'badge-retention')+'">'+(d.accountDesignation||'&#8212;')+'</span></td>' +
         '<td class="td-muted">'+d.revenueType+'</td>' +
-        '<td class="td-muted">'+fmtDate(d.hireDate)+'</td>' +
+        '<td class="td-muted">'+fmtDate(d.assignDate)+'</td>' +
         '<td class="td-muted">'+fmtDate(d.closeDate)+'</td>' +
-        '<td class="td-num">'+(d.hireToCloseDays!==null?d.hireToCloseDays+'d':'&#8212;')+'</td>' +
+        '<td class="td-num">'+(d.assignToCloseDays!==null?d.assignToCloseDays+'d':'&#8212;')+'</td>' +
         '<td><span class="badge '+(d.curriculumComplete==='Yes'?'badge-yes':'badge-no')+'">'+d.curriculumComplete+'</span></td>' +
         '<td class="td-amount">'+fmtMoney(d.amount)+'</td>' +
       '</tr>'
@@ -681,42 +720,108 @@ function renderLeaderboard(){
 }
 renderLeaderboard();
 
+// ---- On Deck ----
+function renderOnDeck(){
+  const lbSet = new Set(leaderboardRows.map(d => d.oppId));
+  const inWindowNames = new Set(HIRES.filter(h => h.eligible).map(h => h.name));
+  const onDeckDeals = DEALS.filter(d => inWindowNames.has(d.name) && !lbSet.has(d.oppId));
+  const byRep = {};
+  onDeckDeals.forEach(d => {
+    if(!byRep[d.name]) byRep[d.name] = [];
+    byRep[d.name].push(d);
+  });
+  const readyReps = HIRES.filter(h => h.eligible && h.curriculumOk && !onDeckDeals.some(d => d.name === h.name) && !leaderboardRows.some(d => d.name === h.name));
+  const totalCount = Object.keys(byRep).length + readyReps.length;
+  document.getElementById('onDeckCount').textContent = totalCount;
+  if(!totalCount){
+    document.getElementById('onDeckBody').innerHTML = '<div class="empty-state" style="padding:32px 0;"><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Nothing on deck</div><div style="font-size:13px;">All in-window reps are either on the leaderboard or have no cohort deals yet.</div></div>';
+    return;
+  }
+  let html = '<div class="table-scroll"><table><thead><tr><th>Rep</th><th>Account</th><th>Close Date</th><th>Program Day</th><th>Curriculum</th><th>Sales Qualified By</th><th>Engage By</th><th>Amount</th></tr></thead><tbody>';
+  Object.entries(byRep).forEach(function([name, deals]){
+    deals.sort((a,b) => b.amount - a.amount);
+    deals.forEach(function(d, i){
+      const missing = [];
+      if(d.curriculumComplete !== 'Yes') missing.push('<span class="badge badge-no">Curriculum</span>');
+      if(d.assignToCloseDays === null || d.assignToCloseDays > WINDOW_DAYS) missing.push('<span class="badge badge-out">Outside window</span>');
+      if(d.salesQualifiedBy && d.salesQualifiedBy !== d.name) missing.push('<span class="badge" style="background:rgba(255,160,0,.18);color:var(--accent3);">SQ handed off</span>');
+      if(!d.salesQualifiedBy) missing.push('<span class="badge" style="background:rgba(255,160,0,.18);color:var(--accent3);">SQ not recorded</span>');
+      if(d.engageBy && d.engageBy !== d.name) missing.push('<span class="badge" style="background:rgba(255,100,80,.18);color:var(--red);">Engage handed off</span>');
+      if(!d.engageBy) missing.push('<span class="badge" style="background:rgba(255,100,80,.18);color:var(--red);">Engage not recorded</span>');
+      html +=
+        '<tr>' +
+        (i===0 ? '<td class="td-name" rowspan="'+deals.length+'">'+name+'</td>' : '') +
+        '<td>'+d.accountName+'</td>' +
+        '<td class="td-muted">'+fmtDate(d.closeDate)+'</td>' +
+        '<td class="td-num">'+(d.assignToCloseDays!==null?d.assignToCloseDays+'d':'&#8212;')+'</td>' +
+        '<td>'+missing.join(' ')+'</td>' +
+        '<td class="'+(d.salesQualifiedBy===d.name?'td-self':'td-muted')+'">'+(d.salesQualifiedBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
+        '<td class="'+(d.engageBy===d.name?'td-self':'td-muted')+'">'+(d.engageBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
+        '<td class="td-amount">'+fmtMoney(d.amount)+'</td>' +
+        '</tr>';
+    });
+  });
+  readyReps.forEach(function(h){
+    html +=
+      '<tr>' +
+      '<td class="td-name">'+h.name+'</td>' +
+      '<td colspan="7" class="td-muted" style="font-style:italic;">Curriculum complete, in window &mdash; no cohort deals yet</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('onDeckBody').innerHTML = html;
+}
+renderOnDeck();
+
 // ---- Window Tracker ----
 let trackerSort = {key:'daysSince', dir:1};
+function _trackerRow(h){
+  const pct   = Math.min(100, Math.max(0, h.daysSince/WINDOW_DAYS*100));
+  const color = !h.eligible ? 'var(--border)' : pct<60 ? 'var(--teal)' : pct<90 ? 'var(--accent3)' : 'var(--red)';
+  return '<tr>' +
+    '<td class="td-name">'+h.name+'</td>' +
+    '<td class="td-muted">'+h.jobTitle+'</td>' +
+    '<td class="td-muted">'+h.market.replace(' Sls','')+'</td>' +
+    '<td class="td-muted">'+fmtDate(h.assignDate)+'</td>' +
+    '<td><div class="win-bar-wrap">' +
+      '<div class="win-bar"><div class="fill" style="width:'+pct.toFixed(1)+'%;background:'+color+'"></div></div>' +
+      '<span class="win-days">'+h.daysSince+'d</span>' +
+    '</div></td>' +
+    '<td>'+(h.eligible
+      ? '<span class="badge badge-in">&#9679; In window</span>'
+      : '<span class="badge badge-out">Closed &middot; day '+h.daysSince+'</span>')+'</td>' +
+    '<td><span class="badge '+(h.curriculumComplete==='Yes'?'badge-yes':'badge-no')+'">'+h.curriculumComplete+'</span></td>' +
+  '</tr>';
+}
 function renderTracker(){
   const q = (document.getElementById('trackerSearch').value||'').toLowerCase();
-  const rows = [...HIRES]
+  const all = [...HIRES]
     .filter(h => !q || h.name.toLowerCase().includes(q))
     .sort((a,b) => {
       let av=a[trackerSort.key], bv=b[trackerSort.key];
-      if(trackerSort.key==='hireDate'){ av=parseDate(av)||new Date(0); bv=parseDate(bv)||new Date(0); }
+      if(trackerSort.key==='assignDate'){ av=parseDate(av)||new Date(0); bv=parseDate(bv)||new Date(0); }
       if(av<bv) return -1*trackerSort.dir;
       if(av>bv) return  1*trackerSort.dir;
       return 0;
     });
-  document.getElementById('trackerCount').textContent = rows.length;
-  document.getElementById('trackerTbody').innerHTML = rows.map(h => {
-    const pct   = Math.min(100, Math.max(0, h.daysSince/WINDOW_DAYS*100));
-    const color = !h.eligible ? 'var(--border)' : pct<60 ? 'var(--teal)' : pct<90 ? 'var(--accent3)' : 'var(--red)';
-    return '<tr>' +
-      '<td class="td-name">'+h.name+'</td>' +
-      '<td class="td-muted">'+h.jobTitle+'</td>' +
-      '<td class="td-muted">'+h.market.replace(' Sls','')+'</td>' +
-      '<td class="td-muted">'+fmtDate(h.hireDate)+'</td>' +
-      '<td><div class="win-bar-wrap">' +
-        '<div class="win-bar"><div class="fill" style="width:'+pct.toFixed(1)+'%;background:'+color+'"></div></div>' +
-        '<span class="win-days">'+h.daysSince+'d</span>' +
-      '</div></td>' +
-      '<td>'+(h.eligible
-        ? '<span class="badge badge-in">&#9679; In window</span>'
-        : '<span class="badge badge-out">Closed &middot; day '+h.daysSince+'</span>')+'</td>' +
-      '<td><span class="badge '+(h.curriculumComplete==='Yes'?'badge-yes':'badge-no')+'">'+h.curriculumComplete+'</span></td>' +
-    '</tr>';
-  }).join('');
+  const active  = all.filter(h => h.eligible);
+  const expired = all.filter(h => !h.eligible);
+  document.getElementById('trackerCount').textContent = active.length;
+  document.getElementById('trackerTbody').innerHTML = active.map(_trackerRow).join('') ||
+    '<tr><td colspan="7" class="empty-state" style="padding:24px;text-align:center;">No reps currently in window</td></tr>';
+  document.getElementById('expiredCount').textContent = expired.length;
+  document.getElementById('expiredTbody').innerHTML = expired.map(_trackerRow).join('');
+  document.getElementById('expiredTrackerWrap').style.display = expired.length ? '' : 'none';
   document.querySelectorAll('#trackerTable thead th').forEach(th => {
     th.classList.remove('sorted-asc','sorted-desc');
     if(th.dataset.key===trackerSort.key) th.classList.add(trackerSort.dir===1?'sorted-asc':'sorted-desc');
   });
+}
+let expiredOpen = false;
+function toggleExpired(){
+  expiredOpen = !expiredOpen;
+  document.getElementById('expiredTrackerBody').style.display = expiredOpen ? '' : 'none';
+  document.getElementById('expiredToggleIcon').textContent = expiredOpen ? '▲' : '▼';
 }
 document.querySelectorAll('#trackerTable thead th').forEach(th => {
   th.addEventListener('click', () => {
@@ -729,14 +834,14 @@ document.querySelectorAll('#trackerTable thead th').forEach(th => {
 renderTracker();
 
 // ---- History ----
-let histSort = {key:'hireDate', dir:1};
+let histSort = {key:'assignDate', dir:1};
 function renderHistory(){
   const q = (document.getElementById('historySearch').value||'').toLowerCase();
   const rows = [...DEALS]
     .filter(d => !q || d.name.toLowerCase().includes(q) || d.accountName.toLowerCase().includes(q))
     .sort((a,b) => {
       let av=a[histSort.key], bv=b[histSort.key];
-      if(histSort.key==='hireDate'||histSort.key==='closeDate'){ av=av?parseDate(av):new Date(0); bv=bv?parseDate(bv):new Date(0); }
+      if(histSort.key==='assignDate'||histSort.key==='closeDate'){ av=av?parseDate(av):new Date(0); bv=bv?parseDate(bv):new Date(0); }
       if(av<bv) return -1*histSort.dir;
       if(av>bv) return  1*histSort.dir;
       return 0;
@@ -748,9 +853,9 @@ function renderHistory(){
       '<td>'+d.accountName+'</td>' +
       '<td><span class="badge '+(d.accountDesignation.toLowerCase()==='growth'?'badge-growth':'badge-retention')+'">'+(d.accountDesignation||'&#8212;')+'</span></td>' +
       '<td class="td-muted">'+d.revenueType+'</td>' +
-      '<td class="td-muted">'+fmtDate(d.hireDate)+'</td>' +
+      '<td class="td-muted">'+fmtDate(d.assignDate)+'</td>' +
       '<td class="td-muted">'+fmtDate(d.closeDate)+'</td>' +
-      '<td class="td-num">'+(d.hireToCloseDays!==null?d.hireToCloseDays+'d':'&#8212;')+'</td>' +
+      '<td class="td-num">'+(d.assignToCloseDays!==null?d.assignToCloseDays+'d':'&#8212;')+'</td>' +
       '<td class="'+(d.salesQualifiedBy===d.name?'td-self':'td-muted')+'">'+(d.salesQualifiedBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
       '<td class="'+(d.engageBy===d.name?'td-self':'td-muted')+'">'+(d.engageBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
       '<td class="td-amount">'+fmtMoney(d.amount)+'</td>' +
@@ -770,7 +875,7 @@ document.querySelectorAll('#historyTable thead th').forEach(th => {
   });
 });
 renderHistory();
-document.querySelector('#historyTable thead th[data-key="hireDate"]').classList.add('sorted-asc');
+document.querySelector('#historyTable thead th[data-key="assignDate"]').classList.add('sorted-asc');
 
 // ---- Verification ----
 let verifSort = {key:'name', dir:1};

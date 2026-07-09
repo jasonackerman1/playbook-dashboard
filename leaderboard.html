@@ -122,7 +122,7 @@
 <div class="header">
   <div class="header-left">
     <h1>Accelerate Leaderboard <span>/ Sales Performance</span></h1>
-    <div class="header-date" id="header-date">Data as of July 9, 2026</div>
+    <div class="header-date" id="header-date">Data as of July 8, 2026</div>
   </div>
   <div class="header-center">
     <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
@@ -137,7 +137,7 @@
 
   <div class="data-note">
     <span style="font-size:15px;flex-shrink:0;">&#9432;</span>
-    <span>To appear on this board, a rep must close a deal within their first 45 days on the job, complete the Accelerate curriculum, and personally move that deal through both Sales Qualified and Engage. Deals handed off to a manager or teammate do not count.</span>
+    <span>To appear on this board, a rep must close a deal within their first 45 days of the Accelerate program, complete the curriculum, and personally move that deal through both Sales Qualified and Engage. Deals handed off to a manager or teammate do not count.</span>
   </div>
 
   <div class="data-note" id="dataNote"></div>
@@ -149,7 +149,7 @@
     <div class="section-head">
       <div>
         <h2>Closed-Won Revenue by Market <span class="count" id="marketCount">0</span></h2>
-        <p>Closed Won revenue for the Accelerate cohort from June 4, 2026 onward, rolled up by market.</p>
+        <p>Closed Won revenue for the Accelerate cohort from June 4, 2026 onward, rolled up by market. Includes all cohort deals, not just leaderboard-qualifying wins.</p>
       </div>
     </div>
     <div id="marketChart" class="market-chart"></div>
@@ -160,19 +160,30 @@
     <div class="section-head">
       <div>
         <h2>Closed-Won Leaderboard <span class="count" id="leaderboardCount">0</span></h2>
-        <p>Reps hired in the last 45 days who have <strong>completed the Accelerate curriculum</strong>, have at least one Closed Won opportunity carrying a dollar amount, and <strong>personally moved that opportunity through Sales Qualified and Engage themselves</strong>. Each qualifying win is its own row.</p>
+        <p>Reps who closed a deal within their first 45 days of the Accelerate program, completed the curriculum, and personally moved the deal through Sales Qualified and Engage. Each qualifying win is its own row.</p>
       </div>
       <input class="search-box" id="leaderboardSearch" placeholder="Filter by rep or account&hellip;" oninput="renderLeaderboard()">
     </div>
     <div id="leaderboardBody"></div>
   </div>
 
+  <!-- ON DECK -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>On Deck <span class="count" id="onDeckCount">0</span></h2>
+        <p>Reps currently inside their 45-day window with deals that don't yet qualify for the leaderboard. Shows what each deal is still missing.</p>
+      </div>
+    </div>
+    <div id="onDeckBody"></div>
+  </div>
+
   <!-- WINDOW TRACKER -->
   <div class="section">
     <div class="section-head">
       <div>
-        <h2>New Hire Window Tracker <span class="count" id="trackerCount">0</span></h2>
-        <p>Every Accelerate cohort member and where they sit against the 45-day clock, from hire date to today. Leaderboard eligibility requires both an open window and a completed curriculum.</p>
+        <h2>Program Window Tracker <span class="count" id="trackerCount">0</span></h2>
+        <p>Every Accelerate cohort member and where they sit against the 45-day clock, from program start to today. Leaderboard eligibility requires both an open window and a completed curriculum. Reps past day 45 are grouped separately below.</p>
       </div>
       <input class="search-box" id="trackerSearch" placeholder="Filter by rep&hellip;" oninput="renderTracker()">
     </div>
@@ -182,13 +193,28 @@
           <th data-key="name" data-type="string">Rep</th>
           <th data-key="jobTitle" data-type="string">Job Title</th>
           <th data-key="market" data-type="string">Market</th>
-          <th data-key="hireDate" data-type="date">Hire Date</th>
-          <th data-key="daysSince" data-type="number">Days Since Hire</th>
+          <th data-key="assignDate" data-type="date">Program Start</th>
+          <th data-key="daysSince" data-type="number">Days in Program</th>
           <th data-key="eligible" data-type="string">45-Day Window</th>
           <th data-key="curriculumComplete" data-type="string">Curriculum</th>
         </tr></thead>
         <tbody id="trackerTbody"></tbody>
       </table>
+    </div>
+    <div id="expiredTrackerWrap" style="margin-top:8px;">
+      <button id="expiredToggle" onclick="toggleExpired()" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:6px 14px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <span id="expiredToggleIcon">&#9660;</span> Show expired reps (<span id="expiredCount">0</span> past day 45)
+      </button>
+      <div id="expiredTrackerBody" style="display:none;margin-top:8px;">
+        <div class="table-scroll">
+          <table id="expiredTable">
+            <thead><tr>
+              <th>Rep</th><th>Job Title</th><th>Market</th><th>Program Start</th><th>Days in Program</th><th>Status</th><th>Curriculum</th>
+            </tr></thead>
+            <tbody id="expiredTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -208,9 +234,9 @@
           <th data-key="accountName" data-type="string">Account</th>
           <th data-key="accountDesignation" data-type="string">Designation</th>
           <th data-key="revenueType" data-type="string">Revenue Type</th>
-          <th data-key="hireDate" data-type="date">Hire Date</th>
+          <th data-key="assignDate" data-type="date">Program Start</th>
           <th data-key="closeDate" data-type="date">Close Date</th>
-          <th data-key="hireToCloseDays" data-type="number">Hire&rarr;Close (days)</th>
+          <th data-key="assignToCloseDays" data-type="number">Program Day</th>
           <th data-key="salesQualifiedBy" data-type="string">Sales Qualified</th>
           <th data-key="engageBy" data-type="string">Engage</th>
           <th data-key="amount" data-type="number">Amount</th>
@@ -250,11 +276,11 @@
 </div>
 
 <script>
-const DEALS        = [{"name": "Gregory Christie", "jobTitle": "Senior Account Executive - GES", "market": "West Sls", "branch": "West Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "STANFORD HOTELS CORPORATION", "hireDate": "2026-02-09", "closeDate": "2026-06-04", "hireToCloseDays": 115, "curriculumComplete": "No", "amount": 9801.12, "oppId": "006Vy00001axbcd", "salesQualifiedBy": "Gregory Christie", "engageBy": "Gregory Christie"}, {"name": "Paolo Castellon", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "MISA IMPORTS INC", "hireDate": "2025-11-03", "closeDate": "2026-06-04", "hireToCloseDays": 213, "curriculumComplete": "No", "amount": 4392.37, "oppId": "006Vy00001bCgSO", "salesQualifiedBy": "Paolo Castellon", "engageBy": "Paolo Castellon"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "CELEBRATION CHURCH OF THE", "hireDate": "2026-04-01", "closeDate": "2026-06-05", "hireToCloseDays": 65, "curriculumComplete": "No", "amount": 9956.94, "oppId": "006Vy00001JlN49", "salesQualifiedBy": null, "engageBy": "Richard Bortner"}, {"name": "Sophia Krawczak", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "branch": "Heartland Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "GABRIEL NORTH AMERICA, INC.", "hireDate": "2026-02-02", "closeDate": "2026-06-16", "hireToCloseDays": 134, "curriculumComplete": "No", "amount": 2435.0, "oppId": "006Vy00001NVClV", "salesQualifiedBy": null, "engageBy": "Adeline Sherman"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "SANDHILLS VENTURES LLC", "hireDate": "2026-03-09", "closeDate": "2026-06-16", "hireToCloseDays": 99, "curriculumComplete": "No", "amount": 770.0, "oppId": "006Vy00001aDpdm", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "COMFORT DENTAL GROUP INC", "hireDate": "2026-03-09", "closeDate": "2026-06-16", "hireToCloseDays": 99, "curriculumComplete": "No", "amount": 6395.84, "oppId": "006Vy00001bXCFz", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "ROCKSOL CONSULTING GROUP INC", "hireDate": "2026-03-09", "closeDate": "2026-06-16", "hireToCloseDays": 99, "curriculumComplete": "No", "amount": 10793.1, "oppId": "006Vy00001cOi7y", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "FORT BEND SENIORS MEALS ON WHEELS", "hireDate": "2026-04-01", "closeDate": "2026-06-16", "hireToCloseDays": 76, "curriculumComplete": "No", "amount": 7694.19, "oppId": "006Vy00001dmDyU", "salesQualifiedBy": null, "engageBy": "Valencia Gilford"}, {"name": "Michael Shields", "jobTitle": "Senior Account Executive - CPS", "market": "Commercial Print", "branch": "CP New England", "accountDesignation": "Growth", "revenueType": "Production Print", "accountName": "B & B MANAGEMENT GROUP INC.", "hireDate": "2026-05-04", "closeDate": "2026-06-19", "hireToCloseDays": 46, "curriculumComplete": "No", "amount": 49988.07, "oppId": "006Vy00001f7T4F", "salesQualifiedBy": "Michael Shields", "engageBy": "Michael Shields"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "HAJOCA CORP", "hireDate": "2026-03-02", "closeDate": "2026-06-22", "hireToCloseDays": 112, "curriculumComplete": "No", "amount": 1500.0, "oppId": "006Vy00001b6Hmk", "salesQualifiedBy": "Anthony Petretta", "engageBy": "Anthony Petretta"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "ALTEC AIR, LLC", "hireDate": "2026-03-09", "closeDate": "2026-06-26", "hireToCloseDays": 109, "curriculumComplete": "No", "amount": 2914.5, "oppId": "006Vy00001caQ41", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Dylan McDonough", "jobTitle": "Named Account Executive", "market": "West Sls", "branch": "West Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "RAMONA CONVENT SCHOOL", "hireDate": "2026-02-17", "closeDate": "2026-06-29", "hireToCloseDays": 132, "curriculumComplete": "No", "amount": 24810.99, "oppId": "006Vy00001gAlBS", "salesQualifiedBy": "Dylan Mcdonough", "engageBy": "Dylan Mcdonough"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Growth", "revenueType": "Office Products", "accountName": "BALFOUR BEATTY MILITARY HOUSING MANAGEME", "hireDate": "2026-03-02", "closeDate": "2026-06-30", "hireToCloseDays": 120, "curriculumComplete": "No", "amount": 3684.08, "oppId": "006Vy00001aPdqa", "salesQualifiedBy": null, "engageBy": "Marie Caparo"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "HAJOCA CORPORATION", "hireDate": "2026-03-02", "closeDate": "2026-06-30", "hireToCloseDays": 120, "curriculumComplete": "No", "amount": 5700.0, "oppId": "006Vy00001etugM", "salesQualifiedBy": null, "engageBy": "Anthony Petretta"}, {"name": "Kelsey Carrington", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "branch": "Heartland Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "AMERICAN METAL TECHNOLOGIES LLC", "hireDate": "2026-05-05", "closeDate": "2026-07-07", "hireToCloseDays": 63, "curriculumComplete": "No", "amount": 11994.0, "oppId": "006Vy00001gqlLV", "salesQualifiedBy": "Kelsey Carrington", "engageBy": "Kelsey Carrington"}, {"name": "Kevin Kojouri", "jobTitle": "Named Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "BOGHARA CONSULTING COMPANY", "hireDate": "2026-04-01", "closeDate": "2026-07-08", "hireToCloseDays": 98, "curriculumComplete": "No", "amount": 13349.0, "oppId": "006Vy00001hPw18", "salesQualifiedBy": null, "engageBy": "Kevin Kojouri"}];
-const HIRES        = [{"name": "Alford Wood", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-03-16", "curriculumComplete": "No"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-03-02", "curriculumComplete": "No"}, {"name": "Christopher Melton", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-23", "curriculumComplete": "No"}, {"name": "Daniel Zepeda", "jobTitle": "Senior Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Dillon Basnight", "jobTitle": "Named Account Executive - HS", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-20", "curriculumComplete": "No"}, {"name": "Dre Ante Noel", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-04-27", "curriculumComplete": "No"}, {"name": "Dylan McDonough", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-17", "curriculumComplete": "No"}, {"name": "Emily Olstein", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-04-06", "curriculumComplete": "No"}, {"name": "Frances Rogers", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Southeast Sls", "branch": "Southeast Sls", "hireDate": "2026-05-04", "curriculumComplete": "No"}, {"name": "Gregory Christie", "jobTitle": "Senior Account Executive - GES", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-09", "curriculumComplete": "No"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-03-09", "curriculumComplete": "No"}, {"name": "Kelsey Carrington", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-05-05", "curriculumComplete": "No"}, {"name": "Kevin Kojouri", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Kyle Baker", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Meagan Blythe", "jobTitle": "Named Account Executive - PPS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Michael Shields", "jobTitle": "Senior Account Executive - CPS", "region": "FY2026 Commercial Print", "market": "Commercial Print", "branch": "CP New England", "hireDate": "2026-05-04", "curriculumComplete": "No"}, {"name": "Paolo Castellon", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2025-11-03", "curriculumComplete": "No"}, {"name": "Patrick Meagher", "jobTitle": "Named Account Executive - FBS", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-13", "curriculumComplete": "No"}, {"name": "RICHARD ALLEN", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-04-27", "curriculumComplete": "No"}, {"name": "Randahl Bradley", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2025-08-04", "curriculumComplete": "No"}, {"name": "Sophia Krawczak", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-02-02", "curriculumComplete": "No"}, {"name": "Spencer Larson", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-06", "curriculumComplete": "No"}, {"name": "Taylor Hill", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-03-23", "curriculumComplete": "No"}, {"name": "Tracy Hendricks", "jobTitle": "Major Account Executive - CPS", "region": "FY2026 Commercial Print", "market": "Commercial Print", "branch": "CP Texas", "hireDate": "2026-04-13", "curriculumComplete": "No"}, {"name": "Ty Foster", "jobTitle": "Senior Account Executive - HS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "William Birkett", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Kelli Sorrentino", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-06-08", "curriculumComplete": "No"}, {"name": "Morgan Bruno", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-06-23", "curriculumComplete": "No"}];
+const DEALS        = [{"name": "Gregory Christie", "jobTitle": "Senior Account Executive - GES", "market": "West Sls", "branch": "West Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "STANFORD HOTELS CORPORATION", "hireDate": "2026-02-09", "assignDate": "2026-06-04", "closeDate": "2026-06-04", "hireToCloseDays": 115, "assignToCloseDays": 0, "curriculumComplete": "No", "amount": 9801.12, "oppId": "006Vy00001axbcd", "salesQualifiedBy": "Gregory Christie", "engageBy": "Gregory Christie"}, {"name": "Paolo Castellon", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "MISA IMPORTS INC", "hireDate": "2025-11-03", "assignDate": "2026-06-04", "closeDate": "2026-06-04", "hireToCloseDays": 213, "assignToCloseDays": 0, "curriculumComplete": "No", "amount": 4392.37, "oppId": "006Vy00001bCgSO", "salesQualifiedBy": "Paolo Castellon", "engageBy": "Paolo Castellon"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "CELEBRATION CHURCH OF THE", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "closeDate": "2026-06-05", "hireToCloseDays": 65, "assignToCloseDays": 1, "curriculumComplete": "No", "amount": 9956.94, "oppId": "006Vy00001JlN49", "salesQualifiedBy": null, "engageBy": "Richard Bortner"}, {"name": "Sophia Krawczak", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "branch": "Heartland Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "GABRIEL NORTH AMERICA, INC.", "hireDate": "2026-02-02", "assignDate": "2026-06-04", "closeDate": "2026-06-16", "hireToCloseDays": 134, "assignToCloseDays": 12, "curriculumComplete": "No", "amount": 2435.0, "oppId": "006Vy00001NVClV", "salesQualifiedBy": null, "engageBy": "Adeline Sherman"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "SANDHILLS VENTURES LLC", "hireDate": "2026-03-09", "assignDate": "2026-06-04", "closeDate": "2026-06-16", "hireToCloseDays": 99, "assignToCloseDays": 12, "curriculumComplete": "No", "amount": 770.0, "oppId": "006Vy00001aDpdm", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "COMFORT DENTAL GROUP INC", "hireDate": "2026-03-09", "assignDate": "2026-06-04", "closeDate": "2026-06-16", "hireToCloseDays": 99, "assignToCloseDays": 12, "curriculumComplete": "No", "amount": 6395.84, "oppId": "006Vy00001bXCFz", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "ROCKSOL CONSULTING GROUP INC", "hireDate": "2026-03-09", "assignDate": "2026-06-04", "closeDate": "2026-06-16", "hireToCloseDays": 99, "assignToCloseDays": 12, "curriculumComplete": "No", "amount": 10793.1, "oppId": "006Vy00001cOi7y", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "FORT BEND SENIORS MEALS ON WHEELS", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "closeDate": "2026-06-16", "hireToCloseDays": 76, "assignToCloseDays": 12, "curriculumComplete": "No", "amount": 7694.19, "oppId": "006Vy00001dmDyU", "salesQualifiedBy": null, "engageBy": "Valencia Gilford"}, {"name": "Michael Shields", "jobTitle": "Senior Account Executive - CPS", "market": "Commercial Print", "branch": "CP New England", "accountDesignation": "Growth", "revenueType": "Production Print", "accountName": "B & B MANAGEMENT GROUP INC.", "hireDate": "2026-05-04", "assignDate": "2026-06-04", "closeDate": "2026-06-19", "hireToCloseDays": 46, "assignToCloseDays": 15, "curriculumComplete": "No", "amount": 49988.07, "oppId": "006Vy00001f7T4F", "salesQualifiedBy": "Michael Shields", "engageBy": "Michael Shields"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "HAJOCA CORP", "hireDate": "2026-03-02", "assignDate": "2026-06-04", "closeDate": "2026-06-22", "hireToCloseDays": 112, "assignToCloseDays": 18, "curriculumComplete": "No", "amount": 1500.0, "oppId": "006Vy00001b6Hmk", "salesQualifiedBy": "Anthony Petretta", "engageBy": "Anthony Petretta"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "ALTEC AIR, LLC", "hireDate": "2026-03-09", "assignDate": "2026-06-04", "closeDate": "2026-06-26", "hireToCloseDays": 109, "assignToCloseDays": 22, "curriculumComplete": "No", "amount": 2914.5, "oppId": "006Vy00001caQ41", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Dylan McDonough", "jobTitle": "Named Account Executive", "market": "West Sls", "branch": "West Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "RAMONA CONVENT SCHOOL", "hireDate": "2026-02-17", "assignDate": "2026-06-04", "closeDate": "2026-06-29", "hireToCloseDays": 132, "assignToCloseDays": 25, "curriculumComplete": "No", "amount": 24810.99, "oppId": "006Vy00001gAlBS", "salesQualifiedBy": "Dylan Mcdonough", "engageBy": "Dylan Mcdonough"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Growth", "revenueType": "Office Products", "accountName": "BALFOUR BEATTY MILITARY HOUSING MANAGEME", "hireDate": "2026-03-02", "assignDate": "2026-06-04", "closeDate": "2026-06-30", "hireToCloseDays": 120, "assignToCloseDays": 26, "curriculumComplete": "No", "amount": 3684.08, "oppId": "006Vy00001aPdqa", "salesQualifiedBy": null, "engageBy": "Marie Caparo"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "HAJOCA CORPORATION", "hireDate": "2026-03-02", "assignDate": "2026-06-04", "closeDate": "2026-06-30", "hireToCloseDays": 120, "assignToCloseDays": 26, "curriculumComplete": "No", "amount": 5700.0, "oppId": "006Vy00001etugM", "salesQualifiedBy": null, "engageBy": "Anthony Petretta"}, {"name": "Kelsey Carrington", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "branch": "Heartland Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "AMERICAN METAL TECHNOLOGIES LLC", "hireDate": "2026-05-05", "assignDate": "2026-06-04", "closeDate": "2026-07-07", "hireToCloseDays": 63, "assignToCloseDays": 33, "curriculumComplete": "No", "amount": 11994.0, "oppId": "006Vy00001gqlLV", "salesQualifiedBy": "Kelsey Carrington", "engageBy": "Kelsey Carrington"}, {"name": "Kevin Kojouri", "jobTitle": "Named Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "BOGHARA CONSULTING COMPANY", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "closeDate": "2026-07-08", "hireToCloseDays": 98, "assignToCloseDays": 34, "curriculumComplete": "No", "amount": 13349.0, "oppId": "006Vy00001hPw18", "salesQualifiedBy": null, "engageBy": "Kevin Kojouri"}];
+const HIRES        = [{"name": "Alford Wood", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-03-16", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-03-02", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Christopher Melton", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-23", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Daniel Zepeda", "jobTitle": "Senior Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Dillon Basnight", "jobTitle": "Named Account Executive - HS", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-20", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Dre Ante Noel", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-04-27", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Dylan McDonough", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-17", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Emily Olstein", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-04-06", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Frances Rogers", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Southeast Sls", "branch": "Southeast Sls", "hireDate": "2026-05-04", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Gregory Christie", "jobTitle": "Senior Account Executive - GES", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-09", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-03-09", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Kelsey Carrington", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-05-05", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Kevin Kojouri", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Kyle Baker", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Meagan Blythe", "jobTitle": "Named Account Executive - PPS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Michael Shields", "jobTitle": "Senior Account Executive - CPS", "region": "FY2026 Commercial Print", "market": "Commercial Print", "branch": "CP New England", "hireDate": "2026-05-04", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Paolo Castellon", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2025-11-03", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Patrick Meagher", "jobTitle": "Named Account Executive - FBS", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-13", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "RICHARD ALLEN", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-04-27", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Randahl Bradley", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2025-08-04", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Sophia Krawczak", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-02-02", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Spencer Larson", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-06", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Taylor Hill", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-03-23", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Tracy Hendricks", "jobTitle": "Major Account Executive - CPS", "region": "FY2026 Commercial Print", "market": "Commercial Print", "branch": "CP Texas", "hireDate": "2026-04-13", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Ty Foster", "jobTitle": "Senior Account Executive - HS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "William Birkett", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "assignDate": "2026-06-04", "curriculumComplete": "No"}, {"name": "Kelli Sorrentino", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-06-08", "assignDate": "2026-06-08", "curriculumComplete": "No"}, {"name": "Morgan Bruno", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-06-23", "assignDate": "2026-06-23", "curriculumComplete": "No"}];
 const VERIFICATION = [{"name": "Alford Wood", "jobTitle": "Named Account Executive", "market": "West Sls", "hireDate": "2026-03-16", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 5, "createdCount": 5, "lastModCount": 5}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "hireDate": "2026-03-02", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 4, "createdCount": 3, "lastModCount": 2}, {"name": "Christopher Melton", "jobTitle": "Senior Account Executive", "market": "West Sls", "hireDate": "2026-02-23", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 2, "createdCount": 2, "lastModCount": 1}, {"name": "Daniel Zepeda", "jobTitle": "Senior Account Executive - GES", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Dillon Basnight", "jobTitle": "Named Account Executive - HS", "market": "Mid-Atlantic Sls", "hireDate": "2026-04-20", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Dre Ante Noel", "jobTitle": "Named Account Executive - GES", "market": "Heartland Sls", "hireDate": "2026-04-27", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Dylan McDonough", "jobTitle": "Named Account Executive", "market": "West Sls", "hireDate": "2026-02-17", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 3, "createdCount": 3, "lastModCount": 3}, {"name": "Emily Olstein", "jobTitle": "Senior Account Executive", "market": "West Sls", "hireDate": "2026-04-06", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 2, "createdCount": 2, "lastModCount": 0}, {"name": "Frances Rogers", "jobTitle": "Named Account Executive", "market": "Southeast Sls", "hireDate": "2026-05-04", "isOwner": false, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 1, "lastModCount": 0}, {"name": "Gregory Christie", "jobTitle": "Senior Account Executive - GES", "market": "West Sls", "hireDate": "2026-02-09", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 7, "createdCount": 7, "lastModCount": 0}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2026-03-09", "isOwner": true, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 4, "createdCount": 0, "lastModCount": 0}, {"name": "Kelsey Carrington", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "hireDate": "2026-05-05", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 1, "createdCount": 1, "lastModCount": 1}, {"name": "Kevin Kojouri", "jobTitle": "Named Account Executive", "market": "Mid-Atlantic Sls", "hireDate": "2026-04-01", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 1, "createdCount": 1, "lastModCount": 0}, {"name": "Kyle Baker", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Meagan Blythe", "jobTitle": "Named Account Executive - PPS", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Michael Shields", "jobTitle": "Senior Account Executive - CPS", "market": "Commercial Print", "hireDate": "2026-05-04", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 2, "createdCount": 1, "lastModCount": 0}, {"name": "Paolo Castellon", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2025-11-03", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 4, "createdCount": 3, "lastModCount": 2}, {"name": "Patrick Meagher", "jobTitle": "Named Account Executive - FBS", "market": "Mid-Atlantic Sls", "hireDate": "2026-04-13", "isOwner": false, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 0, "createdCount": 1, "lastModCount": 2}, {"name": "RICHARD ALLEN", "jobTitle": "Named Account Executive - GES", "market": "West Sls", "hireDate": "2026-04-27", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 1, "createdCount": 2, "lastModCount": 1}, {"name": "Randahl Bradley", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2025-08-04", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 3, "createdCount": 7, "lastModCount": 0}, {"name": "Sophia Krawczak", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "hireDate": "2026-02-02", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 2, "createdCount": 1, "lastModCount": 2}, {"name": "Spencer Larson", "jobTitle": "Named Account Executive - GES", "market": "Central Sls", "hireDate": "2026-04-06", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Taylor Hill", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2026-03-23", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Tracy Hendricks", "jobTitle": "Major Account Executive - CPS", "market": "Commercial Print", "hireDate": "2026-04-13", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Ty Foster", "jobTitle": "Senior Account Executive - HS", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 2, "createdCount": 1, "lastModCount": 1}, {"name": "William Birkett", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Kelli Sorrentino", "jobTitle": "Named Account Executive", "market": "Mid-Atlantic Sls", "hireDate": "2026-06-08", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Morgan Bruno", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "hireDate": "2026-06-23", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}];
 const WINDOW_DAYS  = 45;
-const SOURCE_AS_OF = new Date(2026, 6, 9);
+const SOURCE_AS_OF = new Date(2026, 6, 8);
 
 const TODAY = new Date();
 TODAY.setHours(0,0,0,0);
@@ -271,16 +297,20 @@ document.getElementById('dataNote').innerHTML =
   '. Closed Won and opportunity data is scoped to deals closed on or after June 4, 2026.</strong></span>';
 
 // ---- Augment hires ----
+const hireMap = {};
 HIRES.forEach(h => {
-  h.daysSince = h.hireDate ? daysBetween(parseDate(h.hireDate), TODAY) : 999;
+  h.daysSince = h.assignDate ? daysBetween(parseDate(h.assignDate), TODAY) : 999;
   h.eligible  = h.daysSince >= 0 && h.daysSince <= WINDOW_DAYS;
   h.curriculumOk = h.curriculumComplete === 'Yes';
   h.leaderboardEligible = h.eligible && h.curriculumOk;
+  hireMap[h.name] = h;
 });
 
-const eligibleNames = new Set(HIRES.filter(h => h.leaderboardEligible).map(h => h.name));
 const leaderboardRows = DEALS.filter(d =>
-  eligibleNames.has(d.name) &&
+  d.assignToCloseDays !== null &&
+  d.assignToCloseDays >= 0 &&
+  d.assignToCloseDays <= WINDOW_DAYS &&
+  d.curriculumComplete === 'Yes' &&
   d.salesQualifiedBy === d.name &&
   d.engageBy === d.name
 );
@@ -344,12 +374,12 @@ function renderLeaderboard(){
     el.innerHTML = '<div class="empty-state">' +
       '<div style="font-size:22px;margin-bottom:10px;">&#8212;</div>' +
       '<div style="font-size:14px;font-weight:600;margin-bottom:8px;">No qualifying wins yet</div>' +
-      '<div style="font-size:13px;max-width:560px;margin:0 auto;line-height:1.6;">No rep currently inside the '+WINDOW_DAYS+'-day hire window is curriculum-complete, sitting on a Closed Won deal with a dollar amount, and shown as having personally moved that deal through Sales Qualified and Engage. This panel updates itself the moment all three line up &mdash; check the Window Tracker and Closed-Won History below for where each rep and deal currently stand.</div>' +
+      '<div style="font-size:13px;max-width:560px;margin:0 auto;line-height:1.6;">No rep has yet closed a deal within their first '+WINDOW_DAYS+' days of the Accelerate program while also being curriculum-complete and having personally moved the deal through Sales Qualified and Engage. Check the On Deck and Program Window Tracker sections below for current standings.</div>' +
     '</div>';
     return;
   }
   el.innerHTML = '<div class="table-scroll"><table>' +
-    '<thead><tr><th>Rep</th><th>Job Title</th><th>Market</th><th>Designation</th><th>Revenue Type</th><th>Hire Date</th><th>Close Date</th><th>Hire&rarr;Close</th><th>Curriculum</th><th>Amount</th></tr></thead>' +
+    '<thead><tr><th>Rep</th><th>Job Title</th><th>Market</th><th>Designation</th><th>Revenue Type</th><th>Program Start</th><th>Close Date</th><th>Program Day</th><th>Curriculum</th><th>Amount</th></tr></thead>' +
     '<tbody>' + rows.map(d =>
       '<tr>' +
         '<td class="td-name">'+d.name+'</td>' +
@@ -357,9 +387,9 @@ function renderLeaderboard(){
         '<td class="td-muted">'+d.market.replace(' Sls','')+'</td>' +
         '<td><span class="badge '+(d.accountDesignation.toLowerCase()==='growth'?'badge-growth':'badge-retention')+'">'+(d.accountDesignation||'&#8212;')+'</span></td>' +
         '<td class="td-muted">'+d.revenueType+'</td>' +
-        '<td class="td-muted">'+fmtDate(d.hireDate)+'</td>' +
+        '<td class="td-muted">'+fmtDate(d.assignDate)+'</td>' +
         '<td class="td-muted">'+fmtDate(d.closeDate)+'</td>' +
-        '<td class="td-num">'+(d.hireToCloseDays!==null?d.hireToCloseDays+'d':'&#8212;')+'</td>' +
+        '<td class="td-num">'+(d.assignToCloseDays!==null?d.assignToCloseDays+'d':'&#8212;')+'</td>' +
         '<td><span class="badge '+(d.curriculumComplete==='Yes'?'badge-yes':'badge-no')+'">'+d.curriculumComplete+'</span></td>' +
         '<td class="td-amount">'+fmtMoney(d.amount)+'</td>' +
       '</tr>'
@@ -367,42 +397,108 @@ function renderLeaderboard(){
 }
 renderLeaderboard();
 
+// ---- On Deck ----
+function renderOnDeck(){
+  const lbSet = new Set(leaderboardRows.map(d => d.oppId));
+  const inWindowNames = new Set(HIRES.filter(h => h.eligible).map(h => h.name));
+  const onDeckDeals = DEALS.filter(d => inWindowNames.has(d.name) && !lbSet.has(d.oppId));
+  const byRep = {};
+  onDeckDeals.forEach(d => {
+    if(!byRep[d.name]) byRep[d.name] = [];
+    byRep[d.name].push(d);
+  });
+  const readyReps = HIRES.filter(h => h.eligible && h.curriculumOk && !onDeckDeals.some(d => d.name === h.name) && !leaderboardRows.some(d => d.name === h.name));
+  const totalCount = Object.keys(byRep).length + readyReps.length;
+  document.getElementById('onDeckCount').textContent = totalCount;
+  if(!totalCount){
+    document.getElementById('onDeckBody').innerHTML = '<div class="empty-state" style="padding:32px 0;"><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Nothing on deck</div><div style="font-size:13px;">All in-window reps are either on the leaderboard or have no cohort deals yet.</div></div>';
+    return;
+  }
+  let html = '<div class="table-scroll"><table><thead><tr><th>Rep</th><th>Account</th><th>Close Date</th><th>Program Day</th><th>Curriculum</th><th>Sales Qualified By</th><th>Engage By</th><th>Amount</th></tr></thead><tbody>';
+  Object.entries(byRep).forEach(function([name, deals]){
+    deals.sort((a,b) => b.amount - a.amount);
+    deals.forEach(function(d, i){
+      const missing = [];
+      if(d.curriculumComplete !== 'Yes') missing.push('<span class="badge badge-no">Curriculum</span>');
+      if(d.assignToCloseDays === null || d.assignToCloseDays > WINDOW_DAYS) missing.push('<span class="badge badge-out">Outside window</span>');
+      if(d.salesQualifiedBy && d.salesQualifiedBy !== d.name) missing.push('<span class="badge" style="background:rgba(255,160,0,.18);color:var(--accent3);">SQ handed off</span>');
+      if(!d.salesQualifiedBy) missing.push('<span class="badge" style="background:rgba(255,160,0,.18);color:var(--accent3);">SQ not recorded</span>');
+      if(d.engageBy && d.engageBy !== d.name) missing.push('<span class="badge" style="background:rgba(255,100,80,.18);color:var(--red);">Engage handed off</span>');
+      if(!d.engageBy) missing.push('<span class="badge" style="background:rgba(255,100,80,.18);color:var(--red);">Engage not recorded</span>');
+      html +=
+        '<tr>' +
+        (i===0 ? '<td class="td-name" rowspan="'+deals.length+'">'+name+'</td>' : '') +
+        '<td>'+d.accountName+'</td>' +
+        '<td class="td-muted">'+fmtDate(d.closeDate)+'</td>' +
+        '<td class="td-num">'+(d.assignToCloseDays!==null?d.assignToCloseDays+'d':'&#8212;')+'</td>' +
+        '<td>'+missing.join(' ')+'</td>' +
+        '<td class="'+(d.salesQualifiedBy===d.name?'td-self':'td-muted')+'">'+(d.salesQualifiedBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
+        '<td class="'+(d.engageBy===d.name?'td-self':'td-muted')+'">'+(d.engageBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
+        '<td class="td-amount">'+fmtMoney(d.amount)+'</td>' +
+        '</tr>';
+    });
+  });
+  readyReps.forEach(function(h){
+    html +=
+      '<tr>' +
+      '<td class="td-name">'+h.name+'</td>' +
+      '<td colspan="7" class="td-muted" style="font-style:italic;">Curriculum complete, in window &mdash; no cohort deals yet</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('onDeckBody').innerHTML = html;
+}
+renderOnDeck();
+
 // ---- Window Tracker ----
 let trackerSort = {key:'daysSince', dir:1};
+function _trackerRow(h){
+  const pct   = Math.min(100, Math.max(0, h.daysSince/WINDOW_DAYS*100));
+  const color = !h.eligible ? 'var(--border)' : pct<60 ? 'var(--teal)' : pct<90 ? 'var(--accent3)' : 'var(--red)';
+  return '<tr>' +
+    '<td class="td-name">'+h.name+'</td>' +
+    '<td class="td-muted">'+h.jobTitle+'</td>' +
+    '<td class="td-muted">'+h.market.replace(' Sls','')+'</td>' +
+    '<td class="td-muted">'+fmtDate(h.assignDate)+'</td>' +
+    '<td><div class="win-bar-wrap">' +
+      '<div class="win-bar"><div class="fill" style="width:'+pct.toFixed(1)+'%;background:'+color+'"></div></div>' +
+      '<span class="win-days">'+h.daysSince+'d</span>' +
+    '</div></td>' +
+    '<td>'+(h.eligible
+      ? '<span class="badge badge-in">&#9679; In window</span>'
+      : '<span class="badge badge-out">Closed &middot; day '+h.daysSince+'</span>')+'</td>' +
+    '<td><span class="badge '+(h.curriculumComplete==='Yes'?'badge-yes':'badge-no')+'">'+h.curriculumComplete+'</span></td>' +
+  '</tr>';
+}
 function renderTracker(){
   const q = (document.getElementById('trackerSearch').value||'').toLowerCase();
-  const rows = [...HIRES]
+  const all = [...HIRES]
     .filter(h => !q || h.name.toLowerCase().includes(q))
     .sort((a,b) => {
       let av=a[trackerSort.key], bv=b[trackerSort.key];
-      if(trackerSort.key==='hireDate'){ av=parseDate(av)||new Date(0); bv=parseDate(bv)||new Date(0); }
+      if(trackerSort.key==='assignDate'){ av=parseDate(av)||new Date(0); bv=parseDate(bv)||new Date(0); }
       if(av<bv) return -1*trackerSort.dir;
       if(av>bv) return  1*trackerSort.dir;
       return 0;
     });
-  document.getElementById('trackerCount').textContent = rows.length;
-  document.getElementById('trackerTbody').innerHTML = rows.map(h => {
-    const pct   = Math.min(100, Math.max(0, h.daysSince/WINDOW_DAYS*100));
-    const color = !h.eligible ? 'var(--border)' : pct<60 ? 'var(--teal)' : pct<90 ? 'var(--accent3)' : 'var(--red)';
-    return '<tr>' +
-      '<td class="td-name">'+h.name+'</td>' +
-      '<td class="td-muted">'+h.jobTitle+'</td>' +
-      '<td class="td-muted">'+h.market.replace(' Sls','')+'</td>' +
-      '<td class="td-muted">'+fmtDate(h.hireDate)+'</td>' +
-      '<td><div class="win-bar-wrap">' +
-        '<div class="win-bar"><div class="fill" style="width:'+pct.toFixed(1)+'%;background:'+color+'"></div></div>' +
-        '<span class="win-days">'+h.daysSince+'d</span>' +
-      '</div></td>' +
-      '<td>'+(h.eligible
-        ? '<span class="badge badge-in">&#9679; In window</span>'
-        : '<span class="badge badge-out">Closed &middot; day '+h.daysSince+'</span>')+'</td>' +
-      '<td><span class="badge '+(h.curriculumComplete==='Yes'?'badge-yes':'badge-no')+'">'+h.curriculumComplete+'</span></td>' +
-    '</tr>';
-  }).join('');
+  const active  = all.filter(h => h.eligible);
+  const expired = all.filter(h => !h.eligible);
+  document.getElementById('trackerCount').textContent = active.length;
+  document.getElementById('trackerTbody').innerHTML = active.map(_trackerRow).join('') ||
+    '<tr><td colspan="7" class="empty-state" style="padding:24px;text-align:center;">No reps currently in window</td></tr>';
+  document.getElementById('expiredCount').textContent = expired.length;
+  document.getElementById('expiredTbody').innerHTML = expired.map(_trackerRow).join('');
+  document.getElementById('expiredTrackerWrap').style.display = expired.length ? '' : 'none';
   document.querySelectorAll('#trackerTable thead th').forEach(th => {
     th.classList.remove('sorted-asc','sorted-desc');
     if(th.dataset.key===trackerSort.key) th.classList.add(trackerSort.dir===1?'sorted-asc':'sorted-desc');
   });
+}
+let expiredOpen = false;
+function toggleExpired(){
+  expiredOpen = !expiredOpen;
+  document.getElementById('expiredTrackerBody').style.display = expiredOpen ? '' : 'none';
+  document.getElementById('expiredToggleIcon').textContent = expiredOpen ? '▲' : '▼';
 }
 document.querySelectorAll('#trackerTable thead th').forEach(th => {
   th.addEventListener('click', () => {
@@ -415,14 +511,14 @@ document.querySelectorAll('#trackerTable thead th').forEach(th => {
 renderTracker();
 
 // ---- History ----
-let histSort = {key:'hireDate', dir:1};
+let histSort = {key:'assignDate', dir:1};
 function renderHistory(){
   const q = (document.getElementById('historySearch').value||'').toLowerCase();
   const rows = [...DEALS]
     .filter(d => !q || d.name.toLowerCase().includes(q) || d.accountName.toLowerCase().includes(q))
     .sort((a,b) => {
       let av=a[histSort.key], bv=b[histSort.key];
-      if(histSort.key==='hireDate'||histSort.key==='closeDate'){ av=av?parseDate(av):new Date(0); bv=bv?parseDate(bv):new Date(0); }
+      if(histSort.key==='assignDate'||histSort.key==='closeDate'){ av=av?parseDate(av):new Date(0); bv=bv?parseDate(bv):new Date(0); }
       if(av<bv) return -1*histSort.dir;
       if(av>bv) return  1*histSort.dir;
       return 0;
@@ -434,9 +530,9 @@ function renderHistory(){
       '<td>'+d.accountName+'</td>' +
       '<td><span class="badge '+(d.accountDesignation.toLowerCase()==='growth'?'badge-growth':'badge-retention')+'">'+(d.accountDesignation||'&#8212;')+'</span></td>' +
       '<td class="td-muted">'+d.revenueType+'</td>' +
-      '<td class="td-muted">'+fmtDate(d.hireDate)+'</td>' +
+      '<td class="td-muted">'+fmtDate(d.assignDate)+'</td>' +
       '<td class="td-muted">'+fmtDate(d.closeDate)+'</td>' +
-      '<td class="td-num">'+(d.hireToCloseDays!==null?d.hireToCloseDays+'d':'&#8212;')+'</td>' +
+      '<td class="td-num">'+(d.assignToCloseDays!==null?d.assignToCloseDays+'d':'&#8212;')+'</td>' +
       '<td class="'+(d.salesQualifiedBy===d.name?'td-self':'td-muted')+'">'+(d.salesQualifiedBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
       '<td class="'+(d.engageBy===d.name?'td-self':'td-muted')+'">'+(d.engageBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
       '<td class="td-amount">'+fmtMoney(d.amount)+'</td>' +
@@ -456,7 +552,7 @@ document.querySelectorAll('#historyTable thead th').forEach(th => {
   });
 });
 renderHistory();
-document.querySelector('#historyTable thead th[data-key="hireDate"]').classList.add('sorted-asc');
+document.querySelector('#historyTable thead th[data-key="assignDate"]').classList.add('sorted-asc');
 
 // ---- Verification ----
 let verifSort = {key:'name', dir:1};
