@@ -240,12 +240,79 @@ def attach_playbook(records):
     return records
 
 
-def generate_html(records):
+def _parse_html_xls(path):
+    from html.parser import HTMLParser
+    class _TP(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.rows, self._row, self._cell, self._in = [], [], '', False
+        def handle_starttag(self, tag, attrs):
+            if tag in ('td', 'th'):
+                self._in = True; self._cell = ''
+            elif tag == 'tr':
+                self._row = []
+        def handle_endtag(self, tag):
+            if tag in ('td', 'th'):
+                self._row.append(self._cell.strip()); self._in = False
+            elif tag == 'tr':
+                if self._row: self.rows.append(self._row)
+        def handle_data(self, data):
+            if self._in: self._cell += data
+    with open(path, encoding='utf-8', errors='ignore') as f:
+        content = f.read()
+    p = _TP()
+    p.feed(content)
+    if not p.rows:
+        return []
+    headers = p.rows[0]
+    return [dict(zip(headers, row)) for row in p.rows[1:] if row]
+
+
+def _load_salesforce(records):
+    """Read Closed Won Salesforce export from leaderboard-data/, return first CW deal per cohort email."""
+    import glob
+    xls_files = glob.glob(os.path.join('leaderboard-data', '*.xls'))
+    cw_path = None
+    for p in xls_files:
+        with open(p, encoding='utf-8', errors='ignore') as f:
+            chunk = f.read(2000)
+        if 'Opportunity Owner Email' in chunk:
+            cw_path = p
+            break
+    if not cw_path:
+        return {}
+
+    rows = _parse_html_xls(cw_path)
+    sales = {}
+    for row in rows:
+        if row.get('Stage', '').strip() != 'Closed Won':
+            continue
+        email = row.get('Opportunity Owner Email', '').strip().lower()
+        if email not in records:
+            continue
+        try:
+            amount = float(str(row.get('Amount', '0') or '0').replace(',', '').strip())
+        except ValueError:
+            amount = 0.0
+        raw_date = str(row.get('Close Date', ''))
+        m = re.match(r'(\d{1,2})/(\d{1,2})/(\d{4})', raw_date)
+        close_date = f'{int(m.group(3)):04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}' if m else raw_date[:10]
+        account = row.get('Account Name', '').strip().title()
+        # Keep the earliest closed deal (true "first sale")
+        if email not in sales or close_date < sales[email]['closeDate']:
+            sales[email] = {'amount': amount, 'accountName': account, 'closeDate': close_date}
+    return sales
+
+
+def generate_html(records, sales_map=None):
     from datetime import date
-    people      = sorted(records.values(), key=lambda p: p['name'].lower())
-    people_json = json.dumps(people, default=str)
-    today_str   = date.today().isoformat()
-    file_date   = date.today().strftime('%B %d, %Y')
+    people           = sorted(records.values(), key=lambda p: p['name'].lower())
+    people_json      = json.dumps(people, default=str)
+    sales_map        = sales_map or {}
+    sales_map_json   = json.dumps(sales_map, ensure_ascii=False)
+    cohort_total     = len(people)
+    today_str        = date.today().isoformat()
+    file_date        = date.today().strftime('%B %d, %Y')
     _od = date.today()
     header_date_label = f'{_od.strftime("%B")} {_od.day}, {_od.year}'
     total       = len(people)
@@ -617,6 +684,8 @@ def generate_html(records):
 
 <script>
 const PEOPLE = {people_json};
+const SALES_MAP = {sales_map_json};
+const COHORT_TOTAL = {cohort_total};
 const CURRIC_IDS = {curric_ids};
 const CURRIC_NAMES = {curric_names};
 /* The designed pacing schedule, straight from each curriculum's LMS title
@@ -876,7 +945,7 @@ const INFO = {{
   "overdue": "People who have missed the deadline for one or more of their required courses, as reported by the LMS. For example, if someone's Getting Started course was due June 11 and they have not finished it, they appear here as Overdue.",
   "ontrack": "People who are still within all of their course deadlines. They have not missed anything yet, but may not be done. Tip: click into any person's row to see exactly which courses still need attention.",
   "completed": "People who have fully completed every required course in the Accelerate Onboarding program.",
-  "first-sale": "Will show whether each person has logged their first sale in Salesforce. This is coming soon — it will populate automatically once the Salesforce connection is set up.",
+  "first-sale": "Number of Accelerate cohort members with a Closed Won opportunity in Salesforce. Reflects closed deals only — open pipeline is not included in this view.",
   "market-chart": "Shows how far along each market's reps are on average. Hover over any bar to see the full picture — how many people are done, still on track, or past their deadline. A shorter bar means that market may need extra attention.",
   "curric-chart": "Shows how far along all reps are on average for each course. Hover over any bar to see how many people have finished that course, are working on it, have not started it yet, or are past its deadline. A short bar is a signal that reps are getting stuck there.",
   "heatmap": "One row per person. The Curricula column shows 6 colored squares — one per curriculum — so you can see at a glance where someone stands across the whole program. Green = done, Blue = in progress, Red = past due, Gray = not started. The playbook dot shows whether they are using the Accelerate Playbook alongside their LMS courses. Click any row to open their full detail card — every individual lesson, completion dates, curriculum breakdown, and playbook activity.",
@@ -1001,6 +1070,9 @@ function renderStats() {{
   document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past a curriculum deadline' : '';
   document.getElementById('s-ontrack').textContent = ontrack;
   document.getElementById('s-completed').textContent = completed;
+  const salesCount = Object.keys(SALES_MAP).length;
+  document.getElementById('s-sales').textContent = salesCount + ' of ' + COHORT_TOTAL;
+  document.getElementById('s-sales').nextElementSibling.textContent = 'closed a deal in Salesforce';
 }}
 
 /* ── Heatmap table ── */
@@ -1020,13 +1092,14 @@ function renderTable() {{
   hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Expected Focus<span class="info-btn" onclick="showInfo(event,\\'expected-focus-info\\')">?</span></th>';
   hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Biggest Gap<span class="info-btn" onclick="showInfo(event,\\'biggest-gap-info\\')">?</span></th>';
   hRow += '<th style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;">Curricula</th>';
+  hRow += thS('First Sale','salesAmount','overall-col');
   hRow += '</tr>';
   thead.innerHTML = hRow;
 
   // Body
   const tbody = document.getElementById('heatmap-body');
   if (!filtered.length) {{
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px;">No learners match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px;">No learners match the current filters.</td></tr>';
     document.getElementById('heatmap-foot').innerHTML = '';
     return;
   }}
@@ -1043,6 +1116,7 @@ function renderTable() {{
       else if (col === 'overall')   {{ va = a.overallPct; vb = b.overallPct; }}
       else if (col === 'expected')  {{ va = expectedPct(a); vb = expectedPct(b); }}
       else if (col === 'gap')       {{ va = gapPct(a); vb = gapPct(b); }}
+      else if (col === 'salesAmount') {{ va = SALES_MAP[a.email] ? SALES_MAP[a.email].amount : 0; vb = SALES_MAP[b.email] ? SALES_MAP[b.email].amount : 0; }}
       else {{ va = a.curricula[col] ? a.curricula[col].pct : 0; vb = b.curricula[col] ? b.curricula[col].pct : 0; }}
       if (va < vb) return tableSort.dir === 'asc' ? -1 : 1;
       if (va > vb) return tableSort.dir === 'asc' ? 1 : -1;
@@ -1113,6 +1187,10 @@ function renderTable() {{
     const bgCell = bg ?
       '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="' + pctPillStyle(bg.pct) + '">' + escHtml(bg.name) + ' &middot; ' + bg.pct + '%</span></td>' :
       '<td class="pct-cell" style="text-align:center;color:var(--muted);">&mdash;</td>';
+    const pSaleRow = SALES_MAP[p.email];
+    const saleCell = pSaleRow
+      ? '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--green);white-space:nowrap;">$' + Math.round(pSaleRow.amount).toLocaleString('en-US') + '</td>'
+      : '<td class="pct-cell" style="text-align:center;color:var(--muted);opacity:.4;">&#8212;</td>';
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
       '<td class="name-cell"><span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;" title="' + dotTip + '"></span>' + escHtml(p.name) + '</td>' +
       '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
@@ -1123,6 +1201,7 @@ function renderTable() {{
       expectedFocusCell(p) +
       bgCell +
       dotsCell +
+      saleCell +
     '</tr>';
   }}
 
@@ -1133,7 +1212,7 @@ function renderTable() {{
       if (!groups[mgr]) groups[mgr] = [];
       groups[mgr].push(p);
     }});
-    const colCount = 9;
+    const colCount = 10;
     let html = '';
     Object.keys(groups).sort().forEach(mgr => {{
       const team = groups[mgr];
@@ -1161,6 +1240,7 @@ function renderTable() {{
   fRow += '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--muted);">' + eAvg + '%</td>';
   const gAvg = eAvg - oAvg;
   fRow += '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(gAvg) + '">' + gAvg + '%</span></td>';
+  fRow += '<td></td>';
   fRow += '<td></td>';
   fRow += '<td></td>';
   fRow += '<td></td>';
@@ -1445,6 +1525,10 @@ function openModal(email) {{
         : '<div class="item-row"><div style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><div style="flex:1;font-size:12px;"><span style="color:var(--green);font-weight:500;">Completed</span> &mdash; ' + escHtml(ev.title) + ' <span style="color:var(--muted);font-size:11px;">(' + escHtml(ev.curric) + ')</span></div><div class="item-date">' + fmtDate(ev.date) + '</div></div>'
       ).join('');
 
+  const pSale = SALES_MAP[email];
+  const saleHtml = pSale
+    ? '<span>&middot; First Sale: <strong style="color:var(--green)">$' + Math.round(pSale.amount).toLocaleString('en-US') + '</strong> &middot; ' + escHtml(pSale.accountName) + ' &middot; ' + fmtDate(pSale.closeDate) + '</span>'
+    : '<span style="color:var(--muted);">&middot; First Sale: None yet</span>';
   const content = `
     <div class="modal-header" style="padding-right:52px;">
       <div style="position:absolute;top:17px;right:54px;">${{statusBadge}}</div>
@@ -1454,6 +1538,7 @@ function openModal(email) {{
         ${{p.market ? '<span>&middot; ' + escHtml(p.market) + '</span>' : ''}}
         ${{p.hireDate ? '<span>&middot; Hired ' + fmtDate(p.hireDate) + '</span>' : ''}}
         ${{p.assignDate ? '<span>&middot; Enrolled ' + fmtDate(p.assignDate) + '</span>' : ''}}
+        ${{saleHtml}}
       </div>
       ${{p.manager ? '<div class="modal-meta" style="margin-top:3px;gap:6px;"><span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;">Manager</span><span>' + escHtml(p.manager) + '</span><span>&middot; ' + escHtml(p.mgrTitle) + '</span><span>&middot; <a href="mailto:' + escHtml(p.mgrEmail) + '" style="color:var(--accent)">' + escHtml(p.mgrEmail) + '</a></span></div>' : ''}}
     </div>
@@ -1643,7 +1728,9 @@ def main():
     records = attach_playbook(records)
     pb_matches = sum(1 for p in records.values() if p['playbook'])
     print(f"Playbook activity matched for {pb_matches} learners")
-    html = generate_html(records)
+    sales_map = _load_salesforce(records)
+    print(f"Salesforce: {len(sales_map)} cohort members with a Closed Won deal")
+    html = generate_html(records, sales_map)
     with open('onboarding.html', 'w', encoding='utf-8') as f:
         f.write(html)
     print(f"Generated onboarding.html")
