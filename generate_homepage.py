@@ -379,7 +379,7 @@ def generate_html(pb, hc, ps, ob, lb=None):
     </div>
 
     <!-- Accelerate Leaderboard -->
-    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
+    <div class="card" style="--card-bg:url('https://images.unsplash.com/photo-1527871369852-eb58cb2b54e2?fm=jpg&q=80&w=800');background-image:linear-gradient(115deg,rgba(18,12,2,1.0) 0%,rgba(18,12,2,0.85) 40%,rgba(18,12,2,0.3) 100%),var(--card-bg,none);">
       <div class="card-head">
         <span class="card-icon">&#127942;</span>
         <div>
