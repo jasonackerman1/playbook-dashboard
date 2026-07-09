@@ -421,6 +421,10 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   /* ---- EMPTY STATE ---- */
   .empty-state { padding:52px 24px; text-align:center; color:var(--muted); font-size:13px; }
 
+  /* ---- RULE NOTE ---- */
+  .rule-note { font-size:12px; color:var(--muted); line-height:1.6; margin-top:6px; max-width:760px; }
+  .rule-note strong { color:var(--text); font-weight:600; }
+
   /* ---- FOOTER ---- */
   footer { text-align:center; font-size:11px; color:var(--muted); margin-top:40px; opacity:.7; }
 
@@ -437,6 +441,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   <div class="header-left">
     <h1>Accelerate Leaderboard <span>/ Sales Performance</span></h1>
     <div class="header-date" id="header-date">Data as of __FILE_DATE_LABEL__</div>
+    <div class="rule-note">Recognizes new hires who closed won business <strong>within their first __WINDOW_DAYS__ days</strong> on the job, have <strong>completed the Accelerate curriculum</strong>, and <strong>personally advanced the deal</strong> through Sales Qualified and Engage themselves (a deal handed off to a manager or teammate along the way doesn&rsquo;t count). The window is calculated live against today&rsquo;s date, with every hire, deal, curriculum status, and stage handoff pulled straight from the source reports.</div>
   </div>
   <div class="header-center">
     <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
@@ -469,7 +474,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="section-head">
       <div>
         <h2>Closed-Won Leaderboard <span class="count" id="leaderboardCount">0</span></h2>
-        <p>Reps hired in the last __WINDOW_DAYS__ days who have <strong>completed the Accelerate curriculum</strong>, have at least one Closed Won opportunity with a dollar amount, and <strong>personally moved that opportunity through Sales Qualified and Engage themselves</strong>. Each qualifying win is its own row.</p>
+        <p>Reps hired in the last __WINDOW_DAYS__ days who have <strong>completed the Accelerate curriculum</strong>, have at least one Closed Won opportunity carrying a dollar amount, and <strong>personally moved that opportunity through Sales Qualified and Engage themselves</strong>. Each qualifying win is its own row.</p>
       </div>
       <input class="search-box" id="leaderboardSearch" placeholder="Filter by rep or account&hellip;" oninput="renderLeaderboard()">
     </div>
@@ -481,7 +486,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="section-head">
       <div>
         <h2>New Hire Window Tracker <span class="count" id="trackerCount">0</span></h2>
-        <p>Every Accelerate cohort member and where they sit against the __WINDOW_DAYS__-day clock. Leaderboard eligibility requires both an open window and a completed curriculum.</p>
+        <p>Every Accelerate cohort member and where they sit against the __WINDOW_DAYS__-day clock, from hire date to today. Leaderboard eligibility requires both an open window and a completed curriculum.</p>
       </div>
       <input class="search-box" id="trackerSearch" placeholder="Filter by rep&hellip;" oninput="renderTracker()">
     </div>
@@ -505,8 +510,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   <div class="section">
     <div class="section-head">
       <div>
-        <h2>Cohort Closed-Won History <span class="count" id="historyCount">0</span></h2>
-        <p>Every Closed Won deal by an Accelerate cohort rep with a close date on or after __COHORT_LABEL_LONG__. Stage columns show green when the rep personally advanced that stage.</p>
+        <h2>Cohort Closed-Won History <span class="count" id="historyCount">0</span> <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;">since __COHORT_LABEL_SHORT__</span></h2>
+        <p>Every Closed Won deal booked by an Accelerate-cohort rep with a close date on or after __COHORT_LABEL_LONG__, ordered from earliest hire date to close date, with who moved each opportunity into Sales Qualified and who then advanced it into Engage.</p>
       </div>
       <input class="search-box" id="historySearch" placeholder="Filter by rep or account&hellip;" oninput="renderHistory()">
     </div>
@@ -519,9 +524,9 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
           <th data-key="revenueType" data-type="string">Revenue Type</th>
           <th data-key="hireDate" data-type="date">Hire Date</th>
           <th data-key="closeDate" data-type="date">Close Date</th>
-          <th data-key="hireToCloseDays" data-type="number">Hire&rarr;Close</th>
-          <th data-key="salesQualifiedBy" data-type="string">Sales Qualified By</th>
-          <th data-key="engageBy" data-type="string">Engage By</th>
+          <th data-key="hireToCloseDays" data-type="number">Hire&rarr;Close (days)</th>
+          <th data-key="salesQualifiedBy" data-type="string">Sales Qualified</th>
+          <th data-key="engageBy" data-type="string">Engage</th>
           <th data-key="amount" data-type="number">Amount</th>
         </tr></thead>
         <tbody id="historyTbody"></tbody>
@@ -534,7 +539,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="section-head">
       <div>
         <h2>Salesforce Activity Verification <span class="count" id="verifyCount">0</span></h2>
-        <p>Whether each Accelerate hire has personally created an opportunity record in Salesforce &mdash; the strongest signal of self-initiated sales activity.</p>
+        <p>Confirms whether each Accelerate hire has personally created an opportunity record in Salesforce &mdash; the strongest signal of system activity, since &ldquo;Owner&rdquo; alone can just mean a deal was assigned to them.</p>
       </div>
       <input class="search-box" id="verifySearch" placeholder="Filter by rep&hellip;" oninput="renderVerify()">
     </div>
@@ -555,7 +560,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <footer>Data as of __FILE_DATE_LABEL__ &middot; Accelerate Curriculum Report &middot; Closed Won Export &middot; Stage History Export</footer>
+  <footer>Source: Accelerate Curriculum Report &middot; Opportunity Export &middot; generated client-side, recalculates daily</footer>
 </div>
 
 <script>
@@ -575,10 +580,9 @@ function fmtMoney(n){ return '$'+n.toLocaleString('en-US',{minimumFractionDigits
 
 document.getElementById('dataNote').innerHTML =
   '<span style="font-size:15px;flex-shrink:0;">&#9432;</span>' +
-  '<span><strong>New hire and curriculum data reflects the source reports as of ' +
+  '<span><strong>New hire and curriculum data reflects the source reports pulled as of ' +
   SOURCE_AS_OF.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) +
-  '.</strong> Closed Won and opportunity data is scoped to deals closed on or after __COHORT_LABEL_LONG__. ' +
-  'The __WINDOW_DAYS__-day eligibility window recalculates live against today&rsquo;s date.</span>';
+  '. Closed Won and opportunity data is scoped to deals closed on or after __COHORT_LABEL_LONG__.</strong></span>';
 
 // ---- Augment hires ----
 HIRES.forEach(h => {
@@ -600,11 +604,11 @@ const totalAmount = leaderboardRows.reduce((s,d) => s+d.amount, 0);
 const onBoardReps = new Set(leaderboardRows.map(d => d.name)).size;
 const stats = [
   {label:'Reps In '+WINDOW_DAYS+'-Day Window',     value:HIRES.filter(h=>h.eligible).length,            sub:'of '+HIRES.length+' cohort members'},
-  {label:'Curriculum Complete + In Window',          value:HIRES.filter(h=>h.leaderboardEligible).length, sub:'eligible for the board'},
-  {label:'Reps On The Board',                        value:onBoardReps,                                    sub:'with a qualifying Closed Won deal'},
-  {label:'Qualifying Deals',                         value:leaderboardRows.length,                         sub:'in-window, self-progressed'},
-  {label:'Leaderboard Revenue',                      value:fmtMoney(totalAmount),                          sub:'across qualifying deals'},
-  {label:'Salesforce-Verified',                      value:VERIFICATION.filter(v=>v.isCreatedBy).length+' / '+VERIFICATION.length, sub:'created an opp record'},
+  {label:'Curriculum Complete + In Window',          value:HIRES.filter(h=>h.leaderboardEligible).length, sub:'eligible to appear on the board'},
+  {label:'Reps On The Board',                        value:onBoardReps,                                    sub:'eligible with a qualifying Closed Won deal'},
+  {label:'Qualifying Deals',                         value:leaderboardRows.length,                         sub:'in-window, curriculum complete, self-progressed'},
+  {label:'Leaderboard Revenue',                      value:fmtMoney(totalAmount),                          sub:'total across qualifying deals'},
+  {label:'Salesforce-Verified',                      value:VERIFICATION.filter(v=>v.isCreatedBy).length+' / '+VERIFICATION.length, sub:'cohort members with a created opportunity'},
 ];
 document.getElementById('statStrip').innerHTML = stats.map(s =>
   '<div class="stat">' +
@@ -651,17 +655,20 @@ function renderLeaderboard(){
     .sort((a,b) => b.amount - a.amount);
   document.getElementById('leaderboardCount').textContent = rows.length;
   if(!rows.length){
-    el.innerHTML = '<div class="empty-state">No qualifying wins yet &mdash; a rep must be in the '+WINDOW_DAYS+'-day window, curriculum complete, and have personally walked a deal through both Sales Qualified and Engage.</div>';
+    el.innerHTML = '<div class="empty-state">' +
+      '<div style="font-size:22px;margin-bottom:10px;">&#8212;</div>' +
+      '<div style="font-size:14px;font-weight:600;margin-bottom:8px;">No qualifying wins yet</div>' +
+      '<div style="font-size:13px;max-width:560px;margin:0 auto;line-height:1.6;">No rep currently inside the '+WINDOW_DAYS+'-day hire window is curriculum-complete, sitting on a Closed Won deal with a dollar amount, and shown as having personally moved that deal through Sales Qualified and Engage. This panel updates itself the moment all three line up &mdash; check the Window Tracker and Closed-Won History below for where each rep and deal currently stand.</div>' +
+    '</div>';
     return;
   }
   el.innerHTML = '<div class="table-scroll"><table>' +
-    '<thead><tr><th>Rep</th><th>Job Title</th><th>Market</th><th>Account</th><th>Designation</th><th>Revenue Type</th><th>Hire Date</th><th>Close Date</th><th>Hire&rarr;Close</th><th>Curriculum</th><th>Amount</th></tr></thead>' +
+    '<thead><tr><th>Rep</th><th>Job Title</th><th>Market</th><th>Designation</th><th>Revenue Type</th><th>Hire Date</th><th>Close Date</th><th>Hire&rarr;Close</th><th>Curriculum</th><th>Amount</th></tr></thead>' +
     '<tbody>' + rows.map(d =>
       '<tr>' +
         '<td class="td-name">'+d.name+'</td>' +
         '<td class="td-muted">'+d.jobTitle+'</td>' +
         '<td class="td-muted">'+d.market.replace(' Sls','')+'</td>' +
-        '<td>'+d.accountName+'</td>' +
         '<td><span class="badge '+(d.accountDesignation.toLowerCase()==='growth'?'badge-growth':'badge-retention')+'">'+(d.accountDesignation||'&#8212;')+'</span></td>' +
         '<td class="td-muted">'+d.revenueType+'</td>' +
         '<td class="td-muted">'+fmtDate(d.hireDate)+'</td>' +
