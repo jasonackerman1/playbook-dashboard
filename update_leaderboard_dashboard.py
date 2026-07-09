@@ -449,12 +449,12 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 <div class="wrap">
 
-  <div class="data-note" id="dataNote"></div>
-
   <div class="data-note">
     <span style="font-size:15px;flex-shrink:0;">&#9432;</span>
-    <span>Recognizes new hires who closed won business <strong>within their first __WINDOW_DAYS__ days</strong> on the job, have <strong>completed the Accelerate curriculum</strong>, and <strong>personally advanced the deal</strong> through Sales Qualified and Engage themselves (a deal handed off to a manager or teammate along the way doesn&rsquo;t count). The window is calculated live against today&rsquo;s date, with every hire, deal, curriculum status, and stage handoff pulled straight from the source reports.</span>
+    <span>To appear on this board, a rep must close a deal within their first 45 days on the job, complete the Accelerate curriculum, and personally move that deal through both Sales Qualified and Engage. Deals handed off to a manager or teammate do not count.</span>
   </div>
+
+  <div class="data-note" id="dataNote"></div>
 
   <div class="stats" id="statStrip"></div>
 
