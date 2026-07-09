@@ -299,18 +299,20 @@ def _load_salesforce(records):
         close_date = f'{int(m.group(3)):04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}' if m else raw_date[:10]
         # Only count deals closed within the rep's first 45 days of the program
         assign_date = records[email].get('assignDate')
+        days_to_close = None
         if assign_date and close_date:
             try:
                 from datetime import date as _d
                 atc = (_d.fromisoformat(close_date) - _d.fromisoformat(assign_date)).days
                 if atc < 0 or atc > 45:
                     continue
+                days_to_close = atc
             except Exception:
                 continue
         account = row.get('Account Name', '').strip().title()
         # Keep the earliest closed deal (true "first sale")
         if email not in sales or close_date < sales[email]['closeDate']:
-            sales[email] = {'amount': amount, 'accountName': account, 'closeDate': close_date}
+            sales[email] = {'amount': amount, 'accountName': account, 'closeDate': close_date, 'daysToClose': days_to_close}
     return sales
 
 
@@ -329,6 +331,50 @@ def generate_html(records, sales_map=None):
 
     curric_ids   = json.dumps([c[0] for c in CURRICULA])
     curric_names = json.dumps({c[0]: c[1] for c in CURRICULA})
+
+    # Page-level course map: exact LMS title → playbook page slug (confirmed 2026-07-09)
+    _course_page = {
+        'The KM Sales Experience':                                                          'understandingsalesforce',
+        'Salesforce Live Workshop':                                                         'understandingsalesforce',
+        'Mastering your Daily Sales Workflow':                                              'salesworkflow',
+        'Why Konica Minolta: Selling the Value of Our Technology, Services and Solutions':  'coreportfolio',
+        'bizhub One i-Series: Functionality, Ease of Use, Security':                        'coreportfolio',
+        'Layered Security: Introducing the Model':                                          'coreportfolio',
+        'User Authentication and Access Control':                                           'coreportfolio',
+        'Document Security':                                                                'coreportfolio',
+        'Introduction to Production Print':                                                 'coreportfolio',
+        'Introducing BlueIrisIQ: Our Story':                                               'coreportfolio',
+        'Managed IT (MIT) New Hire Kickstart':                                              'coreportfolio',
+        'Identifying Real Sales Opportunities and Using the Lease Upgrade Sheet Part 1':    'prospectingskills',
+        'Identifying Real Sales Opportunities and Using the Lease Upgrade Sheet Part 2':    'prospectingskills',
+        'How to Focus on the Work That Matters Most: Highest Payoff Activities':            'prospectingskills',
+        'Introduction to Microsoft Copilot':                                                'prospectingskills',
+        'Microsoft Copilot: The Art of Prompting':                                          'prospectingskills',
+        'How to Research and Write Messages That Win Meetings: Foundations of a Targeted Message':    'prospectingskills',
+        'How to Research and Write Messages That Win Meetings: Leveraging the Persona Worksheet':     'prospectingskills',
+        'Design Better Prospecting Calls with Disarm, Purpose, Question':                   'prospectingskills',
+        'Build Better Voicemails: Structure, Clarity, Impact':                              'prospectingskills',
+        'Prospecting Live Workshop':                                                        'prospectingskills',
+        'Prospecting Foundations: Turning Skills into Action':                              'salesforceprospecting',
+        'From Prep to Performance: Running Calls with Confidence':                          'callprep',
+        'Discovery That Delivers: A Structured Approach to Better Sales Conversations':     'callprep',
+        'Presentation Best Practices':                                                      'callprep',
+        "Sales Math: Numbers Don't Lie":                                                    'workingwithnumbers',
+        'Konica Minolta Premier Finance Leasing Live Workshop':                             'workingwithnumbers',
+        'Managing and Moving Your Deals Forward':                                           'movingdeals',
+        'How to Build Accurate Forecasts and Strong Pipelines':                             'pipelineownership',
+    }
+    _page_order = [
+        'index', 'overview', 'welcome', 'understandingsalesforce',
+        'salesworkflow',
+        'coreportfolio',
+        'prospectingskills', 'salesforceprospecting',
+        'callprep', 'workingwithnumbers',
+        'movingdeals', 'pipelineownership',
+        'resources', 'managers',
+    ]
+    course_page_json = json.dumps(_course_page, ensure_ascii=False)
+    page_order_json  = json.dumps(_page_order)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -585,6 +631,7 @@ def generate_html(records, sales_map=None):
     <option value="days-asc">Most Urgent First</option>
   </select>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
+  <span class="info-btn" onclick="showInfo(event,'filters-info')" style="margin-left:4px;">?</span>
   <span class="result-count" id="result-count"></span>
 </div>
 
@@ -608,9 +655,9 @@ def generate_html(records, sales_map=None):
     <div class="stat-value green" id="s-completed">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">First Sale (Salesforce) <span class="info-btn" onclick="showInfo(event,'first-sale')">?</span></div>
+    <div class="stat-label">Days to First Sale <span class="info-btn" onclick="showInfo(event,'first-sale')">?</span></div>
     <div class="stat-value amber" id="s-sales">TBD</div>
-    <div class="stat-sub">Integration pending</div>
+    <div class="stat-sub">avg from program start to close</div>
   </div>
 </div>
 
@@ -634,9 +681,10 @@ def generate_html(records, sales_map=None):
       <div class="section-hint">Click any row to see full detail &mdash; curriculum breakdown, course checklist &amp; playbook activity</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px;align-items:center;">
         <button class="sort-btn active" id="view-individual" onclick="setTableView('individual')">Individual</button>
         <button class="sort-btn" id="view-manager" onclick="setTableView('manager')">By Manager</button>
+        <span class="info-btn" onclick="showInfo(event,'view-toggle')" style="margin-left:2px;">?</span>
       </div>
       <input type="text" id="table-search" oninput="filterTableRows()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
     </div>
@@ -696,6 +744,8 @@ def generate_html(records, sales_map=None):
 const PEOPLE = {people_json};
 const SALES_MAP = {sales_map_json};
 const COHORT_TOTAL = {cohort_total};
+const COURSE_PAGE = {course_page_json};
+const PAGE_ORDER = {page_order_json};
 const CURRIC_IDS = {curric_ids};
 const CURRIC_NAMES = {curric_names};
 /* The designed pacing schedule, straight from each curriculum's LMS title
@@ -873,7 +923,7 @@ function urlSlug(url) {{
   return m[1].toLowerCase();
 }}
 function pbEngagement(p) {{
-  const visits = p.playbook || [];
+  const visits = (p.playbook || []).filter(v => !p.assignDate || v.date >= p.assignDate);
   if (!visits.length) {{
     const level = p.overallPct > 0 ? 'alert' : 'none';
     return {{totalVisits:0, uniquePages:0, visitedCurricula:{{}}, mismatches:[], level}};
@@ -951,17 +1001,27 @@ function toggleTheme() {{
 
 /* ── Info popover ── */
 const INFO = {{
-  "total-enrolled": "The total number of people currently in the Accelerate Onboarding program. If you have applied any filters above, this number reflects only the people matching those filters.",
-  "overdue": "People who have missed the deadline for one or more of their required courses, as reported by the LMS. For example, if someone's Getting Started course was due June 11 and they have not finished it, they appear here as Overdue.",
-  "ontrack": "People who are still within all of their course deadlines. They have not missed anything yet, but may not be done. Tip: click into any person's row to see exactly which courses still need attention.",
-  "completed": "People who have fully completed every required course in the Accelerate Onboarding program.",
-  "first-sale": "Number of Accelerate cohort members with a Closed Won opportunity in Salesforce. Reflects closed deals only — open pipeline is not included in this view.",
-  "market-chart": "Shows how far along each market's reps are on average. Hover over any bar to see the full picture — how many people are done, still on track, or past their deadline. A shorter bar means that market may need extra attention.",
-  "curric-chart": "Shows how far along all reps are on average for each course. Hover over any bar to see how many people have finished that course, are working on it, have not started it yet, or are past its deadline. A short bar is a signal that reps are getting stuck there.",
-  "heatmap": "One row per person. The Curricula column shows 6 colored squares — one per curriculum — so you can see at a glance where someone stands across the whole program. Green = done, Blue = in progress, Red = past due, Gray = not started. The playbook dot shows whether they are using the Accelerate Playbook alongside their LMS courses. Click any row to open their full detail card — every individual lesson, completion dates, curriculum breakdown, and playbook activity.",
-  "biggest-gap-info": "The curriculum this person has made the least progress on (lowest completion %), regardless of whether it's actually due yet. This is different from Days Left, which shows whichever curriculum has the soonest or most overdue deadline. A curriculum can have a big gap (0% done) without being overdue if its deadline has not arrived yet.",
-  "expected-focus-info": "Based on the designed pacing schedule (e.g. Getting Started/Sales Workflow/Core Portfolio in Week 1, Sales Skills in Weeks 2-3, Pipeline Mgmt in Weeks 4-5), this shows which curriculum someone should be working on right now given how many days they have had the program -- or which ones they should already have finished but have not. This is the same pace concept as Expected %/Gap, just broken out by curriculum instead of one overall number.",
-  "export": "Downloads a report based on whoever is currently showing on screen -- so filter first, then export. Full Report: everyone with their status and overall progress. Overdue Only: a list of people who are past a course deadline, including their manager's contact info for follow-up. Manager Summary: one row per manager showing their team's headcount and progress. Example: filter to a specific market, then choose Overdue Only to get a ready-to-use outreach list for that region.",
+  "total-enrolled": "The total number of people currently enrolled in the Accelerate Onboarding program. If filters are applied above, this reflects only the people currently shown.",
+  "overdue": "People who have missed the LMS deadline for at least one required course. Deadlines are set per course relative to each person's program start date — for example, Getting Started items may be due within the first week. Click any row to see exactly which courses are overdue.",
+  "ontrack": "People who have not missed any course deadlines yet. They may or may not be keeping pace — check the Gap column to see who is falling behind even if they are technically still on time. Click any row to see which courses still need attention.",
+  "completed": "People who have finished every required course across all six curricula in the Accelerate program.",
+  "first-sale": "Average number of days from each rep's Accelerate program start date to their first Closed Won deal. Only deals closed within the first 45 days of the program qualify. Open pipeline is not included. Data pulled from Salesforce.",
+  "filters-info": "Market: narrow the table to one market. Status: show only people who are Completed, On Track, or Overdue. Sort: change the default row order. All filters work together — for example, filter to a market and sort by Most Urgent to quickly find who needs attention there. Use Reset to clear everything.",
+  "view-toggle": "Individual view shows one row per learner. By Manager groups learners under their manager so you can see how each team is tracking. The search box updates automatically — in Individual view it searches by learner name, in By Manager view it searches by manager name.",
+  "market-chart": "Average overall completion percentage by market. Hover over a bar to see how many reps in that market are done, on track, or overdue. A short bar is a signal that market may need extra support.",
+  "curric-chart": "Average completion percentage per curriculum across the whole cohort. Hover over a bar to see how many reps have finished, are in progress, have not started, or are past the deadline for that curriculum. A short bar is where reps are getting stuck.",
+  "heatmap": "One row per learner. Click any row to open their full detail — every individual lesson, completion dates, curriculum breakdown, and playbook activity timeline.",
+  "col-learner": "The colored dot to the left of the name shows whether this person is using the Accelerate Playbook alongside their LMS courses. Green = visiting the playbook. Red = completing courses with no playbook visits recorded. Gray = no activity yet. Click any row to see their full playbook and course history.",
+  "col-status": "Each person's current standing in the program. Completed = finished all required courses. Overdue = past the LMS deadline for at least one course. On Track = within all deadlines so far. Note: On Track does not mean ahead of pace — check the Gap column to see if someone is falling behind.",
+  "col-days": "Days until the nearest upcoming course deadline, based on LMS-assigned due dates. Negative numbers mean a deadline has already passed — the number shows how many days ago. Each curriculum has its own deadline schedule tied to the person's program start date.",
+  "col-actual": "Weighted overall completion percentage. Calculated as total lessons completed divided by total lessons assigned across all six curricula. Each lesson counts equally regardless of which curriculum it belongs to.",
+  "col-expected": "How far along this person should be today based on the program's designed pacing schedule. Accounts for how many days they have had the program and what the schedule calls for at this point. Compare to Actual % — if Actual is lower, they are behind pace.",
+  "col-gap": "The difference between Actual % and Expected %. A negative number means behind schedule by that amount. A positive number means ahead. The color scales with severity: green when close, red when the gap is significant enough to warrant a check-in.",
+  "expected-focus-info": "Which curriculum this person should be actively working on right now based on the program's pacing schedule — Getting Started, Sales Workflow, and Core Portfolio in Week 1; Prospecting and Sales Skills in Weeks 2–3; Pipeline Management in Weeks 4–5. If a curriculum is shown in red, it should already be complete but is not.",
+  "biggest-gap-info": "The curriculum this person has fallen furthest behind on, measured by completion percentage. This is not the same as what is overdue — a curriculum can have a big gap without having passed its deadline yet. Use this to identify where to focus a coaching conversation.",
+  "col-curricula": "Six colored squares, one per curriculum in program order: Getting Started, Sales Workflow, Core Portfolio, Prospecting, Sales Skills, Pipeline Management. Green = complete. Blue = in progress. Red = past its deadline and not done. Gray = not started yet. Click the row to see individual lesson detail.",
+  "col-days-to-close": "How many days it took this rep to close their first Salesforce deal after starting the Accelerate program. Only deals closed within the first 45 days of the program qualify. A dash means no qualifying deal has been recorded yet.",
+  "export": "Downloads a report based on whoever is currently visible — apply filters first, then export. Full Report: all visible learners with status and progress. Overdue Only: people past a course deadline with their manager's contact info for easy follow-up. Manager Summary: one row per manager with their team's headcount and progress. Example: filter to a market, then export Overdue Only to get a targeted outreach list.",
 }};
 function showInfo(e, key) {{
   e.stopPropagation();
@@ -1080,29 +1140,30 @@ function renderStats() {{
   document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past a curriculum deadline' : '';
   document.getElementById('s-ontrack').textContent = ontrack;
   document.getElementById('s-completed').textContent = completed;
-  const salesCount = Object.keys(SALES_MAP).length;
-  document.getElementById('s-sales').textContent = salesCount + ' of ' + COHORT_TOTAL;
-  document.getElementById('s-sales').nextElementSibling.textContent = 'closed a deal in Salesforce';
+  const salesVals = Object.values(SALES_MAP).filter(v => v.daysToClose != null);
+  const avgDays = salesVals.length ? Math.round(salesVals.reduce((s,v) => s + v.daysToClose, 0) / salesVals.length) : null;
+  document.getElementById('s-sales').textContent = avgDays !== null ? avgDays + 'd' : '—';
 }}
 
 /* ── Heatmap table ── */
 function renderTable() {{
   // Header
   const thead = document.getElementById('heatmap-head');
-  function thS(label, col, extraCls) {{
+  function thS(label, col, extraCls, infoKey) {{
     const active = tableSort.col === col;
     const arrow = active ? (tableSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
     const cls = ['sortable-th', extraCls, active ? 'sort-active' : ''].filter(Boolean).join(' ');
-    return '<th class="' + cls + '" data-col="' + col + '" onclick="sortByCol(this.dataset.col)">' + label + arrow + '</th>';
+    const btn = infoKey ? '<span class="info-btn print-hide" onclick="event.stopPropagation();showInfo(event,\\'' + infoKey + '\\')">?</span>' : '';
+    return '<th class="' + cls + '" data-col="' + col + '" onclick="sortByCol(this.dataset.col)">' + label + arrow + btn + '</th>';
   }}
-  let hRow = '<tr>' + thS('Learner','name') + thS('Status','status') + thS('Days Left','days');
-  hRow += thS('Actual %','overall','overall-col');
-  hRow += thS('Expected %','expected','overall-col');
-  hRow += thS('Gap','gap','overall-col');
-  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Expected Focus<span class="info-btn" onclick="showInfo(event,\\'expected-focus-info\\')">?</span></th>';
-  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Biggest Gap<span class="info-btn" onclick="showInfo(event,\\'biggest-gap-info\\')">?</span></th>';
-  hRow += '<th style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;">Curricula</th>';
-  hRow += thS('First Sale','salesAmount','overall-col');
+  let hRow = '<tr>' + thS('Learner','name','','col-learner') + thS('Status','status','','col-status') + thS('Days Left','days','','col-days');
+  hRow += thS('Actual %','overall','overall-col','col-actual');
+  hRow += thS('Expected %','expected','overall-col','col-expected');
+  hRow += thS('Gap','gap','overall-col','col-gap');
+  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Expected Focus<span class="info-btn print-hide" onclick="showInfo(event,\\'expected-focus-info\\')">?</span></th>';
+  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Biggest Gap<span class="info-btn print-hide" onclick="showInfo(event,\\'biggest-gap-info\\')">?</span></th>';
+  hRow += '<th style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;">Curricula<span class="info-btn print-hide" onclick="showInfo(event,\\'col-curricula\\')">?</span></th>';
+  hRow += thS('Days to Close','daysToClose','overall-col','col-days-to-close');
   hRow += '</tr>';
   thead.innerHTML = hRow;
 
@@ -1126,7 +1187,7 @@ function renderTable() {{
       else if (col === 'overall')   {{ va = a.overallPct; vb = b.overallPct; }}
       else if (col === 'expected')  {{ va = expectedPct(a); vb = expectedPct(b); }}
       else if (col === 'gap')       {{ va = gapPct(a); vb = gapPct(b); }}
-      else if (col === 'salesAmount') {{ va = SALES_MAP[a.email] ? SALES_MAP[a.email].amount : 0; vb = SALES_MAP[b.email] ? SALES_MAP[b.email].amount : 0; }}
+      else if (col === 'daysToClose') {{ va = SALES_MAP[a.email] ? (SALES_MAP[a.email].daysToClose ?? 999) : 999; vb = SALES_MAP[b.email] ? (SALES_MAP[b.email].daysToClose ?? 999) : 999; }}
       else {{ va = a.curricula[col] ? a.curricula[col].pct : 0; vb = b.curricula[col] ? b.curricula[col].pct : 0; }}
       if (va < vb) return tableSort.dir === 'asc' ? -1 : 1;
       if (va > vb) return tableSort.dir === 'asc' ? 1 : -1;
@@ -1199,7 +1260,7 @@ function renderTable() {{
       '<td class="pct-cell" style="text-align:center;color:var(--muted);">&mdash;</td>';
     const pSaleRow = SALES_MAP[p.email];
     const saleCell = pSaleRow
-      ? '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--green);white-space:nowrap;">$' + Math.round(pSaleRow.amount).toLocaleString('en-US') + '</td>'
+      ? '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--accent);white-space:nowrap;">' + (pSaleRow.daysToClose != null ? pSaleRow.daysToClose + 'd' : '—') + '</td>'
       : '<td class="pct-cell" style="text-align:center;color:var(--muted);opacity:.4;">&#8212;</td>';
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
       '<td class="name-cell"><span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;" title="' + dotTip + '"></span>' + escHtml(p.name) + '</td>' +
@@ -1480,38 +1541,57 @@ function openModal(email) {{
   // Activity timeline — deduped playbook visits + LMS completions, sorted by date
   const tlEvents = [];
   const tlSeen = new Set();
-  (p.playbook || []).forEach(v => {{
+  (p.playbook || []).filter(v => !p.assignDate || v.date >= p.assignDate).forEach(v => {{
     const k = (v.page || '') + '|' + (v.date || '');
-    if (!tlSeen.has(k)) {{ tlSeen.add(k); tlEvents.push({{t:'pb', date:v.date||'', page:v.page||''}}); }}
+    const pbSlug = urlSlug(v.url);
+    if (!tlSeen.has(k)) {{ tlSeen.add(k); tlEvents.push({{t:'pb', date:v.date||'', page:v.page||'', slug:pbSlug, curricId:PLAYBOOK_CURRIC[pbSlug]||null}}); }}
   }});
   CURRIC_IDS.forEach(cid => {{
     const c = p.curricula[cid];
     if (!c) return;
     c.items.forEach(it => {{
-      if (it.done && it.date) tlEvents.push({{t:'lms', date:it.date, title:it.title, curric:c.title}});
+      if (it.done && it.date && (!p.assignDate || it.date >= p.assignDate)) tlEvents.push({{t:'lms', date:it.date, title:it.title, curric:c.title, curricId:cid}});
     }});
   }});
-  tlEvents.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  const _pgIdx = slug => {{ const i = PAGE_ORDER.indexOf(slug); return i >= 0 ? i : 999; }};
+  tlEvents.sort((a,b) => {{
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    const aSlug = a.t === 'pb' ? a.slug : (COURSE_PAGE[a.title] || '');
+    const bSlug = b.t === 'pb' ? b.slug : (COURSE_PAGE[b.title] || '');
+    const ai = _pgIdx(aSlug), bi = _pgIdx(bSlug);
+    if (ai !== bi) return ai - bi;
+    return a.t === 'pb' && b.t !== 'pb' ? -1 : a.t !== 'pb' && b.t === 'pb' ? 1 : 0;
+  }});
 
-  // Path score: for each curriculum with completions, did a playbook visit precede the first completion?
-  const evalCurricula = [];
+  // Build filtered playbook visits (on/after assignDate) and per-curriculum date lookup
+  const filteredPlaybook = (p.playbook || []).filter(v => !p.assignDate || v.date >= p.assignDate);
+  const pbVisitDates = {{}};
+  filteredPlaybook.forEach(v => {{
+    const cid = PLAYBOOK_CURRIC[urlSlug(v.url)];
+    if (cid) {{ if (!pbVisitDates[cid]) pbVisitDates[cid] = new Set(); pbVisitDates[cid].add(v.date); }}
+  }});
+  function dayBefore(d) {{
+    const dt = new Date(d + 'T00:00:00'); dt.setDate(dt.getDate() - 1);
+    return dt.toISOString().slice(0, 10);
+  }}
+  // Path score: of all individual completions, what fraction had a playbook visit same day or day before
+  let ledCount = 0, totalCount = 0;
   CURRIC_IDS.forEach(cid => {{
     const c = p.curricula[cid];
     if (!c) return;
-    const firstCompletion = c.items.filter(i => i.done && i.date).map(i => i.date).sort()[0];
-    if (!firstCompletion) return;
-    const mappedSlugs = Object.keys(PLAYBOOK_CURRIC).filter(slug => PLAYBOOK_CURRIC[slug] === cid);
-    const firstVisit = (p.playbook || [])
-      .filter(v => mappedSlugs.includes(urlSlug(v.url)))
-      .map(v => v.date).sort()[0];
-    evalCurricula.push({{cid, onPath: !!(firstVisit && firstVisit <= firstCompletion)}});
+    const visits = pbVisitDates[cid];
+    c.items.filter(i => i.done && i.date && (!p.assignDate || i.date >= p.assignDate)).forEach(i => {{
+      totalCount++;
+      if (visits && (visits.has(i.date) || visits.has(dayBefore(i.date)))) ledCount++;
+    }});
   }});
   let pathLabel = '', pathColor = '';
-  if (evalCurricula.length > 0) {{
-    const ratio = evalCurricula.filter(x => x.onPath).length / evalCurricula.length;
-    if (ratio >= 0.6)      {{ pathLabel = 'Playbook-led';      pathColor = 'var(--green)'; }}
-    else if (ratio >= 0.3) {{ pathLabel = 'Mixed';              pathColor = 'var(--amber)'; }}
-    else                   {{ pathLabel = 'Skipping playbook';  pathColor = 'var(--red)'; }}
+  if (totalCount > 0) {{
+    const ratio = ledCount / totalCount;
+    const pct = Math.round(ratio * 100) + '%';
+    if (ratio >= 0.6)      {{ pathLabel = 'Playbook-led ' + pct;      pathColor = 'var(--green)'; }}
+    else if (ratio >= 0.3) {{ pathLabel = 'Mixed ' + pct;              pathColor = 'var(--amber)'; }}
+    else                   {{ pathLabel = 'Skipping playbook ' + pct;  pathColor = 'var(--red)'; }}
   }}
 
   // Sequence check: first completion dates should be non-decreasing across CURRIC_IDS order
@@ -1537,7 +1617,7 @@ function openModal(email) {{
 
   const pSale = SALES_MAP[email];
   const saleHtml = pSale
-    ? '<span>&middot; First Sale: <strong style="color:var(--green)">$' + Math.round(pSale.amount).toLocaleString('en-US') + '</strong> &middot; ' + escHtml(pSale.accountName) + ' &middot; ' + fmtDate(pSale.closeDate) + '</span>'
+    ? '<span>&middot; First Sale: <strong style="color:var(--accent)">' + (pSale.daysToClose != null ? pSale.daysToClose + 'd' : '') + '</strong> &middot; $' + Math.round(pSale.amount).toLocaleString('en-US') + ' &middot; ' + escHtml(pSale.accountName) + ' &middot; ' + fmtDate(pSale.closeDate) + '</span>'
     : '<span style="color:var(--muted);">&middot; First Sale: None yet</span>';
   const content = `
     <div class="modal-header" style="padding-right:52px;">

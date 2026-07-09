@@ -117,6 +117,31 @@ CAUTION: verify against each new file from Resmie before regenerating.
 
 ---
 
+## Accelerate Playbook — Page & Course Map (confirmed 2026-07-09)
+
+Used in `update_onboarding_dashboard.py` for two purposes: (1) timeline sorting — within same-day clusters, playbook visits appear immediately before courses on that page; (2) "In sequence" label — courses in prescribed curriculum order.
+
+| Section | Page | Slug | Courses |
+|---|---|---|---|
+| Homepage | Home | `index` | — |
+| Getting Started | Program Overview | `overview` | Register: Accelerate Advanced Skills Boot Camp |
+| Getting Started | Welcome to Konica Minolta | `welcome` | — (doc downloads only) |
+| Getting Started | Understanding Salesforce | `understandingsalesforce` | KM Sales Experience · Register: Salesforce Live Workshop |
+| Sales Workflow | Sales Workflow | `salesworkflow` | Mastering Your Daily Sales Workflow |
+| Core Portfolio | Core Portfolio | `coreportfolio` | Why Konica Minolta · bizhub One i Series · Layered Security: Introducing the Model · Layered Security: User Auth · Layered Security: Document Security · Introduction to Production Print · Introducing Blue Iris IQ · Introducing All Covered · Register: Managed IT New Hire Kickstart |
+| Prospecting | Prospecting Skills | `prospectingskills` | Identifying Real Sales Opportunities · Lease Upgrade Sheet Pt 1 & 2 · High Payoff Activities · Intro to Microsoft Copilot · Copilot: Art of Prompting · Targeted Message: Foundations · Targeted Message: Persona Worksheet · Design Better Prospecting Calls (DPQ) · Build Better Voicemails · Register: Accelerate Advanced Skills Boot Camp · Register: Prospecting Live Workshop |
+| Prospecting | Salesforce Prospecting | `salesforceprospecting` | Prospecting Foundations: Turning Skills into Actions |
+| Sales Skills | Call Prep Essentials | `callprep` | From Prep to Performance · Discovery That Delivers · Presentation Best Practices · How to Prepare for Account Reviews (Coming Soon) |
+| Sales Skills | Working with Numbers | `workingwithnumbers` | Introducing KM Premier Finance · Leasing Fundamentals · Sales Math: Numbers Don't Lie · Commission Confidence (Coming Soon) · Register: KM Premier Finance Leasing Workshop |
+| Pipeline Mgmt | Moving Deals Forward | `movingdeals` | Managing and Moving Your Deal Forward |
+| Pipeline Mgmt | Pipeline Ownership | `pipelineownership` | How to Build Accurate Forecasts and Strong Pipelines |
+| — | Resources | `resources` | — |
+| — | Managers | `managers` | — |
+
+**Prescribed sequence:** Getting Started → Sales Workflow → Core Portfolio → Prospecting → Sales Skills → Pipeline Management
+
+---
+
 ## TLG (hide from dashboards)
 
 Jason Ackerman, Bianca Davis, James Parker, Resmie Biba, Chris Curtis, Sara Thompson, Jeremy MacBean, Bradley Pierce, Laura Sefcik, Samantha Maresca, Staci Musco, CJ Homer, Rich Moore, Dale Kinsey, John Lechner, Resmie Nesimi, Samantha D'Angelo, Bianca DiPasquale, Doug Falk
