@@ -14,6 +14,7 @@ Do not push to GitHub unless Jason explicitly says to. All development is tested
 | `cert-healthcare.html` | `update_cert_dashboard.py` | Healthcare Certification Dashboard |
 | `cert-publicsector.html` | `update_cert_dashboard.py` | Public Sector Certification Dashboard |
 | `onboarding.html` | `update_onboarding_dashboard.py` | Accelerate Onboarding |
+| `leaderboard.html` | `update_leaderboard_dashboard.py` | Accelerate Leaderboard |
 
 **Never edit generated HTML files directly** — always edit the Python script and regenerate.
 
@@ -39,16 +40,11 @@ Full-state backup of all dashboards and scripts saved to `_snapshots/` before si
 
 ---
 
-## Navigation (hamburger menus)
+## Navigation
 
-Every dashboard links to every other dashboard. When adding a new dashboard, update the hamburger menu in **all** scripts.
+All dashboards (Playbook, HC Cert, PS Cert, Onboarding, Leaderboard) use a **hidden triple-click Easter egg** on the `<h1>` to return to `index.html`. No visible hamburger nav.
 
-| Dashboard | Links to |
-|---|---|
-| Playbook | HC Cert, PS Cert, Accelerate Onboarding |
-| Healthcare Cert | Playbook, PS Cert, Accelerate Onboarding |
-| Public Sector Cert | Playbook, HC Cert, Accelerate Onboarding |
-| Accelerate Onboarding | Playbook, HC Cert, PS Cert |
+The homepage (`index.html`) has a card for each dashboard — that's the primary navigation entry point. Always add a new card in `generate_homepage.py` when adding a new dashboard.
 
 ---
 
@@ -63,7 +59,7 @@ Both SVG files are local to the repo root. Do NOT use the CDN URL for `KMA-wht.s
 
 **"POWERED BY" text is baked into both SVGs** at SVG coordinates `x="93" y="9.5" font-size="10"` — centered in the negative space between the hat icon (right edge x≈35) and "KONICA MINOLTA" small text (left edge x≈151). Do not add a "Powered by" wrapper div in any HTML — it's part of the SVG.
 
-All four Python scripts reference:
+All Python scripts reference:
 - Dark mode logo: `<img src="KMA-wht.svg" class="kma-logo kma-logo-dark">`
 - Light mode logo: `<img src="KMA-drk.svg" class="kma-logo kma-logo-light">`
 

@@ -1,0 +1,39 @@
+name: Update Leaderboard Dashboard
+
+on:
+  push:
+    paths:
+      - 'leaderboard-data/*.xlsx'
+      - 'update_leaderboard_dashboard.py'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install openpyxl
+
+      - name: Generate leaderboard dashboard
+        run: python update_leaderboard_dashboard.py
+
+      - name: Generate homepage
+        run: |
+          pip install pandas openpyxl
+          python generate_homepage.py
+
+      - name: Commit updated files
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add leaderboard.html index.html
+          git diff --cached --quiet || git commit -m "Auto-update leaderboard.html and index.html [skip ci]"
+          git push

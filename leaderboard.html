@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accelerate Leaderboard</title>
+<style>
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+    --accent:#4f8ef7; --accent2:#7c5cfc; --accent3:#f7c94f;
+    --text:#e8ecf4; --muted:#7b82a0; --green:#3ecf8e; --red:#f76f6f;
+    --teal:#2dd4bf; --green-subtle:#3ecf8e22; --red-subtle:#f76f6f22;
+    --font:'Segoe UI',system-ui,sans-serif;
+  }
+  body.light-mode {
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#eef1f7; --border:#d0d7e8;
+    --accent:#2563eb; --accent2:#6d28d9; --accent3:#d97706;
+    --text:#1a1d27; --muted:#475569; --green:#059669; --red:#dc2626;
+    --teal:#0f766e; --green-subtle:#05966922; --red-subtle:#dc262622;
+  }
+  body.light-mode select { color-scheme:light; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; transition:background .2s,color .2s; }
+
+  /* ---- HEADER ---- */
+  .header { padding:20px 28px 16px; border-bottom:1px solid var(--border); display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; background:var(--surface); }
+  .header-left { display:flex; flex-direction:column; }
+  .header-center { display:flex; justify-content:center; align-items:center; }
+  .header-right { display:flex; justify-content:flex-end; align-items:center; gap:8px; }
+  .header h1 { font-size:18px; font-weight:700; letter-spacing:.3px; cursor:default; }
+  .header h1 span { color:var(--muted); font-weight:400; }
+  .header-date { font-size:11px; color:var(--muted); margin-top:3px; }
+  .kma-logo { height:38px; width:auto; display:block; }
+  .kma-logo-light { display:none; }
+  .light-mode .kma-logo-dark { display:none; }
+  .light-mode .kma-logo-light { display:block; }
+  .btn-theme { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:5px 12px; font-size:12px; cursor:pointer; transition:all .15s; }
+  .btn-theme:hover { border-color:var(--accent); color:var(--text); }
+
+  /* ---- WRAP ---- */
+  .wrap { padding:28px 28px 80px; }
+
+  /* ---- DATA NOTE ---- */
+  .data-note { display:flex; align-items:flex-start; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:24px; font-size:13px; color:var(--muted); line-height:1.55; }
+
+  /* ---- STAT STRIP ---- */
+  .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:14px; margin-bottom:28px; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; }
+  .stat-label { font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); margin-bottom:6px; }
+  .stat-value { font-size:28px; font-weight:700; line-height:1; color:var(--text); }
+  .stat-value.green { color:var(--green); }
+  .stat-value.teal  { color:var(--teal);  }
+  .stat-value.accent{ color:var(--accent);}
+  .stat-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+
+  /* ---- SECTION CARD ---- */
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:24px; overflow:hidden; }
+  .section-head { padding:18px 22px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+  .section-head h2 { font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+  body.light-mode .section-head h2 { color:var(--text); }
+  .section-head h2 .count { font-size:11px; font-weight:700; color:var(--accent); background:var(--surface2); padding:2px 8px; border-radius:20px; text-transform:none; letter-spacing:0; }
+  .section-head p { margin:0; font-size:13px; color:var(--muted); line-height:1.5; max-width:640px; }
+  .search-box { background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:20px; padding:6px 12px; font-size:13px; outline:none; width:190px; font-family:inherit; }
+  .search-box:focus { border-color:var(--accent); }
+
+  /* ---- MARKET BARS ---- */
+  .market-chart { padding:20px 22px 24px; }
+  .market-row { display:grid; grid-template-columns:130px 1fr 110px; align-items:center; gap:14px; padding:8px 0; }
+  .market-row + .market-row { border-top:1px solid var(--border); }
+  .market-label { font-size:14px; font-weight:600; color:var(--text); }
+  .market-sub   { font-size:11px; color:var(--muted); margin-top:2px; }
+  .market-bar-track { position:relative; height:20px; background:var(--surface2); border-radius:4px; overflow:hidden; }
+  .market-bar-fill  { position:absolute; left:0; top:0; bottom:0; border-radius:4px; transition:width .5s ease; }
+  .market-amount { font-size:14px; font-weight:700; text-align:right; color:var(--text); font-variant-numeric:tabular-nums; }
+
+  /* ---- TABLE ---- */
+  .table-scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); background:var(--surface2); padding:10px 14px; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; position:sticky; top:0; }
+  thead th:hover { color:var(--text); }
+  thead th.sorted-asc::after  { content:' \2191'; color:var(--accent); }
+  thead th.sorted-desc::after { content:' \2193'; color:var(--accent); }
+  tbody td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+  .td-name   { font-weight:600; }
+  .td-muted  { color:var(--muted); }
+  .td-amount { text-align:right; color:var(--teal); font-weight:700; font-variant-numeric:tabular-nums; }
+  .td-num    { text-align:right; font-variant-numeric:tabular-nums; }
+  .td-self   { color:var(--green); font-weight:600; }
+
+  /* ---- BADGES ---- */
+  .badge { display:inline-block; font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; }
+  .badge-yes      { background:var(--green-subtle); color:var(--green); }
+  .badge-no       { background:var(--red-subtle);   color:var(--red); }
+  .badge-growth   { background:#4f8ef722; color:var(--accent); }
+  .badge-retention{ background:#f7c94f22; color:var(--accent3); }
+  .badge-in       { color:var(--teal); }
+  .badge-out      { color:var(--muted); }
+
+  /* ---- WINDOW BAR ---- */
+  .win-bar-wrap { display:flex; align-items:center; gap:8px; min-width:140px; }
+  .win-bar { position:relative; flex:1; height:6px; background:var(--border); border-radius:4px; overflow:hidden; }
+  .win-bar .fill { position:absolute; left:0; top:0; bottom:0; border-radius:4px; }
+  .win-days { font-size:11px; font-weight:600; min-width:42px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; }
+
+  /* ---- EMPTY STATE ---- */
+  .empty-state { padding:52px 24px; text-align:center; color:var(--muted); font-size:13px; }
+
+  /* ---- FOOTER ---- */
+  footer { text-align:center; font-size:11px; color:var(--muted); margin-top:40px; opacity:.7; }
+
+  @media(max-width:760px) {
+    .header { grid-template-columns:1fr auto; }
+    .header-center { display:none; }
+    .market-row { grid-template-columns:100px 1fr 80px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Accelerate Leaderboard <span>/ Sales Performance</span></h1>
+    <div class="header-date" id="header-date">Data as of July 8, 2026</div>
+  </div>
+  <div class="header-center">
+    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+  </div>
+  <div class="header-right">
+    <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="data-note" id="dataNote"></div>
+
+  <div class="stats" id="statStrip"></div>
+
+  <!-- MARKET CHART -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>Closed-Won Revenue by Market <span class="count" id="marketCount">0</span></h2>
+        <p>Closed Won revenue for the Accelerate cohort from June 4, 2026 onward, rolled up by market.</p>
+      </div>
+    </div>
+    <div id="marketChart" class="market-chart"></div>
+  </div>
+
+  <!-- MAIN LEADERBOARD -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>Closed-Won Leaderboard <span class="count" id="leaderboardCount">0</span></h2>
+        <p>Reps hired in the last 45 days who have <strong>completed the Accelerate curriculum</strong>, have at least one Closed Won opportunity with a dollar amount, and <strong>personally moved that opportunity through Sales Qualified and Engage themselves</strong>. Each qualifying win is its own row.</p>
+      </div>
+      <input class="search-box" id="leaderboardSearch" placeholder="Filter by rep or account&hellip;" oninput="renderLeaderboard()">
+    </div>
+    <div id="leaderboardBody"></div>
+  </div>
+
+  <!-- WINDOW TRACKER -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>New Hire Window Tracker <span class="count" id="trackerCount">0</span></h2>
+        <p>Every Accelerate cohort member and where they sit against the 45-day clock. Leaderboard eligibility requires both an open window and a completed curriculum.</p>
+      </div>
+      <input class="search-box" id="trackerSearch" placeholder="Filter by rep&hellip;" oninput="renderTracker()">
+    </div>
+    <div class="table-scroll">
+      <table id="trackerTable">
+        <thead><tr>
+          <th data-key="name" data-type="string">Rep</th>
+          <th data-key="jobTitle" data-type="string">Job Title</th>
+          <th data-key="market" data-type="string">Market</th>
+          <th data-key="hireDate" data-type="date">Hire Date</th>
+          <th data-key="daysSince" data-type="number">Days Since Hire</th>
+          <th data-key="eligible" data-type="string">45-Day Window</th>
+          <th data-key="curriculumComplete" data-type="string">Curriculum</th>
+        </tr></thead>
+        <tbody id="trackerTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COHORT HISTORY -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>Cohort Closed-Won History <span class="count" id="historyCount">0</span></h2>
+        <p>Every Closed Won deal by an Accelerate cohort rep with a close date on or after June 4, 2026. Stage columns show green when the rep personally advanced that stage.</p>
+      </div>
+      <input class="search-box" id="historySearch" placeholder="Filter by rep or account&hellip;" oninput="renderHistory()">
+    </div>
+    <div class="table-scroll">
+      <table id="historyTable">
+        <thead><tr>
+          <th data-key="name" data-type="string">Rep</th>
+          <th data-key="accountName" data-type="string">Account</th>
+          <th data-key="accountDesignation" data-type="string">Designation</th>
+          <th data-key="revenueType" data-type="string">Revenue Type</th>
+          <th data-key="hireDate" data-type="date">Hire Date</th>
+          <th data-key="closeDate" data-type="date">Close Date</th>
+          <th data-key="hireToCloseDays" data-type="number">Hire&rarr;Close</th>
+          <th data-key="salesQualifiedBy" data-type="string">Sales Qualified By</th>
+          <th data-key="engageBy" data-type="string">Engage By</th>
+          <th data-key="amount" data-type="number">Amount</th>
+        </tr></thead>
+        <tbody id="historyTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VERIFICATION -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>Salesforce Activity Verification <span class="count" id="verifyCount">0</span></h2>
+        <p>Whether each Accelerate hire has personally created an opportunity record in Salesforce &mdash; the strongest signal of self-initiated sales activity.</p>
+      </div>
+      <input class="search-box" id="verifySearch" placeholder="Filter by rep&hellip;" oninput="renderVerify()">
+    </div>
+    <div class="table-scroll">
+      <table id="verifyTable">
+        <thead><tr>
+          <th data-key="name" data-type="string">Rep</th>
+          <th data-key="jobTitle" data-type="string">Job Title</th>
+          <th data-key="market" data-type="string">Market</th>
+          <th data-key="hireDate" data-type="date">Hire Date</th>
+          <th data-key="isCreatedBy" data-type="bool">Created a Record</th>
+          <th data-key="createdCount" data-type="number">Opps Created</th>
+          <th data-key="ownedCount" data-type="number">Opps Owned</th>
+          <th data-key="isLastModifiedBy" data-type="bool">Recent Activity</th>
+        </tr></thead>
+        <tbody id="verifyTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>Data as of July 8, 2026 &middot; Accelerate Curriculum Report &middot; Closed Won Export &middot; Stage History Export</footer>
+</div>
+
+<script>
+const DEALS        = [{"name": "Gregory Christie", "jobTitle": "Senior Account Executive - GES", "market": "West Sls", "branch": "West Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "STANFORD HOTELS CORPORATION", "hireDate": "2026-02-09", "closeDate": "2026-06-04", "hireToCloseDays": 115, "curriculumComplete": "No", "amount": 9801.12, "oppId": "006Vy00001axbcd", "salesQualifiedBy": "Gregory Christie", "engageBy": "Gregory Christie"}, {"name": "Paolo Castellon", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "MISA IMPORTS INC", "hireDate": "2025-11-03", "closeDate": "2026-06-04", "hireToCloseDays": 213, "curriculumComplete": "No", "amount": 4392.37, "oppId": "006Vy00001bCgSO", "salesQualifiedBy": "Paolo Castellon", "engageBy": "Paolo Castellon"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "CELEBRATION CHURCH OF THE", "hireDate": "2026-04-01", "closeDate": "2026-06-05", "hireToCloseDays": 65, "curriculumComplete": "No", "amount": 9956.94, "oppId": "006Vy00001JlN49", "salesQualifiedBy": null, "engageBy": "Richard Bortner"}, {"name": "Sophia Krawczak", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "branch": "Heartland Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "GABRIEL NORTH AMERICA, INC.", "hireDate": "2026-02-02", "closeDate": "2026-06-16", "hireToCloseDays": 134, "curriculumComplete": "No", "amount": 2435.0, "oppId": "006Vy00001NVClV", "salesQualifiedBy": null, "engageBy": "Adeline Sherman"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "SANDHILLS VENTURES LLC", "hireDate": "2026-03-09", "closeDate": "2026-06-16", "hireToCloseDays": 99, "curriculumComplete": "No", "amount": 770.0, "oppId": "006Vy00001aDpdm", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "COMFORT DENTAL GROUP INC", "hireDate": "2026-03-09", "closeDate": "2026-06-16", "hireToCloseDays": 99, "curriculumComplete": "No", "amount": 6395.84, "oppId": "006Vy00001bXCFz", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "ROCKSOL CONSULTING GROUP INC", "hireDate": "2026-03-09", "closeDate": "2026-06-16", "hireToCloseDays": 99, "curriculumComplete": "No", "amount": 10793.1, "oppId": "006Vy00001cOi7y", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "FORT BEND SENIORS MEALS ON WHEELS", "hireDate": "2026-04-01", "closeDate": "2026-06-16", "hireToCloseDays": 76, "curriculumComplete": "No", "amount": 7694.19, "oppId": "006Vy00001dmDyU", "salesQualifiedBy": null, "engageBy": "Valencia Gilford"}, {"name": "Michael Shields", "jobTitle": "Senior Account Executive - CPS", "market": "Commercial Print", "branch": "CP New England", "accountDesignation": "Growth", "revenueType": "Production Print", "accountName": "B & B MANAGEMENT GROUP INC.", "hireDate": "2026-05-04", "closeDate": "2026-06-19", "hireToCloseDays": 46, "curriculumComplete": "No", "amount": 49988.07, "oppId": "006Vy00001f7T4F", "salesQualifiedBy": "Michael Shields", "engageBy": "Michael Shields"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "HAJOCA CORP", "hireDate": "2026-03-02", "closeDate": "2026-06-22", "hireToCloseDays": 112, "curriculumComplete": "No", "amount": 1500.0, "oppId": "006Vy00001b6Hmk", "salesQualifiedBy": "Anthony Petretta", "engageBy": "Anthony Petretta"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "branch": "Central Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "ALTEC AIR, LLC", "hireDate": "2026-03-09", "closeDate": "2026-06-26", "hireToCloseDays": 109, "curriculumComplete": "No", "amount": 2914.5, "oppId": "006Vy00001caQ41", "salesQualifiedBy": null, "engageBy": "Randahl Bradley"}, {"name": "Dylan McDonough", "jobTitle": "Named Account Executive", "market": "West Sls", "branch": "West Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "RAMONA CONVENT SCHOOL", "hireDate": "2026-02-17", "closeDate": "2026-06-29", "hireToCloseDays": 132, "curriculumComplete": "No", "amount": 24810.99, "oppId": "006Vy00001gAlBS", "salesQualifiedBy": "Dylan Mcdonough", "engageBy": "Dylan Mcdonough"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Growth", "revenueType": "Office Products", "accountName": "BALFOUR BEATTY MILITARY HOUSING MANAGEME", "hireDate": "2026-03-02", "closeDate": "2026-06-30", "hireToCloseDays": 120, "curriculumComplete": "No", "amount": 3684.08, "oppId": "006Vy00001aPdqa", "salesQualifiedBy": null, "engageBy": "Marie Caparo"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "HAJOCA CORPORATION", "hireDate": "2026-03-02", "closeDate": "2026-06-30", "hireToCloseDays": 120, "curriculumComplete": "No", "amount": 5700.0, "oppId": "006Vy00001etugM", "salesQualifiedBy": null, "engageBy": "Anthony Petretta"}, {"name": "Kelsey Carrington", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "branch": "Heartland Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "AMERICAN METAL TECHNOLOGIES LLC", "hireDate": "2026-05-05", "closeDate": "2026-07-07", "hireToCloseDays": 63, "curriculumComplete": "No", "amount": 11994.0, "oppId": "006Vy00001gqlLV", "salesQualifiedBy": "Kelsey Carrington", "engageBy": "Kelsey Carrington"}, {"name": "Kevin Kojouri", "jobTitle": "Named Account Executive", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "accountDesignation": "Retention", "revenueType": "Office Products", "accountName": "BOGHARA CONSULTING COMPANY", "hireDate": "2026-04-01", "closeDate": "2026-07-08", "hireToCloseDays": 98, "curriculumComplete": "No", "amount": 13349.0, "oppId": "006Vy00001hPw18", "salesQualifiedBy": null, "engageBy": "Kevin Kojouri"}];
+const HIRES        = [{"name": "Alford Wood", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-03-16", "curriculumComplete": "No"}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-03-02", "curriculumComplete": "No"}, {"name": "Christopher Melton", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-23", "curriculumComplete": "No"}, {"name": "Daniel Zepeda", "jobTitle": "Senior Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Dillon Basnight", "jobTitle": "Named Account Executive - HS", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-20", "curriculumComplete": "No"}, {"name": "Dre Ante Noel", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-04-27", "curriculumComplete": "No"}, {"name": "Dylan McDonough", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-17", "curriculumComplete": "No"}, {"name": "Emily Olstein", "jobTitle": "Senior Account Executive", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-04-06", "curriculumComplete": "No"}, {"name": "Frances Rogers", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Southeast Sls", "branch": "Southeast Sls", "hireDate": "2026-05-04", "curriculumComplete": "No"}, {"name": "Gregory Christie", "jobTitle": "Senior Account Executive - GES", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-02-09", "curriculumComplete": "No"}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-03-09", "curriculumComplete": "No"}, {"name": "Kelsey Carrington", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-05-05", "curriculumComplete": "No"}, {"name": "Kevin Kojouri", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Kyle Baker", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Meagan Blythe", "jobTitle": "Named Account Executive - PPS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Michael Shields", "jobTitle": "Senior Account Executive - CPS", "region": "FY2026 Commercial Print", "market": "Commercial Print", "branch": "CP New England", "hireDate": "2026-05-04", "curriculumComplete": "No"}, {"name": "Paolo Castellon", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2025-11-03", "curriculumComplete": "No"}, {"name": "Patrick Meagher", "jobTitle": "Named Account Executive - FBS", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-04-13", "curriculumComplete": "No"}, {"name": "RICHARD ALLEN", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "West Sls", "branch": "West Sls", "hireDate": "2026-04-27", "curriculumComplete": "No"}, {"name": "Randahl Bradley", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2025-08-04", "curriculumComplete": "No"}, {"name": "Sophia Krawczak", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-02-02", "curriculumComplete": "No"}, {"name": "Spencer Larson", "jobTitle": "Named Account Executive - GES", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-06", "curriculumComplete": "No"}, {"name": "Taylor Hill", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-03-23", "curriculumComplete": "No"}, {"name": "Tracy Hendricks", "jobTitle": "Major Account Executive - CPS", "region": "FY2026 Commercial Print", "market": "Commercial Print", "branch": "CP Texas", "hireDate": "2026-04-13", "curriculumComplete": "No"}, {"name": "Ty Foster", "jobTitle": "Senior Account Executive - HS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "William Birkett", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Central Sls", "branch": "Central Sls", "hireDate": "2026-04-01", "curriculumComplete": "No"}, {"name": "Kelli Sorrentino", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Mid-Atlantic Sls", "branch": "Mid-Atlantic Sls", "hireDate": "2026-06-08", "curriculumComplete": "No"}, {"name": "Morgan Bruno", "jobTitle": "Named Account Executive", "region": "FY2026 Direct Sales", "market": "Heartland Sls", "branch": "Heartland Sls", "hireDate": "2026-06-23", "curriculumComplete": "No"}];
+const VERIFICATION = [{"name": "Alford Wood", "jobTitle": "Named Account Executive", "market": "West Sls", "hireDate": "2026-03-16", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 5, "createdCount": 5, "lastModCount": 5}, {"name": "Anthony Petretta", "jobTitle": "Senior Account Executive", "market": "Mid-Atlantic Sls", "hireDate": "2026-03-02", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 4, "createdCount": 3, "lastModCount": 2}, {"name": "Christopher Melton", "jobTitle": "Senior Account Executive", "market": "West Sls", "hireDate": "2026-02-23", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 2, "createdCount": 2, "lastModCount": 1}, {"name": "Daniel Zepeda", "jobTitle": "Senior Account Executive - GES", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Dillon Basnight", "jobTitle": "Named Account Executive - HS", "market": "Mid-Atlantic Sls", "hireDate": "2026-04-20", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Dre Ante Noel", "jobTitle": "Named Account Executive - GES", "market": "Heartland Sls", "hireDate": "2026-04-27", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Dylan McDonough", "jobTitle": "Named Account Executive", "market": "West Sls", "hireDate": "2026-02-17", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 3, "createdCount": 3, "lastModCount": 3}, {"name": "Emily Olstein", "jobTitle": "Senior Account Executive", "market": "West Sls", "hireDate": "2026-04-06", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 2, "createdCount": 2, "lastModCount": 0}, {"name": "Frances Rogers", "jobTitle": "Named Account Executive", "market": "Southeast Sls", "hireDate": "2026-05-04", "isOwner": false, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 1, "lastModCount": 0}, {"name": "Gregory Christie", "jobTitle": "Senior Account Executive - GES", "market": "West Sls", "hireDate": "2026-02-09", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 7, "createdCount": 7, "lastModCount": 0}, {"name": "Jared Poplawski", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2026-03-09", "isOwner": true, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 4, "createdCount": 0, "lastModCount": 0}, {"name": "Kelsey Carrington", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "hireDate": "2026-05-05", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 1, "createdCount": 1, "lastModCount": 1}, {"name": "Kevin Kojouri", "jobTitle": "Named Account Executive", "market": "Mid-Atlantic Sls", "hireDate": "2026-04-01", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 1, "createdCount": 1, "lastModCount": 0}, {"name": "Kyle Baker", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Meagan Blythe", "jobTitle": "Named Account Executive - PPS", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Michael Shields", "jobTitle": "Senior Account Executive - CPS", "market": "Commercial Print", "hireDate": "2026-05-04", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 2, "createdCount": 1, "lastModCount": 0}, {"name": "Paolo Castellon", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2025-11-03", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 4, "createdCount": 3, "lastModCount": 2}, {"name": "Patrick Meagher", "jobTitle": "Named Account Executive - FBS", "market": "Mid-Atlantic Sls", "hireDate": "2026-04-13", "isOwner": false, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 0, "createdCount": 1, "lastModCount": 2}, {"name": "RICHARD ALLEN", "jobTitle": "Named Account Executive - GES", "market": "West Sls", "hireDate": "2026-04-27", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 1, "createdCount": 2, "lastModCount": 1}, {"name": "Randahl Bradley", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2025-08-04", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": false, "ownedCount": 3, "createdCount": 7, "lastModCount": 0}, {"name": "Sophia Krawczak", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "hireDate": "2026-02-02", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 2, "createdCount": 1, "lastModCount": 2}, {"name": "Spencer Larson", "jobTitle": "Named Account Executive - GES", "market": "Central Sls", "hireDate": "2026-04-06", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Taylor Hill", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2026-03-23", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Tracy Hendricks", "jobTitle": "Major Account Executive - CPS", "market": "Commercial Print", "hireDate": "2026-04-13", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Ty Foster", "jobTitle": "Senior Account Executive - HS", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Valencia Gilford", "jobTitle": "Named Account Executive - FBS", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": true, "isCreatedBy": true, "isLastModifiedBy": true, "ownedCount": 2, "createdCount": 1, "lastModCount": 1}, {"name": "William Birkett", "jobTitle": "Named Account Executive", "market": "Central Sls", "hireDate": "2026-04-01", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Kelli Sorrentino", "jobTitle": "Named Account Executive", "market": "Mid-Atlantic Sls", "hireDate": "2026-06-08", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}, {"name": "Morgan Bruno", "jobTitle": "Named Account Executive", "market": "Heartland Sls", "hireDate": "2026-06-23", "isOwner": false, "isCreatedBy": false, "isLastModifiedBy": false, "ownedCount": 0, "createdCount": 0, "lastModCount": 0}];
+const WINDOW_DAYS  = 45;
+const SOURCE_AS_OF = new Date(2026, 6, 8);
+
+const TODAY = new Date();
+TODAY.setHours(0,0,0,0);
+
+function parseDate(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function daysBetween(a,b){ return Math.round((b-a)/86400000); }
+function fmtDate(s){ if(!s) return '&#8212;'; return parseDate(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function fmtMoney(n){ return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+document.getElementById('dataNote').innerHTML =
+  '<span style="font-size:15px;flex-shrink:0;">&#9432;</span>' +
+  '<span><strong>New hire and curriculum data reflects the source reports as of ' +
+  SOURCE_AS_OF.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) +
+  '.</strong> Closed Won and opportunity data is scoped to deals closed on or after June 4, 2026. ' +
+  'The 45-day eligibility window recalculates live against today&rsquo;s date.</span>';
+
+// ---- Augment hires ----
+HIRES.forEach(h => {
+  h.daysSince = h.hireDate ? daysBetween(parseDate(h.hireDate), TODAY) : 999;
+  h.eligible  = h.daysSince >= 0 && h.daysSince <= WINDOW_DAYS;
+  h.curriculumOk = h.curriculumComplete === 'Yes';
+  h.leaderboardEligible = h.eligible && h.curriculumOk;
+});
+
+const eligibleNames = new Set(HIRES.filter(h => h.leaderboardEligible).map(h => h.name));
+const leaderboardRows = DEALS.filter(d =>
+  eligibleNames.has(d.name) &&
+  d.salesQualifiedBy === d.name &&
+  d.engageBy === d.name
+);
+
+// ---- Stat strip ----
+const totalAmount = leaderboardRows.reduce((s,d) => s+d.amount, 0);
+const onBoardReps = new Set(leaderboardRows.map(d => d.name)).size;
+const stats = [
+  {label:'Reps In '+WINDOW_DAYS+'-Day Window',     value:HIRES.filter(h=>h.eligible).length,            sub:'of '+HIRES.length+' cohort members'},
+  {label:'Curriculum Complete + In Window',          value:HIRES.filter(h=>h.leaderboardEligible).length, sub:'eligible for the board'},
+  {label:'Reps On The Board',                        value:onBoardReps,                                    sub:'with a qualifying Closed Won deal'},
+  {label:'Qualifying Deals',                         value:leaderboardRows.length,                         sub:'in-window, self-progressed'},
+  {label:'Leaderboard Revenue',                      value:fmtMoney(totalAmount),                          sub:'across qualifying deals'},
+  {label:'Salesforce-Verified',                      value:VERIFICATION.filter(v=>v.isCreatedBy).length+' / '+VERIFICATION.length, sub:'created an opp record'},
+];
+document.getElementById('statStrip').innerHTML = stats.map(s =>
+  '<div class="stat">' +
+    '<div class="stat-label">'+s.label+'</div>' +
+    '<div class="stat-value">'+s.value+'</div>' +
+    '<div class="stat-sub">'+s.sub+'</div>' +
+  '</div>'
+).join('');
+
+// ---- Market chart ----
+(function(){
+  const colors = [
+    'var(--accent)', 'var(--teal)', 'var(--accent3)',
+    'var(--green)',  'var(--accent2)', 'var(--red)'
+  ];
+  const byMarket = {};
+  DEALS.forEach(d => {
+    const m = d.market.replace(' Sls','');
+    if(!byMarket[m]) byMarket[m] = {amount:0, count:0, reps:new Set()};
+    byMarket[m].amount += d.amount;
+    byMarket[m].count  += 1;
+    byMarket[m].reps.add(d.name);
+  });
+  const rows = Object.entries(byMarket)
+    .map(([market,v]) => ({market, amount:v.amount, count:v.count, repCount:v.reps.size}))
+    .sort((a,b) => b.amount - a.amount);
+  const max = Math.max(...rows.map(r=>r.amount), 1);
+  document.getElementById('marketCount').textContent = rows.length;
+  document.getElementById('marketChart').innerHTML = rows.length ? rows.map((r,i) =>
+    '<div class="market-row">' +
+      '<div><div class="market-label">'+r.market+'</div><div class="market-sub">'+r.count+' deal'+(r.count===1?'':'s')+' &middot; '+r.repCount+' rep'+(r.repCount===1?'':'s')+'</div></div>' +
+      '<div class="market-bar-track"><div class="market-bar-fill" style="width:'+(r.amount/max*100).toFixed(1)+'%;background:'+colors[i%colors.length]+';opacity:.7;"></div></div>' +
+      '<div class="market-amount">'+fmtMoney(r.amount)+'</div>' +
+    '</div>'
+  ).join('') : '<div class="empty-state">No deals yet</div>';
+})();
+
+// ---- Leaderboard ----
+function renderLeaderboard(){
+  const el = document.getElementById('leaderboardBody');
+  const q  = (document.getElementById('leaderboardSearch').value||'').toLowerCase();
+  const rows = leaderboardRows
+    .filter(d => !q || d.name.toLowerCase().includes(q) || d.accountName.toLowerCase().includes(q))
+    .sort((a,b) => b.amount - a.amount);
+  document.getElementById('leaderboardCount').textContent = rows.length;
+  if(!rows.length){
+    el.innerHTML = '<div class="empty-state">No qualifying wins yet &mdash; a rep must be in the '+WINDOW_DAYS+'-day window, curriculum complete, and have personally walked a deal through both Sales Qualified and Engage.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="table-scroll"><table>' +
+    '<thead><tr><th>Rep</th><th>Job Title</th><th>Market</th><th>Account</th><th>Designation</th><th>Revenue Type</th><th>Hire Date</th><th>Close Date</th><th>Hire&rarr;Close</th><th>Curriculum</th><th>Amount</th></tr></thead>' +
+    '<tbody>' + rows.map(d =>
+      '<tr>' +
+        '<td class="td-name">'+d.name+'</td>' +
+        '<td class="td-muted">'+d.jobTitle+'</td>' +
+        '<td class="td-muted">'+d.market.replace(' Sls','')+'</td>' +
+        '<td>'+d.accountName+'</td>' +
+        '<td><span class="badge '+(d.accountDesignation.toLowerCase()==='growth'?'badge-growth':'badge-retention')+'">'+(d.accountDesignation||'&#8212;')+'</span></td>' +
+        '<td class="td-muted">'+d.revenueType+'</td>' +
+        '<td class="td-muted">'+fmtDate(d.hireDate)+'</td>' +
+        '<td class="td-muted">'+fmtDate(d.closeDate)+'</td>' +
+        '<td class="td-num">'+(d.hireToCloseDays!==null?d.hireToCloseDays+'d':'&#8212;')+'</td>' +
+        '<td><span class="badge '+(d.curriculumComplete==='Yes'?'badge-yes':'badge-no')+'">'+d.curriculumComplete+'</span></td>' +
+        '<td class="td-amount">'+fmtMoney(d.amount)+'</td>' +
+      '</tr>'
+    ).join('') + '</tbody></table></div>';
+}
+renderLeaderboard();
+
+// ---- Window Tracker ----
+let trackerSort = {key:'daysSince', dir:1};
+function renderTracker(){
+  const q = (document.getElementById('trackerSearch').value||'').toLowerCase();
+  const rows = [...HIRES]
+    .filter(h => !q || h.name.toLowerCase().includes(q))
+    .sort((a,b) => {
+      let av=a[trackerSort.key], bv=b[trackerSort.key];
+      if(trackerSort.key==='hireDate'){ av=parseDate(av)||new Date(0); bv=parseDate(bv)||new Date(0); }
+      if(av<bv) return -1*trackerSort.dir;
+      if(av>bv) return  1*trackerSort.dir;
+      return 0;
+    });
+  document.getElementById('trackerCount').textContent = rows.length;
+  document.getElementById('trackerTbody').innerHTML = rows.map(h => {
+    const pct   = Math.min(100, Math.max(0, h.daysSince/WINDOW_DAYS*100));
+    const color = !h.eligible ? 'var(--border)' : pct<60 ? 'var(--teal)' : pct<90 ? 'var(--accent3)' : 'var(--red)';
+    return '<tr>' +
+      '<td class="td-name">'+h.name+'</td>' +
+      '<td class="td-muted">'+h.jobTitle+'</td>' +
+      '<td class="td-muted">'+h.market.replace(' Sls','')+'</td>' +
+      '<td class="td-muted">'+fmtDate(h.hireDate)+'</td>' +
+      '<td><div class="win-bar-wrap">' +
+        '<div class="win-bar"><div class="fill" style="width:'+pct.toFixed(1)+'%;background:'+color+'"></div></div>' +
+        '<span class="win-days">'+h.daysSince+'d</span>' +
+      '</div></td>' +
+      '<td>'+(h.eligible
+        ? '<span class="badge badge-in">&#9679; In window</span>'
+        : '<span class="badge badge-out">Closed &middot; day '+h.daysSince+'</span>')+'</td>' +
+      '<td><span class="badge '+(h.curriculumComplete==='Yes'?'badge-yes':'badge-no')+'">'+h.curriculumComplete+'</span></td>' +
+    '</tr>';
+  }).join('');
+  document.querySelectorAll('#trackerTable thead th').forEach(th => {
+    th.classList.remove('sorted-asc','sorted-desc');
+    if(th.dataset.key===trackerSort.key) th.classList.add(trackerSort.dir===1?'sorted-asc':'sorted-desc');
+  });
+}
+document.querySelectorAll('#trackerTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    trackerSort.dir = trackerSort.key===key ? -trackerSort.dir : 1;
+    trackerSort.key = key;
+    renderTracker();
+  });
+});
+renderTracker();
+
+// ---- History ----
+let histSort = {key:'hireDate', dir:1};
+function renderHistory(){
+  const q = (document.getElementById('historySearch').value||'').toLowerCase();
+  const rows = [...DEALS]
+    .filter(d => !q || d.name.toLowerCase().includes(q) || d.accountName.toLowerCase().includes(q))
+    .sort((a,b) => {
+      let av=a[histSort.key], bv=b[histSort.key];
+      if(histSort.key==='hireDate'||histSort.key==='closeDate'){ av=av?parseDate(av):new Date(0); bv=bv?parseDate(bv):new Date(0); }
+      if(av<bv) return -1*histSort.dir;
+      if(av>bv) return  1*histSort.dir;
+      return 0;
+    });
+  document.getElementById('historyCount').textContent = rows.length;
+  document.getElementById('historyTbody').innerHTML = rows.map(d =>
+    '<tr>' +
+      '<td class="td-name">'+d.name+'</td>' +
+      '<td>'+d.accountName+'</td>' +
+      '<td><span class="badge '+(d.accountDesignation.toLowerCase()==='growth'?'badge-growth':'badge-retention')+'">'+(d.accountDesignation||'&#8212;')+'</span></td>' +
+      '<td class="td-muted">'+d.revenueType+'</td>' +
+      '<td class="td-muted">'+fmtDate(d.hireDate)+'</td>' +
+      '<td class="td-muted">'+fmtDate(d.closeDate)+'</td>' +
+      '<td class="td-num">'+(d.hireToCloseDays!==null?d.hireToCloseDays+'d':'&#8212;')+'</td>' +
+      '<td class="'+(d.salesQualifiedBy===d.name?'td-self':'td-muted')+'">'+(d.salesQualifiedBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
+      '<td class="'+(d.engageBy===d.name?'td-self':'td-muted')+'">'+(d.engageBy||'<span style="opacity:.5">Not recorded</span>')+'</td>' +
+      '<td class="td-amount">'+fmtMoney(d.amount)+'</td>' +
+    '</tr>'
+  ).join('');
+  document.querySelectorAll('#historyTable thead th').forEach(th => {
+    th.classList.remove('sorted-asc','sorted-desc');
+    if(th.dataset.key===histSort.key) th.classList.add(histSort.dir===1?'sorted-asc':'sorted-desc');
+  });
+}
+document.querySelectorAll('#historyTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    histSort.dir = histSort.key===key ? -histSort.dir : 1;
+    histSort.key = key;
+    renderHistory();
+  });
+});
+renderHistory();
+document.querySelector('#historyTable thead th[data-key="hireDate"]').classList.add('sorted-asc');
+
+// ---- Verification ----
+let verifSort = {key:'name', dir:1};
+function renderVerify(){
+  const q = (document.getElementById('verifySearch').value||'').toLowerCase();
+  const rows = [...VERIFICATION]
+    .filter(v => !q || v.name.toLowerCase().includes(q))
+    .sort((a,b) => {
+      let av=a[verifSort.key], bv=b[verifSort.key];
+      if(verifSort.key==='hireDate'){ av=parseDate(av)||new Date(0); bv=parseDate(bv)||new Date(0); }
+      if(typeof av==='boolean'){ av=av?1:0; bv=bv?1:0; }
+      if(av<bv) return -1*verifSort.dir;
+      if(av>bv) return  1*verifSort.dir;
+      return 0;
+    });
+  document.getElementById('verifyCount').textContent = rows.length;
+  document.getElementById('verifyTbody').innerHTML = rows.map(v =>
+    '<tr>' +
+      '<td class="td-name">'+v.name+'</td>' +
+      '<td class="td-muted">'+v.jobTitle+'</td>' +
+      '<td class="td-muted">'+v.market.replace(' Sls','')+'</td>' +
+      '<td class="td-muted">'+fmtDate(v.hireDate)+'</td>' +
+      '<td>'+(v.isCreatedBy
+        ? '<span class="badge badge-yes">&#10003; Confirmed</span>'
+        : '<span class="badge badge-no">No record found</span>')+'</td>' +
+      '<td class="td-num">'+v.createdCount+'</td>' +
+      '<td class="td-num">'+v.ownedCount+'</td>' +
+      '<td>'+(v.isLastModifiedBy
+        ? '<span class="badge badge-yes">Active</span>'
+        : '<span class="badge" style="background:var(--surface2);color:var(--muted)">Dormant</span>')+'</td>' +
+    '</tr>'
+  ).join('');
+  document.querySelectorAll('#verifyTable thead th').forEach(th => {
+    th.classList.remove('sorted-asc','sorted-desc');
+    if(th.dataset.key===verifSort.key) th.classList.add(verifSort.dir===1?'sorted-asc':'sorted-desc');
+  });
+}
+document.querySelectorAll('#verifyTable thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    verifSort.dir = verifSort.key===key ? -verifSort.dir : 1;
+    verifSort.key = key;
+    renderVerify();
+  });
+});
+renderVerify();
+
+// ---- Theme ----
+(function(){
+  if(localStorage.getItem('pb-theme')==='light'){
+    document.body.classList.add('light-mode');
+    document.getElementById('btn-theme').innerHTML='&#9790; Dark';
+  }
+})();
+function toggleTheme(){
+  const light = document.body.classList.toggle('light-mode');
+  document.getElementById('btn-theme').innerHTML = light ? '&#9790; Dark' : '&#9728; Light';
+  localStorage.setItem('pb-theme', light ? 'light' : 'dark');
+}
+
+// ---- Triple-click on h1 returns to index.html ----
+(function(){
+  var n=0,t;
+  var h=document.querySelector('.header h1');
+  if(h) h.addEventListener('click',function(){
+    n++;clearTimeout(t);
+    if(n>=3){n=0;window.location.href='index.html';}
+    else t=setTimeout(function(){n=0;},1500);
+  });
+})();
+</script>
+</body>
+</html>

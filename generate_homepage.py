@@ -188,8 +188,53 @@ def onboarding_stats():
     avg_pct = round(sum(p.get('overallPct', 0) for p in people) / total) if total else 0
     return {'total': total, 'completed': completed, 'overdue': overdue, 'avg_pct': avg_pct}
 
+# ── Leaderboard stats ─────────────────────────────────────────────────────────
+def leaderboard_stats():
+    orig = os.getcwd()
+    try:
+        os.chdir(str(SCRIPT_DIR))
+        from update_leaderboard_dashboard import (
+            _find_files, _parse_lms, _parse_html_xls, _stage_index, _build_data, WINDOW_DAYS
+        )
+        lms_path, cw_path, sh_path = _find_files()
+        hires, cohort_start = _parse_lms(lms_path)
+        cw_rows = _parse_html_xls(cw_path)
+        sh_rows = _parse_html_xls(sh_path)
+        stage_idx = _stage_index(sh_rows)
+        deals, _ = _build_data(cw_rows, stage_idx, hires, cohort_start)
+        from datetime import date as _d
+        today = _d.today()
+        eligible_names = {
+            h['name'] for h in hires
+            if h['hireDate'] and
+               0 <= (_d.today() - _d.fromisoformat(h['hireDate'])).days <= WINDOW_DAYS and
+               h['curriculumComplete'] == 'Yes'
+        }
+        lb_rows = [
+            d for d in deals
+            if d['name'] in eligible_names and
+               d['salesQualifiedBy'] == d['name'] and
+               d['engageBy'] == d['name']
+        ]
+        in_window   = sum(1 for h in hires if h['hireDate'] and
+                          0 <= (_d.today() - _d.fromisoformat(h['hireDate'])).days <= WINDOW_DAYS)
+        total_rev   = sum(d['amount'] for d in lb_rows)
+        on_board    = len(set(d['name'] for d in lb_rows))
+        return {
+            'total':      len(hires),
+            'in_window':  in_window,
+            'on_board':   on_board,
+            'total_rev':  f"${total_rev:,.0f}",
+        }
+    except Exception as e:
+        print(f"    Leaderboard stats error: {e}")
+        return None
+    finally:
+        os.chdir(orig)
+
+
 # ── HTML generation ───────────────────────────────────────────────────────────
-def generate_html(pb, hc, ps, ob):
+def generate_html(pb, hc, ps, ob, lb=None):
     today = datetime.now().strftime('%B %-d, %Y')
 
     pb_views = pb['total_views']   if pb else '—'
@@ -218,6 +263,11 @@ def generate_html(pb, hc, ps, ob):
     ob_avg_pct   = ob['avg_pct']   if ob else '—'
 
     ob_on_track  = (ob['total'] - ob['completed'] - ob['overdue']) if ob else '—'
+
+    lb_total     = lb['total']     if lb else '—'
+    lb_in_window = lb['in_window'] if lb else '—'
+    lb_on_board  = lb['on_board']  if lb else '—'
+    lb_total_rev = lb['total_rev'] if lb else '—'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -413,6 +463,32 @@ def generate_html(pb, hc, ps, ob):
       </div>
     </div>
 
+    <!-- Accelerate Leaderboard -->
+    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
+      <div class="card-head">
+        <span class="card-icon">&#127942;</span>
+        <div>
+          <div class="card-title">Accelerate Leaderboard</div>
+          <div class="card-desc">First closed-won deals, 45-day window</div>
+        </div>
+      </div>
+      <div>
+        <div class="stat-main">
+          <span class="stat-num" style="color:var(--accent)">{lb_total}</span>
+          <span class="stat-unit">cohort members</span>
+        </div>
+        <div class="stat-sub">{lb_in_window} currently in 45-day window</div>
+      </div>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-green">&#9733; {lb_on_board} on the board</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-blue">&#36; {lb_total_rev} qualifying revenue</span>
+        </div>
+        <a href="leaderboard.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -461,7 +537,14 @@ def main():
     else:
         print("    No onboarding data found")
 
-    html = generate_html(pb, hc, ps, ob)
+    print("  Reading leaderboard data...")
+    lb = leaderboard_stats()
+    if lb:
+        print(f"    {lb['total']} cohort members, {lb['in_window']} in window, {lb['on_board']} on the board, {lb['total_rev']} qualifying revenue")
+    else:
+        print("    No leaderboard data found")
+
+    html = generate_html(pb, hc, ps, ob, lb)
     out  = SCRIPT_DIR / 'index.html'
     out.write_text(html, encoding='utf-8')
     print(f"\nHomepage written to: {out}")
