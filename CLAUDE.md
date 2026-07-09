@@ -91,6 +91,32 @@ For user-supplied values (names, etc.) use `data-*` attributes and read them in 
 
 ---
 
+## Leaderboard Script — Developer Notes
+
+**Window anchor (critical):** The 45-day window runs from `assignDate` (LMS col 21, Accelerate program assignment date), NOT `hireDate`. This cohort was hired months before the program launched — the two dates diverge significantly. For future cohorts they may align, but the logic must always use `assignDate`.
+
+**Window timing:** Eligibility is checked at deal close date (`assignToCloseDays = closeDate - assignDate`), not today. This means a deal that closed on day 30 stays on the board even after the rep's window has since expired.
+
+**Both HIRES and DEALS carry `assignDate`:** HIRES uses it to compute `daysSince` for the Window Tracker (today-based). DEALS uses it for `assignToCloseDays`.
+
+**On Deck section:** Shows in-window reps (today check) with non-qualifying deals. "What's Missing" column — spell out all labels fully, no abbreviations. "SQ" → "Sales Qualified." Also shows curriculum-complete in-window reps with no deals yet.
+
+**Window Tracker split:** Active reps (in window) in the main table. Expired reps in a collapsed toggle (`expiredTrackerWrap` div, hidden by default). Count badge shows active count only.
+
+**History table column names:** "Program Start" (`assignDate`) and "Program Day" (`assignToCloseDays`) — not "Hire Date" / "Hire→Close."
+
+**LMS column constants (0-based):**
+```
+COL_FIRST=3, COL_LAST=4, COL_EMAIL=5
+COL_JOBTITLE=6, COL_REGION=7, COL_MARKET=8, COL_BRANCH=9
+COL_HIRE_DATE=15, COL_CURRIC_COMPLETE=20, COL_ASSIGN_DATE=21
+```
+CAUTION: verify against each new file from Resmie before regenerating.
+
+**Git push conflict pattern:** GitHub Actions auto-commits `leaderboard.html` after each push, causing diverged branches. Fix: `git pull --no-rebase -X ours && git push`.
+
+---
+
 ## TLG (hide from dashboards)
 
 Jason Ackerman, Bianca Davis, James Parker, Resmie Biba, Chris Curtis, Sara Thompson, Jeremy MacBean, Bradley Pierce, Laura Sefcik, Samantha Maresca, Staci Musco, CJ Homer, Rich Moore, Dale Kinsey, John Lechner, Resmie Nesimi, Samantha D'Angelo, Bianca DiPasquale, Doug Falk
