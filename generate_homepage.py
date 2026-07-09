@@ -351,34 +351,56 @@ def generate_html(pb, hc, ps, ob, lb=None):
 <div class="main">
   <div class="grid">
 
-    <!-- Playbook Traffic -->
-    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg')">
+    <!-- Accelerate Onboarding -->
+    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
       <div class="card-head">
-        <span class="card-icon">&#128202;</span>
+        <span class="card-icon">&#127919;</span>
         <div>
-          <div class="card-title">Playbook Traffic</div>
-          <div class="card-desc">Monthly page views by rep</div>
+          <div class="card-title">Accelerate Onboarding</div>
+          <div class="card-desc">45-day new rep program</div>
         </div>
       </div>
       <div>
         <div class="stat-main">
-          <span class="stat-num" style="color:var(--accent)">{pb_views}</span>
-          <span class="stat-unit">total views</span>
+          <span class="stat-num" style="color:var(--accent)">{ob_total}</span>
+          <span class="stat-unit">total learners</span>
         </div>
-        <div class="stat-sub">Latest data: {pb_month}</div>
+        <div class="stat-sub">{ob_avg_pct}% avg completion</div>
       </div>
-      <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:16px;">
-        <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
-          <div class="stat-row">
-            <span style="font-size:12px;color:var(--muted)">Top playbook:</span>
-            <span class="pill pill-blue">{pb_top}</span>
-          </div>
-          <div class="stat-row">
-            <span style="font-size:12px;color:var(--muted)">Unique reps:</span>
-            <span class="pill pill-blue">{pb_reps}</span>
-          </div>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-green">&#10003; {ob_completed} completed</span>
+          <span class="pill pill-blue">&#9679; {ob_on_track} on track</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-red">&#9888; {ob_overdue} overdue</span>
         </div>
-        <a href="playbook.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
+        <a href="onboarding.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
+      </div>
+    </div>
+
+    <!-- Accelerate Leaderboard -->
+    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
+      <div class="card-head">
+        <span class="card-icon">&#127942;</span>
+        <div>
+          <div class="card-title">Accelerate Leaderboard</div>
+          <div class="card-desc">First closed-won deals, 45-day window</div>
+        </div>
+      </div>
+      <div>
+        <div class="stat-main">
+          <span class="stat-num" style="color:var(--accent)">{lb_total}</span>
+          <span class="stat-unit">cohort members</span>
+        </div>
+        <div class="stat-sub">{lb_in_window} currently in 45-day window</div>
+      </div>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-green">&#9733; {lb_on_board} on the board</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-blue">&#36; {lb_total_rev} qualifying revenue</span>
+        </div>
+        <a href="leaderboard.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
@@ -436,56 +458,34 @@ def generate_html(pb, hc, ps, ob, lb=None):
       </div>
     </div>
 
-    <!-- Accelerate Onboarding -->
-    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
+    <!-- Playbook Traffic -->
+    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg')">
       <div class="card-head">
-        <span class="card-icon">&#127919;</span>
+        <span class="card-icon">&#128202;</span>
         <div>
-          <div class="card-title">Accelerate Onboarding</div>
-          <div class="card-desc">45-day new rep program</div>
+          <div class="card-title">Playbook Traffic</div>
+          <div class="card-desc">Monthly page views by rep</div>
         </div>
       </div>
       <div>
         <div class="stat-main">
-          <span class="stat-num" style="color:var(--accent)">{ob_total}</span>
-          <span class="stat-unit">total learners</span>
+          <span class="stat-num" style="color:var(--accent)">{pb_views}</span>
+          <span class="stat-unit">total views</span>
         </div>
-        <div class="stat-sub">{ob_avg_pct}% avg completion</div>
+        <div class="stat-sub">Latest data: {pb_month}</div>
       </div>
-      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
-        <div class="stat-row" style="flex:1;">
-          <span class="pill pill-green">&#10003; {ob_completed} completed</span>
-          <span class="pill pill-blue">&#9679; {ob_on_track} on track</span>
-          <div style="width:100%;height:0;"></div>
-          <span class="pill pill-red">&#9888; {ob_overdue} overdue</span>
+      <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+          <div class="stat-row">
+            <span style="font-size:12px;color:var(--muted)">Top playbook:</span>
+            <span class="pill pill-blue">{pb_top}</span>
+          </div>
+          <div class="stat-row">
+            <span style="font-size:12px;color:var(--muted)">Unique reps:</span>
+            <span class="pill pill-blue">{pb_reps}</span>
+          </div>
         </div>
-        <a href="onboarding.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
-      </div>
-    </div>
-
-    <!-- Accelerate Leaderboard -->
-    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
-      <div class="card-head">
-        <span class="card-icon">&#127942;</span>
-        <div>
-          <div class="card-title">Accelerate Leaderboard</div>
-          <div class="card-desc">First closed-won deals, 45-day window</div>
-        </div>
-      </div>
-      <div>
-        <div class="stat-main">
-          <span class="stat-num" style="color:var(--accent)">{lb_total}</span>
-          <span class="stat-unit">cohort members</span>
-        </div>
-        <div class="stat-sub">{lb_in_window} currently in 45-day window</div>
-      </div>
-      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
-        <div class="stat-row" style="flex:1;">
-          <span class="pill pill-green">&#9733; {lb_on_board} on the board</span>
-          <div style="width:100%;height:0;"></div>
-          <span class="pill pill-blue">&#36; {lb_total_rev} qualifying revenue</span>
-        </div>
-        <a href="leaderboard.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
+        <a href="playbook.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
       </div>
     </div>
 
