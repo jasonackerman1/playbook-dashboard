@@ -421,10 +421,6 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   /* ---- EMPTY STATE ---- */
   .empty-state { padding:52px 24px; text-align:center; color:var(--muted); font-size:13px; }
 
-  /* ---- RULE NOTE ---- */
-  .rule-note { font-size:12px; color:var(--muted); line-height:1.6; margin-top:6px; max-width:760px; }
-  .rule-note strong { color:var(--text); font-weight:600; }
-
   /* ---- FOOTER ---- */
   footer { text-align:center; font-size:11px; color:var(--muted); margin-top:40px; opacity:.7; }
 
@@ -441,7 +437,6 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   <div class="header-left">
     <h1>Accelerate Leaderboard <span>/ Sales Performance</span></h1>
     <div class="header-date" id="header-date">Data as of __FILE_DATE_LABEL__</div>
-    <div class="rule-note">Recognizes new hires who closed won business <strong>within their first __WINDOW_DAYS__ days</strong> on the job, have <strong>completed the Accelerate curriculum</strong>, and <strong>personally advanced the deal</strong> through Sales Qualified and Engage themselves (a deal handed off to a manager or teammate along the way doesn&rsquo;t count). The window is calculated live against today&rsquo;s date, with every hire, deal, curriculum status, and stage handoff pulled straight from the source reports.</div>
   </div>
   <div class="header-center">
     <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
@@ -455,6 +450,11 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <div class="wrap">
 
   <div class="data-note" id="dataNote"></div>
+
+  <div class="data-note">
+    <span style="font-size:15px;flex-shrink:0;">&#9432;</span>
+    <span>Recognizes new hires who closed won business <strong>within their first __WINDOW_DAYS__ days</strong> on the job, have <strong>completed the Accelerate curriculum</strong>, and <strong>personally advanced the deal</strong> through Sales Qualified and Engage themselves (a deal handed off to a manager or teammate along the way doesn&rsquo;t count). The window is calculated live against today&rsquo;s date, with every hire, deal, curriculum status, and stage handoff pulled straight from the source reports.</span>
+  </div>
 
   <div class="stats" id="statStrip"></div>
 
