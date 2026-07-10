@@ -333,14 +333,14 @@ def generate_html(pb, hc, ps, ob, lb=None):
   .header{{position:relative;overflow:hidden;}}
   .header>*:not(.aurora-wrap){{position:relative;z-index:1;}}
   .aurora-wrap{{position:absolute;inset:0;overflow:hidden;pointer-events:none;}}
-  .aurora-orb{{position:absolute;border-radius:50%;filter:blur(65px);animation:aurora-drift linear infinite alternate;}}
-  .aurora-1{{width:55%;height:160px;background:rgba(74,124,247,.45);top:-80px;left:-2%;animation-duration:11s;}}
-  .aurora-2{{width:50%;height:140px;background:rgba(139,92,246,.38);top:-60px;left:28%;animation-duration:8.5s;animation-delay:-2.5s;}}
-  .aurora-3{{width:48%;height:130px;background:rgba(20,184,166,.32);top:-75px;right:-2%;animation-duration:14s;animation-delay:-5.5s;}}
+  .aurora-orb{{position:absolute;border-radius:50%;filter:blur(70px);animation:aurora-drift linear infinite alternate;}}
+  .aurora-1{{width:400px;height:210px;background:rgba(74,124,247,.4);top:-120px;left:1%;animation-duration:11s;}}
+  .aurora-2{{width:300px;height:175px;background:rgba(139,92,246,.32);top:-85px;left:40%;animation-duration:8.5s;animation-delay:-2.5s;}}
+  .aurora-3{{width:270px;height:160px;background:rgba(20,184,166,.27);top:-100px;right:3%;animation-duration:14s;animation-delay:-5.5s;}}
   .light-mode .aurora-1{{width:420px;height:200px;background:rgba(74,124,247,.38);top:-55px;left:18%;}}
   .light-mode .aurora-2{{width:340px;height:180px;background:rgba(139,92,246,.3);top:-45px;left:32%;}}
   .light-mode .aurora-3{{width:380px;height:190px;background:rgba(20,184,166,.28);top:-60px;left:38%;}}
-  @keyframes aurora-drift{{0%{{transform:translate(0,0) scale(1);}}100%{{transform:translate(28px,18px) scale(1.18);}}}}
+  @keyframes aurora-drift{{0%{{transform:translate(0,0) scale(1);}}100%{{transform:translate(30px,22px) scale(1.22);}}}}
 </style>
 </head>
 <body>
