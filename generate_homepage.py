@@ -329,7 +329,7 @@ def generate_html(pb, hc, ps, ob, lb=None):
 
   /* ── Visual effects ──────────────────────────────────────────── */
   #particles-bg{{position:fixed;inset:0;z-index:0;pointer-events:none;}}
-  .light-mode #particles-bg{{opacity:.3;}}
+  .light-mode #particles-bg{{opacity:.45;}}
   body>*:not(#particles-bg){{position:relative;z-index:1;}}
   .header{{position:relative;overflow:hidden;}}
   .header>*:not(.aurora-wrap){{position:relative;z-index:1;}}
@@ -338,11 +338,10 @@ def generate_html(pb, hc, ps, ob, lb=None):
   .aurora-1{{width:400px;height:210px;background:rgba(74,124,247,.4);top:-120px;left:1%;animation-duration:11s;}}
   .aurora-2{{width:300px;height:175px;background:rgba(139,92,246,.32);top:-85px;left:40%;animation-duration:8.5s;animation-delay:-2.5s;}}
   .aurora-3{{width:270px;height:160px;background:rgba(20,184,166,.27);top:-100px;right:3%;animation-duration:14s;animation-delay:-5.5s;}}
+  .light-mode .aurora-1{{background:rgba(74,124,247,.22);top:-80px;}}
+  .light-mode .aurora-2{{background:rgba(139,92,246,.18);top:-60px;}}
+  .light-mode .aurora-3{{background:rgba(20,184,166,.16);top:-70px;}}
   @keyframes aurora-drift{{0%{{transform:translate(0,0) scale(1);}}100%{{transform:translate(30px,22px) scale(1.22);}}}}
-  .light-mode .aurora-wrap{{display:none;}}
-  .stat-num-wrap{{position:relative;display:inline-block;}}
-  .pulse-ring{{position:absolute;inset:-8px;border-radius:10px;border:1.5px solid var(--accent);opacity:0;animation:pulse-out 3.2s ease-out infinite;pointer-events:none;}}
-  @keyframes pulse-out{{0%{{transform:scale(1);opacity:.6;}}65%{{opacity:.1;}}100%{{transform:scale(1.5);opacity:0;}}}}
 </style>
 </head>
 <body>
@@ -559,17 +558,9 @@ function toggleTheme(){{
   frame();
 }})();
 
-/* ── Stat counters + pulse rings ────────────────────────────────── */
+/* ── Stat counters ──────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded',function(){{
   document.querySelectorAll('.stat-num').forEach(function(el,i){{
-    var wrap=document.createElement('span');
-    wrap.className='stat-num-wrap';
-    el.parentNode.insertBefore(wrap,el);
-    wrap.appendChild(el);
-    var ring=document.createElement('span');
-    ring.className='pulse-ring';
-    ring.style.animationDelay=(i*0.55)+'s';
-    wrap.appendChild(ring);
     var orig=el.textContent.trim();
     if(orig==='—')return;
     var pre=orig[0]==='$'?'$':'';
