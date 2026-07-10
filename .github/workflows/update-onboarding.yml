@@ -6,6 +6,7 @@ on:
       - 'onboarding-data/*.xlsx'
       - 'data/playbook-monthly-*.xlsx'
       - 'update_onboarding_dashboard.py'
+      - 'generate_homepage.py'
   workflow_dispatch:
 
 permissions:
