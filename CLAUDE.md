@@ -91,6 +91,37 @@ For user-supplied values (names, etc.) use `data-*` attributes and read them in 
 
 ---
 
+## Homepage Visual Effects (generate_homepage.py — added 2026-07-09)
+
+Three animated effects are embedded in the generated `index.html` via `generate_homepage.py`:
+
+1. **Particle network** — `<canvas id="particles-bg">` fixed behind all content. 65 dots, connect within 130px. Mode-aware colors (dark/light).
+2. **Aurora header glow** — 3 blurred orbs (`filter:blur(70px); border-radius:50%`) inside `.aurora-wrap` div in `.header`. Animated with `@keyframes aurora-drift`.
+3. **Animated stat counters** — `.stat-num` elements count up on DOMContentLoaded, 1400ms ease-out cubic easing.
+
+**Dark mode aurora: DO NOT CHANGE** — Jason confirmed it's "perfect." Three-orb positions at top:-120px/left:1%, top:-85px/left:40%, top:-100px/right:3% are intentional.
+**Light mode aurora:** Centered cluster, all three orbs at left:18–38%, top:-45 to -60px — glow sits behind the center logo, leaving title and buttons on clean white.
+
+All JS/CSS is inside a Python f-string — use `{{` / `}}` for literal braces.
+
+---
+
+## Cert Dashboard — `generate_html_healthcare_v2` CSS (Fixed 2026-07-09)
+
+`update_cert_dashboard.py` has two healthcare generator functions. The v2 function (currently used) has its own self-contained CSS block — it does NOT inherit from the v1 function.
+
+**Every time CSS is added to the v1 function, check whether it's also needed in v2.** The kma-logo CSS was missing from v2, causing the logo to be invisible. Required in v2's CSS block:
+```css
+.header { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; }
+.header-center { display:flex; justify-content:center; align-items:center; }
+.kma-logo { height:38px; width:auto; display:block; }
+.kma-logo-light { display:none; }
+.light-mode .kma-logo-dark { display:none; }
+.light-mode .kma-logo-light { display:block; }
+```
+
+---
+
 ## Leaderboard Script — Developer Notes
 
 **Window anchor (critical):** The 45-day window runs from `assignDate` (LMS col 21, Accelerate program assignment date), NOT `hireDate`. This cohort was hired months before the program launched — the two dates diverge significantly. For future cohorts they may align, but the logic must always use `assignDate`.
@@ -112,6 +143,10 @@ COL_JOBTITLE=6, COL_REGION=7, COL_MARKET=8, COL_BRANCH=9
 COL_HIRE_DATE=15, COL_CURRIC_COMPLETE=20, COL_ASSIGN_DATE=21
 ```
 CAUTION: verify against each new file from Resmie before regenerating.
+
+**`curriculumComplete = 'Yes'` is a multi-step final state:** Courses done → workshops attended → Boot Camp → capstone presentation to John Lechner with his sign-off. Reps finishing individual courses do NOT flip this flag. "On board = 0" in the homepage card while reps are actively enrolled is accurate and expected.
+
+**`leaderboard_stats()` in `generate_homepage.py` uses `assignDate`** for the 45-day window check (fixed 2026-07-09). Before the fix, it was using `hireDate`, which made all 29 reps appear out-of-window since they were hired months before Accelerate launched.
 
 **Git push conflict pattern:** GitHub Actions auto-commits `leaderboard.html` after each push, causing diverged branches. Fix: `git pull --no-rebase -X ours && git push`.
 
