@@ -89,6 +89,21 @@ def _norm(s):
     return ' '.join(w.capitalize() for w in str(s or '').split())
 
 
+def _file_dt(fname):
+    """Return a datetime derived from a filename date pattern, falling back to mtime."""
+    base = os.path.basename(str(fname))
+    m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', base)
+    if m:
+        return datetime.datetime(int(m.group(3)), int(m.group(1)), int(m.group(2)))
+    m = re.search(r'(\d{2})\.(\d{2})(?!\.\d)', base)
+    if m:
+        return datetime.datetime(datetime.datetime.today().year, int(m.group(1)), int(m.group(2)))
+    m = re.search(r'(\d{4})-(\d{2})', base)
+    if m:
+        return datetime.datetime(int(m.group(1)), int(m.group(2)), 1)
+    return datetime.datetime.fromtimestamp(os.path.getmtime(str(fname)))
+
+
 # ---------------------------------------------------------------------------
 # File detection
 # ---------------------------------------------------------------------------
@@ -445,7 +460,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <div class="header">
   <div class="header-left">
     <h1>Accelerate Leaderboard <span>/ Sales Performance</span></h1>
-    <div class="header-date" id="header-date">Data as of __FILE_DATE_LABEL__</div>
+    <div class="header-date" id="header-date">Data through __FILE_DATE_LABEL__</div>
   </div>
   <div class="header-center">
     <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
@@ -960,7 +975,7 @@ def main():
     print(f'Closed Won:    {os.path.basename(cw_path)}')
     print(f'Stage History: {os.path.basename(sh_path)}')
 
-    source_as_of = datetime.datetime.fromtimestamp(os.path.getmtime(lms_path))
+    source_as_of = _file_dt(lms_path)
 
     hires, cohort_start = _parse_lms(lms_path)
     print(f'  {len(hires)} hires, cohort start {cohort_start}')

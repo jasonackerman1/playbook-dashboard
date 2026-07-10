@@ -48,6 +48,29 @@ The homepage (`index.html`) has a card for each dashboard — that's the primary
 
 ---
 
+## "Data through" Date Pattern (All Dashboards — updated 2026-07-10)
+
+Every dashboard header shows **"Data through [date]"** — the actual date of the source data, not today's date. Each script has a helper that parses the date from the filename:
+
+| Script | Helper | How date is derived |
+|---|---|---|
+| `update_cert_dashboard.py` | `_file_date_label(fname)` | HC: `MM.DD.YYYY` from filename · PS: `YYYY-MM` from filename |
+| `update_dashboard.py` | inline | Max `Date` value across all records (most accurate — actual data) |
+| `update_onboarding_dashboard.py` | `_file_date_label(fname)` | `MM.DD.YYYY` from latest file in `onboarding-data/` |
+| `update_leaderboard_dashboard.py` | `_file_dt(fname)` | `MM.DD` from filename (returns datetime; rest of script derives label from it) |
+
+**Filename patterns handled** (all helpers match in this priority order):
+1. `MM.DD.YYYY` → `Month D, YYYY` (e.g. `07.10.2026` → `July 10, 2026`)
+2. `MM.DD` (no year) → `Month D, [current year]`
+3. `YYYY-MM` → `Month YYYY`
+4. Fallback → `os.path.getmtime()`
+
+**Playbook traffic dashboard:** The header subtitle (`Data through June 29, 2026`) is all you need — the old badge pill next to the export button was removed 2026-07-10 to avoid showing the same info twice.
+
+**HC cert file detection:** Both `update_cert_dashboard.py` and `generate_homepage.py` use glob-based auto-detection (`Healthcare*Certification-Report-*.xlsx` and `Healthcare-Certification-Foundations-Curricula-Report-*.xlsx`) — no hardcoded filenames. Just drop new files in `cert-data/` and regenerate.
+
+---
+
 ## KM Academy Logo SVGs
 
 Both SVG files are local to the repo root. Do NOT use the CDN URL for `KMA-wht.svg` — a local copy exists here.

@@ -99,8 +99,14 @@ months     = sorted(set(r['Month'] for r in records))
 print(f"\nTotal rows combined: {total_rows:,}")
 print(f"Months covered: {', '.join(months)}")
 
-_pb_dt = datetime.datetime.fromtimestamp(os.path.getmtime(str(files[-1][1])))
-pb_date_label = f'{_pb_dt.strftime("%B")} {_pb_dt.day}, {_pb_dt.year}'
+_pb_max_date = max((r.get('Date','') for r in records if r.get('Date')), default='')
+if _pb_max_date:
+    _y, _m, _d = _pb_max_date.split('-')
+    _MONTHS_PB = ['January','February','March','April','May','June','July','August','September','October','November','December']
+    pb_date_label = f'{_MONTHS_PB[int(_m)-1]} {int(_d)}, {_y}'
+else:
+    _pb_dt = datetime.datetime.fromtimestamp(os.path.getmtime(str(files[-1][1])))
+    pb_date_label = f'{_pb_dt.strftime("%B")} {_pb_dt.day}, {_pb_dt.year}'
 
 # ── Playbook Intelligence: static analysis content ────────────────────────────
 PLAYBOOK_ANALYSIS = {
@@ -651,7 +657,7 @@ html = f"""<!DOCTYPE html>
   <div class="header-left">
     <div>
       <h1>Playbook Traffic Dashboard</h1>
-      <div class="header-date">Data as of {pb_date_label}</div>
+      <div class="header-date">Data through {pb_date_label}</div>
     </div>
   </div>
   <div class="header-center">
@@ -659,7 +665,6 @@ html = f"""<!DOCTYPE html>
     <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span class="badge" id="badge-asof"></span>
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
@@ -846,7 +851,6 @@ function fmtDate(d){{
   return new Date(+y,+m-1,+day).toLocaleDateString('en-US',{{month:'long',day:'numeric',year:'numeric'}});
 }}
 const maxDate = RAW.reduce((mx,r)=>r.Date>mx?r.Date:mx,'');
-if(maxDate) sel('badge-asof').textContent = 'Data through '+fmtDate(maxDate);
 
 let filtered = [...RAW];
 function getFilters(){{

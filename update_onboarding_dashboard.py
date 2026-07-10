@@ -104,6 +104,26 @@ def extract_date(fname):
     return m.group(1) if m else '0000-00'
 
 
+def _file_date_label(fname):
+    """Return a human-readable 'Data through' date from a filename."""
+    import datetime as _dt
+    _MONTHS = ['January','February','March','April','May','June',
+               'July','August','September','October','November','December']
+    base = os.path.basename(str(fname))
+    m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', base)
+    if m:
+        return f'{_MONTHS[int(m.group(1))-1]} {int(m.group(2))}, {m.group(3)}'
+    m = re.search(r'(\d{2})\.(\d{2})(?!\.\d)', base)
+    if m:
+        yr = _dt.datetime.today().year
+        return f'{_MONTHS[int(m.group(1))-1]} {int(m.group(2))}, {yr}'
+    m = re.search(r'(\d{4})-(\d{2})', base)
+    if m:
+        return f'{_MONTHS[int(m.group(2))-1]} {m.group(1)}'
+    dt = _dt.datetime.fromtimestamp(os.path.getmtime(str(fname)))
+    return f'{_MONTHS[dt.month-1]} {dt.day}, {dt.year}'
+
+
 def page_label(url):
     m = re.search(r'/([^/]+?)(?:\.html)?$', url.rstrip('/'))
     if not m or m.group(1) in ('accelerate_sales_playbook', ''):
@@ -324,9 +344,15 @@ def generate_html(records, sales_map=None):
     sales_map_json   = json.dumps(sales_map, ensure_ascii=False)
     cohort_total     = len(people)
     today_str        = date.today().isoformat()
-    file_date        = date.today().strftime('%B %d, %Y')
-    _od = date.today()
-    header_date_label = f'{_od.strftime("%B")} {_od.day}, {_od.year}'
+    try:
+        _lms_dir   = 'onboarding-data'
+        _lms_files = [f for f in os.listdir(_lms_dir) if f.endswith('.xlsx')]
+        _lms_files.sort(key=lambda f: os.path.getmtime(os.path.join(_lms_dir, f)))
+        _lms_label = _file_date_label(os.path.join(_lms_dir, _lms_files[-1])) if _lms_files else date.today().strftime('%B %-d, %Y')
+    except Exception:
+        _lms_label = date.today().strftime('%B %-d, %Y')
+    file_date         = _lms_label
+    header_date_label = _lms_label
     total       = len(people)
 
     curric_ids   = json.dumps([c[0] for c in CURRICULA])
@@ -591,7 +617,7 @@ def generate_html(records, sales_map=None):
   <div class="header-left">
     <div>
       <h1>Accelerate Onboarding</h1>
-      <div class="header-date">Data as of {header_date_label}</div>
+      <div class="header-date">Data through {header_date_label}</div>
     </div>
     <span class="data-badge" id="data-badge">{total} learners &middot; updated {file_date}</span>
   </div>

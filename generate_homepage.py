@@ -80,11 +80,14 @@ def playbook_stats():
 
 # ── HC Cert stats ─────────────────────────────────────────────────────────────
 def hc_cert_stats():
+    import glob as _glob
     cert_dir = SCRIPT_DIR / 'cert-data'
-    hc_cert_path  = cert_dir / 'Healthcare=Certification-Report-07.06.2026.xlsx'
-    hc_learn_path = cert_dir / 'Healthcare-Certification-Foundations-Curricula-Report-07.06.2026.xlsx'
+    hc_cert_matches  = sorted(_glob.glob(str(cert_dir / 'Healthcare*Certification-Report-*.xlsx')), key=os.path.getmtime)
+    hc_learn_matches = sorted(_glob.glob(str(cert_dir / 'Healthcare-Certification-Foundations-Curricula-Report-*.xlsx')), key=os.path.getmtime)
+    hc_cert_path  = Path(hc_cert_matches[-1])  if hc_cert_matches  else None
+    hc_learn_path = Path(hc_learn_matches[-1]) if hc_learn_matches else None
 
-    if hc_cert_path.exists() and hc_learn_path.exists():
+    if hc_cert_path and hc_learn_path and hc_cert_path.exists() and hc_learn_path.exists():
         from update_cert_dashboard import load_rows_healthcare_v2, TLG as CT
         rows        = load_rows_healthcare_v2(str(hc_cert_path), str(hc_learn_path))
         non_tlg     = [r for r in rows if f"{r['FirstName']} {r['LastName']}" not in CT]

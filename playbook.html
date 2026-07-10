@@ -197,7 +197,7 @@
   <div class="header-left">
     <div>
       <h1>Playbook Traffic Dashboard</h1>
-      <div class="header-date">Data as of July 9, 2026</div>
+      <div class="header-date">Data through June 29, 2026</div>
     </div>
   </div>
   <div class="header-center">
@@ -205,7 +205,6 @@
     <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span class="badge" id="badge-asof"></span>
     <div class="export-drop print-hide" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
@@ -392,7 +391,6 @@ function fmtDate(d){
   return new Date(+y,+m-1,+day).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 }
 const maxDate = RAW.reduce((mx,r)=>r.Date>mx?r.Date:mx,'');
-if(maxDate) sel('badge-asof').textContent = 'Data through '+fmtDate(maxDate);
 
 let filtered = [...RAW];
 function getFilters(){

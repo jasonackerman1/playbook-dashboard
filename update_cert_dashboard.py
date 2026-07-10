@@ -84,10 +84,32 @@ def km_fiscal_quarter(date):
     return f'FY{fy} Q{q}'
 
 
+def _MONTHS():
+    return ['January','February','March','April','May','June',
+            'July','August','September','October','November','December']
+
+def _file_date_label(fname):
+    """Parse a human-readable 'Data through' date from a filename.
+    Supports MM.DD.YYYY, MM.DD (assumes current year), and YYYY-MM patterns.
+    Falls back to file modification time."""
+    base = os.path.basename(str(fname))
+    months = _MONTHS()
+    m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', base)
+    if m:
+        return f'{months[int(m.group(1))-1]} {int(m.group(2))}, {m.group(3)}'
+    m = re.search(r'(\d{2})\.(\d{2})(?!\.\d)', base)
+    if m:
+        yr = datetime.datetime.today().year
+        return f'{months[int(m.group(1))-1]} {int(m.group(2))}, {yr}'
+    m = re.search(r'(\d{4})-(\d{2})', base)
+    if m:
+        return f'{months[int(m.group(2))-1]} {m.group(1)}'
+    dt = datetime.datetime.fromtimestamp(os.path.getmtime(str(fname)))
+    return f'{months[dt.month-1]} {dt.day}, {dt.year}'
+
 def fmt_date_label(yyyy_mm):
     """Convert 'YYYY-MM' to 'Month YYYY' for display."""
-    months = ['January','February','March','April','May','June',
-              'July','August','September','October','November','December']
+    months = _MONTHS()
     try:
         y, m = yyyy_mm.split('-')
         return f"{months[int(m)-1]} {y}"
@@ -1189,7 +1211,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   <div class="header-left">
     <div>
       <h1>{name} <span>Certification Dashboard</span></h1>
-      <div class="header-date">Data as of {date_label}</div>
+      <div class="header-date">Data through {date_label}</div>
     </div>
   </div>
   <div class="header-center">
@@ -1772,24 +1794,22 @@ def main():
     generated = []
     hc_handled = False
 
-    # ── New two-file HC format ────────────────────────────────────────────────
-    HC_CERT_FILE  = 'Healthcare=Certification-Report-07.06.2026.xlsx'
-    HC_LEARN_FILE = 'Healthcare-Certification-Foundations-Curricula-Report-07.06.2026.xlsx'
-    hc_cert_path  = os.path.join(cert_dir, HC_CERT_FILE)
-    hc_learn_path = os.path.join(cert_dir, HC_LEARN_FILE)
+    # ── New two-file HC format (auto-detect latest file for each type) ──────
+    import glob
+    hc_cert_matches  = sorted(glob.glob(os.path.join(cert_dir, 'Healthcare*Certification-Report-*.xlsx')), key=os.path.getmtime)
+    hc_learn_matches = sorted(glob.glob(os.path.join(cert_dir, 'Healthcare-Certification-Foundations-Curricula-Report-*.xlsx')), key=os.path.getmtime)
+    hc_cert_path  = hc_cert_matches[-1]  if hc_cert_matches  else None
+    hc_learn_path = hc_learn_matches[-1] if hc_learn_matches else None
 
-    if os.path.exists(hc_cert_path) and os.path.exists(hc_learn_path):
+    if hc_cert_path and hc_learn_path:
         print(f'\nhealthcare (Healthcare) — v2 two-file format:')
-        print(f'  {HC_CERT_FILE}')
-        print(f'  {HC_LEARN_FILE}')
+        print(f'  {os.path.basename(hc_cert_path)}')
+        print(f'  {os.path.basename(hc_learn_path)}')
         rows = load_rows_healthcare_v2(hc_cert_path, hc_learn_path)
         cert_count = sum(1 for r in rows if r['Certified'] == 'Yes')
         ip_count   = sum(1 for r in rows if r['overallPct'] > 0 and r['Certified'] != 'Yes')
         print(f'  → {len(rows)} people  ({cert_count} certified, {ip_count} in progress, {len(rows)-cert_count-ip_count} not started)')
-        import datetime, time
-        latest_mtime = max(os.path.getmtime(hc_cert_path), os.path.getmtime(hc_learn_path))
-        _dt = datetime.datetime.fromtimestamp(latest_mtime)
-        hc_date_label = f'{_dt.strftime("%B")} {_dt.day}, {_dt.year}'
+        hc_date_label = _file_date_label(hc_cert_path)
         html = generate_html_healthcare_v2('healthcare', 'Healthcare', rows, hc_date_label)
         out  = 'cert-healthcare.html'
         with open(out, 'w', encoding='utf-8') as fh:
@@ -1856,8 +1876,7 @@ def main():
         elif slug == 'publicsector':
             ps_cert = sum(1 for r in deduped if r['PublicSector'] == 'Yes')
             print(f'  → {len(deduped)} unique people  ({ps_cert} certified, {len(deduped)-ps_cert} not yet)')
-            _ps_dt = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(cert_dir, fnames[-1])))
-            ps_date_label = f'{_ps_dt.strftime("%B")} {_ps_dt.day}, {_ps_dt.year}'
+            ps_date_label = _file_date_label(os.path.join(cert_dir, fnames[-1]))
             html = generate_html_publicsector(slug, vert_name, deduped, ps_date_label)
 
         out  = f'cert-{slug}.html'
@@ -1877,10 +1896,10 @@ def load_rows_healthcare_v2(cert_file, learning_file):
       9=MgrFirst, 10=MgrLast, 11=MgrEmail, 12=MgrTitle,
       14=HireDate(datetime), 17=CertDate(datetime), 19=Certified("Yes"/"No")
 
-    learning_file columns (0-based):
-      4=Email, 16=CurriculumTitle, 20=ItemID, 24=ItemTitle,
-      25=CompletionDate(datetime), 27=CompletionStatusDesc
-      Skip rows where col 20 (ItemID) is None — those are curriculum-level rows.
+    learning_file columns (0-based) — verified 07.10.2026 file:
+      4=Email, 18=CurriculumTitle, 20=CurriculumAssignmentDate, 22=ItemID, 26=ItemTitle,
+      27=ItemCompletionDate(datetime), 29=ItemCompletionStatusDesc
+      Skip rows where col 22 (ItemID) is None — those are curriculum-level parent rows.
     """
 
     HCF_ORDER = ['HCF_HBT','HC_PLAYBOOK','HCF_MFP','HCF_DPMS','HCF_ACS',
@@ -1937,27 +1956,27 @@ def load_rows_healthcare_v2(cert_file, learning_file):
     wb_l = openpyxl.load_workbook(learning_file, read_only=True, data_only=True)
     ws_l = wb_l.active
     for raw in ws_l.iter_rows(min_row=2, values_only=True):
-        item_id = raw[20]
+        item_id = raw[22]   # col 22: Item ID (was col 20 in old file)
         if item_id is None:
             continue   # curriculum-level parent row — skip
         email = _str(raw[4]).lower()
         if not email:
             continue
-        ctitle = _str(raw[16]).lower()
+        ctitle = _str(raw[18]).lower()   # col 18: Curriculum Title (was col 16)
         curr_id = CURRIC_TITLE_TO_ID.get(ctitle)
         if not curr_id:
             continue   # unknown curriculum — skip
-        # Track earliest curriculum assignment date (col 18)
-        assign_raw = raw[18]
+        # Track earliest curriculum assignment date (col 20, was col 18)
+        assign_raw = raw[20]
         assign_str = _date(assign_raw)
         if assign_str:
             if email not in assign_dates or assign_str < assign_dates[email]:
                 assign_dates[email] = assign_str
         item_id = _str(item_id).upper()
-        title   = _str(raw[24])
-        comp_date_raw = raw[25]
+        title   = _str(raw[26])          # col 26: Item Title (was col 24)
+        comp_date_raw = raw[27]          # col 27: Item Completion Date (was col 25)
         comp_date = _date(comp_date_raw)
-        status    = _str(raw[27])
+        status    = _str(raw[29])        # col 29: Item Completion Status Description (was col 27)
         done = (status == 'Online-Complete')
         if email not in learning:
             learning[email] = {}
@@ -2242,7 +2261,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   <div class="header-left">
     <div>
       <h1>{name} <span>Certification Dashboard</span></h1>
-      <div class="header-date">Data as of {date_label}</div>
+      <div class="header-date">Data through {date_label}</div>
     </div>
   </div>
   <div class="header-center">
