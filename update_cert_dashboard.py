@@ -2066,8 +2066,13 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   body{{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}}
 
   /* ── Header ────────────────────────────────────────────────────────── */
-  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}}
+  .header{{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}}
   .header-left{{display:flex;align-items:center;gap:16px;}}
+  .header-center{{display:flex;justify-content:center;align-items:center;}}
+  .kma-logo{{height:38px;width:auto;display:block;}}
+  .kma-logo-light{{display:none;}}
+  .light-mode .kma-logo-dark{{display:none;}}
+  .light-mode .kma-logo-light{{display:block;}}
   .header h1{{font-size:18px;font-weight:700;letter-spacing:.3px;}}
   .header h1 span{{color:var(--muted);font-weight:400;}}
   .header-date{{font-size:11px;color:var(--muted);margin-top:2px;}}

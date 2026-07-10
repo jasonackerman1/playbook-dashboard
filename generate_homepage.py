@@ -204,20 +204,16 @@ def leaderboard_stats():
         deals, _ = _build_data(cw_rows, stage_idx, hires, cohort_start)
         from datetime import date as _d
         today = _d.today()
-        eligible_names = {
-            h['name'] for h in hires
-            if h['hireDate'] and
-               0 <= (_d.today() - _d.fromisoformat(h['hireDate'])).days <= WINDOW_DAYS and
-               h['curriculumComplete'] == 'Yes'
-        }
         lb_rows = [
             d for d in deals
-            if d['name'] in eligible_names and
+            if d.get('assignToCloseDays') is not None and
+               0 <= d['assignToCloseDays'] <= WINDOW_DAYS and
+               d['curriculumComplete'] == 'Yes' and
                d['salesQualifiedBy'] == d['name'] and
                d['engageBy'] == d['name']
         ]
-        in_window   = sum(1 for h in hires if h['hireDate'] and
-                          0 <= (_d.today() - _d.fromisoformat(h['hireDate'])).days <= WINDOW_DAYS)
+        in_window = sum(1 for h in hires if h.get('assignDate') and
+                        0 <= (_d.today() - _d.fromisoformat(h['assignDate'])).days <= WINDOW_DAYS)
         total_rev   = sum(d['amount'] for d in lb_rows)
         on_board    = len(set(d['name'] for d in lb_rows))
         return {
@@ -379,7 +375,7 @@ def generate_html(pb, hc, ps, ob, lb=None):
     </div>
 
     <!-- Accelerate Leaderboard -->
-    <div class="card" style="--card-bg:url('https://images.unsplash.com/photo-1527871369852-eb58cb2b54e2?fm=jpg&q=80&w=800');background-image:linear-gradient(115deg,rgba(18,12,2,1.0) 0%,rgba(18,12,2,0.85) 40%,rgba(18,12,2,0.3) 100%),var(--card-bg,none);">
+    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
       <div class="card-head">
         <span class="card-icon">&#127942;</span>
         <div>
