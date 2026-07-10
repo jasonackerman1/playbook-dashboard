@@ -463,8 +463,8 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="header-date" id="header-date">Data through __FILE_DATE_LABEL__</div>
   </div>
   <div class="header-center">
-    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
-    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div class="header-right">
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>

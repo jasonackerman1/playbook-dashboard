@@ -360,8 +360,8 @@ def generate_html(pb, hc, ps, ob, lb=None):
     <div class="header-sub">Powered by TLG &middot; {today}</div>
   </div>
   <div class="header-center">
-    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
-    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div class="header-right">
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>

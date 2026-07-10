@@ -661,8 +661,8 @@ html = f"""<!DOCTYPE html>
     </div>
   </div>
   <div class="header-center">
-    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
-    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;">
     <div class="export-drop print-hide" id="export-drop">

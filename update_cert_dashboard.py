@@ -1215,8 +1215,8 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
     </div>
   </div>
   <div class="header-center">
-    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
-    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;">
     <div class="export-drop print-hide" id="export-drop">
@@ -2265,8 +2265,8 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
     </div>
   </div>
   <div class="header-center">
-    <img src="KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
-    <img src="KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;">
     <a href="playbook.html?playbook=Healthcare+Playbook" target="_blank" class="btn-theme print-hide" style="text-decoration:none;white-space:nowrap;">&#128200; Healthcare Playbook Metrics</a>
