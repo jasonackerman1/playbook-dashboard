@@ -329,7 +329,6 @@ def generate_html(pb, hc, ps, ob, lb=None):
 
   /* ── Visual effects ──────────────────────────────────────────── */
   #particles-bg{{position:fixed;inset:0;z-index:0;pointer-events:none;}}
-  .light-mode #particles-bg{{opacity:.45;}}
   body>*:not(#particles-bg){{position:relative;z-index:1;}}
   .header{{position:relative;overflow:hidden;}}
   .header>*:not(.aurora-wrap){{position:relative;z-index:1;}}
@@ -338,9 +337,9 @@ def generate_html(pb, hc, ps, ob, lb=None):
   .aurora-1{{width:400px;height:210px;background:rgba(74,124,247,.4);top:-120px;left:1%;animation-duration:11s;}}
   .aurora-2{{width:300px;height:175px;background:rgba(139,92,246,.32);top:-85px;left:40%;animation-duration:8.5s;animation-delay:-2.5s;}}
   .aurora-3{{width:270px;height:160px;background:rgba(20,184,166,.27);top:-100px;right:3%;animation-duration:14s;animation-delay:-5.5s;}}
-  .light-mode .aurora-1{{background:rgba(74,124,247,.22);top:-80px;}}
-  .light-mode .aurora-2{{background:rgba(139,92,246,.18);top:-60px;}}
-  .light-mode .aurora-3{{background:rgba(20,184,166,.16);top:-70px;}}
+  .light-mode .aurora-1{{background:rgba(74,124,247,.45);top:-60px;}}
+  .light-mode .aurora-2{{background:rgba(139,92,246,.36);top:-40px;}}
+  .light-mode .aurora-3{{background:rgba(20,184,166,.32);top:-50px;}}
   @keyframes aurora-drift{{0%{{transform:translate(0,0) scale(1);}}100%{{transform:translate(30px,22px) scale(1.22);}}}}
 </style>
 </head>
@@ -542,14 +541,14 @@ function toggleTheme(){{
       if(p.x<0||p.x>cvs.width)p.vx*=-1;
       if(p.y<0||p.y>cvs.height)p.vy*=-1;
       ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);
-      ctx.fillStyle=dark?'rgba(74,124,247,.55)':'rgba(74,124,247,.28)';
+      ctx.fillStyle=dark?'rgba(74,124,247,.55)':'rgba(74,124,247,.6)';
       ctx.fill();
     }});
     for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){{
       var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
       if(d<DIST){{
         ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
-        var a=(dark?.18:.07)*(1-d/DIST);
+        var a=(dark?.18:.22)*(1-d/DIST);
         ctx.strokeStyle='rgba(74,124,247,'+a+')';ctx.lineWidth=.7;ctx.stroke();
       }}
     }}
