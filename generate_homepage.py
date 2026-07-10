@@ -326,11 +326,34 @@ def generate_html(pb, hc, ps, ob, lb=None):
   .btn-open:hover{{opacity:.88;}}
 
   .divider{{width:100%;height:1px;background:var(--border);margin:4px 0;}}
+
+  /* ── Visual effects ──────────────────────────────────────────── */
+  #particles-bg{{position:fixed;inset:0;z-index:0;pointer-events:none;}}
+  .light-mode #particles-bg{{opacity:.3;}}
+  body>*:not(#particles-bg){{position:relative;z-index:1;}}
+  .header{{position:relative;overflow:hidden;}}
+  .header>*:not(.aurora-wrap){{position:relative;z-index:1;}}
+  .aurora-wrap{{position:absolute;inset:0;overflow:hidden;pointer-events:none;}}
+  .aurora-orb{{position:absolute;border-radius:50%;filter:blur(70px);animation:aurora-drift linear infinite alternate;}}
+  .aurora-1{{width:400px;height:210px;background:rgba(74,124,247,.4);top:-120px;left:1%;animation-duration:11s;}}
+  .aurora-2{{width:300px;height:175px;background:rgba(139,92,246,.32);top:-85px;left:40%;animation-duration:8.5s;animation-delay:-2.5s;}}
+  .aurora-3{{width:270px;height:160px;background:rgba(20,184,166,.27);top:-100px;right:3%;animation-duration:14s;animation-delay:-5.5s;}}
+  @keyframes aurora-drift{{0%{{transform:translate(0,0) scale(1);}}100%{{transform:translate(30px,22px) scale(1.22);}}}}
+  .light-mode .aurora-wrap{{display:none;}}
+  .stat-num-wrap{{position:relative;display:inline-block;}}
+  .pulse-ring{{position:absolute;inset:-8px;border-radius:10px;border:1.5px solid var(--accent);opacity:0;animation:pulse-out 3.2s ease-out infinite;pointer-events:none;}}
+  @keyframes pulse-out{{0%{{transform:scale(1);opacity:.6;}}65%{{opacity:.1;}}100%{{transform:scale(1.5);opacity:0;}}}}
 </style>
 </head>
 <body>
+<canvas id="particles-bg"></canvas>
 
 <div class="header">
+  <div class="aurora-wrap">
+    <div class="aurora-orb aurora-1"></div>
+    <div class="aurora-orb aurora-2"></div>
+    <div class="aurora-orb aurora-3"></div>
+  </div>
   <div class="header-left">
     <h1>Analytical Data Hub</h1>
     <div class="header-sub">Powered by TLG &middot; {today}</div>
@@ -500,6 +523,69 @@ function toggleTheme(){{
   document.getElementById('btn-theme').innerHTML=light?'&#9790; Dark':'&#9728; Light';
   localStorage.setItem('pb-theme',light?'light':'dark');
 }}
+
+/* ── Particle network ───────────────────────────────────────────── */
+(function(){{
+  var cvs=document.getElementById('particles-bg'),ctx=cvs.getContext('2d');
+  var pts=[],N=65,DIST=130;
+  function resize(){{cvs.width=innerWidth;cvs.height=innerHeight;}}
+  addEventListener('resize',resize);resize();
+  for(var i=0;i<N;i++)pts.push({{
+    x:Math.random()*cvs.width,y:Math.random()*cvs.height,
+    vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45,
+    r:Math.random()*1.6+.7
+  }});
+  function frame(){{
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    var dark=!document.body.classList.contains('light-mode');
+    pts.forEach(function(p){{
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>cvs.width)p.vx*=-1;
+      if(p.y<0||p.y>cvs.height)p.vy*=-1;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);
+      ctx.fillStyle=dark?'rgba(74,124,247,.55)':'rgba(74,124,247,.28)';
+      ctx.fill();
+    }});
+    for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){{
+      var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<DIST){{
+        ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+        var a=(dark?.18:.07)*(1-d/DIST);
+        ctx.strokeStyle='rgba(74,124,247,'+a+')';ctx.lineWidth=.7;ctx.stroke();
+      }}
+    }}
+    requestAnimationFrame(frame);
+  }}
+  frame();
+}})();
+
+/* ── Stat counters + pulse rings ────────────────────────────────── */
+document.addEventListener('DOMContentLoaded',function(){{
+  document.querySelectorAll('.stat-num').forEach(function(el,i){{
+    var wrap=document.createElement('span');
+    wrap.className='stat-num-wrap';
+    el.parentNode.insertBefore(wrap,el);
+    wrap.appendChild(el);
+    var ring=document.createElement('span');
+    ring.className='pulse-ring';
+    ring.style.animationDelay=(i*0.55)+'s';
+    wrap.appendChild(ring);
+    var orig=el.textContent.trim();
+    if(orig==='—')return;
+    var pre=orig[0]==='$'?'$':'';
+    var suf=orig[orig.length-1]==='%'?'%':'';
+    var num=parseFloat(orig.replace(/[$,%\s,]/g,''));
+    if(isNaN(num)||num===0)return;
+    var t0=null,DUR=1400;
+    el.textContent=pre+'0'+suf;
+    requestAnimationFrame(function tick(ts){{
+      if(!t0)t0=ts;
+      var p=Math.min((ts-t0)/DUR,1),e=1-Math.pow(1-p,3);
+      el.textContent=pre+Math.round(e*num).toLocaleString()+suf;
+      if(p<1)requestAnimationFrame(tick);else el.textContent=orig;
+    }});
+  }});
+}});
 </script>
 </body>
 </html>"""
