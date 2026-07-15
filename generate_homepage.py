@@ -181,12 +181,11 @@ def onboarding_stats():
     people    = list(records.values())
     total     = len(people)
     completed = sum(1 for p in people if p.get('overallDone'))
-    overdue   = sum(
+    from datetime import date as _d
+    overdue = sum(
         1 for p in people
-        if not p.get('overallDone') and any(
-            c.get('daysRem') is not None and c['daysRem'] < 0 and not c.get('complete')
-            for c in p.get('curricula', {}).values()
-        )
+        if not p.get('overallDone') and p.get('assignDate') and
+        (_d.today() - _d.fromisoformat(p['assignDate'])).days > 35
     )
     avg_pct = round(sum(p.get('overallPct', 0) for p in people) / total) if total else 0
     return {'total': total, 'completed': completed, 'overdue': overdue, 'avg_pct': avg_pct}
