@@ -472,6 +472,11 @@ def generate_html(records, sales_map=None):
   select:focus,input:focus{{border-color:var(--accent);}}
   .btn-reset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}}
   .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
+  .btn-group{{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}}
+  .btn-group button{{background:transparent;border:none;border-right:1px solid var(--border);color:var(--muted);padding:6px 12px;font-size:12px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;}}
+  .btn-group button:last-child{{border-right:none;}}
+  .btn-group button:hover{{background:var(--surface2);color:var(--text);}}
+  .btn-group button.active{{background:var(--accent);color:#fff;font-weight:600;}}
 
   .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
   .sort-btn:hover{{border-color:var(--accent);color:var(--text);}}
@@ -656,6 +661,11 @@ def generate_html(records, sales_map=None):
     <option value="pct-asc">Completion Low→High</option>
     <option value="days-asc">Most Urgent First</option>
   </select>
+  <span class="filter-label">Group</span>
+  <div class="btn-group" id="test-group-btns">
+    <button class="active" onclick="setTestGroup('all',this)">All</button>
+    <button onclick="setTestGroup('hide',this)">Hide Test Group</button>
+  </div>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <span class="info-btn" onclick="showInfo(event,'filters-info')" style="margin-left:4px;">?</span>
   <span class="result-count" id="result-count"></span>
@@ -810,6 +820,15 @@ const TLG_SET = new Set([
 ]);
 
 let hideTLG = true;
+let testGroupFilter = 'all'; // 'all' | 'only' | 'hide'
+const TEST_GROUP_DATE = '2026-06-04';
+
+function setTestGroup(val, btn) {{
+  testGroupFilter = val;
+  document.querySelectorAll('#test-group-btns button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}}
 let filtered = [];
 let marketChartObj = null;
 let curricChartObj = null;
@@ -1126,6 +1145,8 @@ function resetFilters() {{
   document.getElementById('f-status').value = '';
   document.getElementById('f-sort').value = 'name';
   document.getElementById('table-search').value = '';
+  testGroupFilter = 'all';
+  document.querySelectorAll('#test-group-btns button').forEach((b,i) => b.classList.toggle('active', i===0));
   filterTableRows();
   applyFilters();
 }}
@@ -1137,6 +1158,7 @@ function applyFilters() {{
 
   filtered = PEOPLE.filter(p => {{
     if (hideTLG && TLG_SET.has(p.name.toLowerCase())) return false;
+    if (testGroupFilter === 'hide' && p.assignDate === TEST_GROUP_DATE) return false;
     if (mkt && p.market !== mkt) return false;
     const st = computeStatus(p);
     if (status && st !== status) return false;
