@@ -374,6 +374,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   .light-mode .kma-logo-light { display:block; }
   .btn-theme { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:5px 12px; font-size:12px; cursor:pointer; transition:all .15s; }
   .btn-theme:hover { border-color:var(--accent); color:var(--text); }
+  .btn-theme.active { border-color:var(--accent); color:var(--accent); background:var(--accent)11; }
 
   /* ---- WRAP ---- */
   .wrap { padding:28px 28px 80px; }
@@ -467,6 +468,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div class="header-right">
+    <button class="btn-theme" id="btn-beta-filter" onclick="toggleBetaFilter()">Hide Beta Cohort</button>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
   </div>
 </div>
@@ -614,11 +616,36 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 </div>
 
 <script>
-const DEALS        = __DEALS_JSON__;
-const HIRES        = __HIRES_JSON__;
-const VERIFICATION = __VERIF_JSON__;
+const ALL_DEALS        = __DEALS_JSON__;
+const ALL_HIRES        = __HIRES_JSON__;
+const ALL_VERIFICATION = __VERIF_JSON__;
 const WINDOW_DAYS  = __WINDOW_DAYS__;
 const SOURCE_AS_OF = __SOURCE_DATE_JS__;
+
+// ---- Beta cohort filter ----
+// Fixed roster of the original June 4, 2026 launch/beta cohort. Using a
+// stable name list (rather than checking assignDate live) so this stays
+// correct even when a future curriculum pull reassigns someone's date.
+const BETA_NAMES = new Set([
+  'Alford Wood', 'Anthony Petretta', 'Christopher Melton', 'Daniel Zepeda',
+  'Dillon Basnight', 'Dre Ante Noel', 'Dylan McDonough', 'Emily Olstein',
+  'Frances Rogers', 'Gregory Christie', 'Jared Poplawski', 'Kelsey Carrington',
+  'Kevin Kojouri', 'Kyle Baker', 'Meagan Blythe', 'Michael Shields',
+  'Paolo Castellon', 'Patrick Meagher', 'RICHARD ALLEN', 'Randahl Bradley',
+  'Sophia Krawczak', 'Spencer Larson', 'Taylor Hill', 'Tracy Hendricks',
+  'Ty Foster', 'Valencia Gilford', 'William Birkett'
+]);
+let hideBeta = false;
+
+function toggleBetaFilter(){
+  hideBeta = !hideBeta;
+  const btn = document.getElementById('btn-beta-filter');
+  btn.textContent = hideBeta ? 'Show Beta Cohort' : 'Hide Beta Cohort';
+  btn.classList.toggle('active', hideBeta);
+  renderAll();
+}
+
+let HIRES, DEALS, VERIFICATION, hireMap, leaderboardRows;
 
 const TODAY = new Date();
 TODAY.setHours(0,0,0,0);
@@ -634,46 +661,60 @@ document.getElementById('dataNote').innerHTML =
   SOURCE_AS_OF.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) +
   '. Closed Won and opportunity data is scoped to deals closed on or after __COHORT_LABEL_LONG__.</strong></span>';
 
-// ---- Augment hires ----
-const hireMap = {};
-HIRES.forEach(h => {
-  h.daysSince = h.assignDate ? daysBetween(parseDate(h.assignDate), TODAY) : 999;
-  h.eligible  = h.daysSince >= 0 && h.daysSince <= WINDOW_DAYS;
-  h.curriculumOk = h.curriculumComplete === 'Yes';
-  h.leaderboardEligible = h.eligible && h.curriculumOk;
-  hireMap[h.name] = h;
-});
+function renderAll(){
+  // ---- Apply beta filter (June 4 launch/beta cohort, fixed roster) ----
+  HIRES        = hideBeta ? ALL_HIRES.filter(h => !BETA_NAMES.has(h.name))        : ALL_HIRES.slice();
+  DEALS        = hideBeta ? ALL_DEALS.filter(d => !BETA_NAMES.has(d.name))        : ALL_DEALS.slice();
+  VERIFICATION = hideBeta ? ALL_VERIFICATION.filter(v => !BETA_NAMES.has(v.name)) : ALL_VERIFICATION.slice();
 
-const leaderboardRows = DEALS.filter(d =>
-  d.assignToCloseDays !== null &&
-  d.assignToCloseDays >= 0 &&
-  d.assignToCloseDays <= WINDOW_DAYS &&
-  d.curriculumComplete === 'Yes' &&
-  d.salesQualifiedBy === d.name &&
-  d.engageBy === d.name
-);
+  // ---- Augment hires ----
+  hireMap = {};
+  HIRES.forEach(h => {
+    h.daysSince = h.assignDate ? daysBetween(parseDate(h.assignDate), TODAY) : 999;
+    h.eligible  = h.daysSince >= 0 && h.daysSince <= WINDOW_DAYS;
+    h.curriculumOk = h.curriculumComplete === 'Yes';
+    h.leaderboardEligible = h.eligible && h.curriculumOk;
+    hireMap[h.name] = h;
+  });
 
-// ---- Stat strip ----
-const totalAmount = leaderboardRows.reduce((s,d) => s+d.amount, 0);
-const onBoardReps = new Set(leaderboardRows.map(d => d.name)).size;
-const stats = [
-  {label:'Reps In '+WINDOW_DAYS+'-Day Window',     value:HIRES.filter(h=>h.eligible).length,            sub:'of '+HIRES.length+' cohort members',              color:'var(--teal)'},
-  {label:'Curriculum Complete + In Window',          value:HIRES.filter(h=>h.leaderboardEligible).length, sub:'eligible to appear on the board',                 color:'var(--accent3)'},
-  {label:'Reps On The Board',                        value:onBoardReps,                                    sub:'eligible with a qualifying Closed Won deal',      color:'var(--green)'},
-  {label:'Qualifying Deals',                         value:leaderboardRows.length,                         sub:'in-window, curriculum complete, self-progressed', color:'var(--accent)'},
-  {label:'Leaderboard Revenue',                      value:fmtMoney(totalAmount),                          sub:'total across qualifying deals',                   color:'var(--accent2)'},
-  {label:'Salesforce-Verified',                      value:VERIFICATION.filter(v=>v.isCreatedBy).length+' / '+VERIFICATION.length, sub:'cohort members with a created opportunity', color:'var(--teal)'},
-];
-document.getElementById('statStrip').innerHTML = stats.map(s =>
-  '<div class="stat">' +
-    '<div class="stat-label">'+s.label+'</div>' +
-    '<div class="stat-value" style="color:'+s.color+'">'+s.value+'</div>' +
-    '<div class="stat-sub">'+s.sub+'</div>' +
-  '</div>'
-).join('');
+  leaderboardRows = DEALS.filter(d =>
+    d.assignToCloseDays !== null &&
+    d.assignToCloseDays >= 0 &&
+    d.assignToCloseDays <= WINDOW_DAYS &&
+    d.curriculumComplete === 'Yes' &&
+    d.salesQualifiedBy === d.name &&
+    d.engageBy === d.name
+  );
 
-// ---- Market chart ----
-(function(){
+  // ---- Stat strip ----
+  const totalAmount = leaderboardRows.reduce((s,d) => s+d.amount, 0);
+  const onBoardReps = new Set(leaderboardRows.map(d => d.name)).size;
+  const stats = [
+    {label:'Reps In '+WINDOW_DAYS+'-Day Window',     value:HIRES.filter(h=>h.eligible).length,            sub:'of '+HIRES.length+' cohort members',              color:'var(--teal)'},
+    {label:'Curriculum Complete + In Window',          value:HIRES.filter(h=>h.leaderboardEligible).length, sub:'eligible to appear on the board',                 color:'var(--accent3)'},
+    {label:'Reps On The Board',                        value:onBoardReps,                                    sub:'eligible with a qualifying Closed Won deal',      color:'var(--green)'},
+    {label:'Qualifying Deals',                         value:leaderboardRows.length,                         sub:'in-window, curriculum complete, self-progressed', color:'var(--accent)'},
+    {label:'Leaderboard Revenue',                      value:fmtMoney(totalAmount),                          sub:'total across qualifying deals',                   color:'var(--accent2)'},
+    {label:'Salesforce-Verified',                      value:VERIFICATION.filter(v=>v.isCreatedBy).length+' / '+VERIFICATION.length, sub:'cohort members with a created opportunity', color:'var(--teal)'},
+  ];
+  document.getElementById('statStrip').innerHTML = stats.map(s =>
+    '<div class="stat">' +
+      '<div class="stat-label">'+s.label+'</div>' +
+      '<div class="stat-value" style="color:'+s.color+'">'+s.value+'</div>' +
+      '<div class="stat-sub">'+s.sub+'</div>' +
+    '</div>'
+  ).join('');
+
+  // ---- Market chart + all sections ----
+  renderMarketChart();
+  renderLeaderboard();
+  renderOnDeck();
+  renderTracker();
+  renderHistory();
+  renderVerify();
+}
+
+function renderMarketChart(){
   const colors = [
     'var(--accent)', 'var(--teal)', 'var(--accent3)',
     'var(--green)',  'var(--accent2)', 'var(--red)'
@@ -698,7 +739,7 @@ document.getElementById('statStrip').innerHTML = stats.map(s =>
       '<div class="market-amount">'+fmtMoney(r.amount)+'</div>' +
     '</div>'
   ).join('') : '<div class="empty-state">No deals yet</div>';
-})();
+}
 
 // ---- Leaderboard ----
 function renderLeaderboard(){
@@ -733,7 +774,6 @@ function renderLeaderboard(){
       '</tr>'
     ).join('') + '</tbody></table></div>';
 }
-renderLeaderboard();
 
 // ---- On Deck ----
 function renderOnDeck(){
@@ -786,7 +826,6 @@ function renderOnDeck(){
   html += '</tbody></table></div>';
   document.getElementById('onDeckBody').innerHTML = html;
 }
-renderOnDeck();
 
 // ---- Window Tracker ----
 let trackerSort = {key:'daysSince', dir:1};
@@ -846,7 +885,6 @@ document.querySelectorAll('#trackerTable thead th').forEach(th => {
     renderTracker();
   });
 });
-renderTracker();
 
 // ---- History ----
 let histSort = {key:'assignDate', dir:1};
@@ -889,8 +927,6 @@ document.querySelectorAll('#historyTable thead th').forEach(th => {
     renderHistory();
   });
 });
-renderHistory();
-document.querySelector('#historyTable thead th[data-key="assignDate"]').classList.add('sorted-asc');
 
 // ---- Verification ----
 let verifSort = {key:'name', dir:1};
@@ -936,7 +972,7 @@ document.querySelectorAll('#verifyTable thead th').forEach(th => {
     renderVerify();
   });
 });
-renderVerify();
+renderAll();
 
 // ---- Theme ----
 (function(){
