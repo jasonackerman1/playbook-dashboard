@@ -1057,13 +1057,10 @@ const INFO = {{
   "curric-chart": "Average completion percentage per curriculum across the whole cohort. Hover over a bar to see how many reps have finished, are in progress, have not started, or are past the deadline for that curriculum. A short bar is where reps are getting stuck.",
   "heatmap": "One row per learner. Click any row to open their full detail — every individual lesson, completion dates, curriculum breakdown, and playbook activity timeline.",
   "col-learner": "The colored dot to the left of the name shows whether this person is using the Accelerate Playbook alongside their LMS courses. Green = visiting the playbook. Red = completing courses with no playbook visits recorded. Gray = no activity yet. Click any row to see their full playbook and course history.",
-  "col-status": "Each person's current standing in the program. Completed = finished all required courses. Overdue = past the LMS deadline for at least one course. On Track = within all deadlines so far. Note: On Track does not mean ahead of pace — check the Gap column to see if someone is falling behind.",
-  "col-days": "Days until the nearest upcoming course deadline, based on LMS-assigned due dates. Negative numbers mean a deadline has already passed — the number shows how many days ago. Each curriculum has its own deadline schedule tied to the person's program start date.",
+  "col-status": "Each person's current standing in the program, plus the reason. Completed = finished all required courses. Overdue = past the LMS deadline for at least one course; the detail line shows how many courses and which curriculum. On Track = within all deadlines so far; the detail line shows days until the next one. A red 'Behind pace' line appears when someone has fallen behind the program's designed weekly pacing schedule, even if they haven't missed an LMS deadline yet — this can catch problems earlier than the deadline-based status alone. Note: On Track does not mean ahead of pace — check the Gap column too.",
   "col-actual": "Weighted overall completion percentage. Calculated as total lessons completed divided by total lessons assigned across all six curricula. Each lesson counts equally regardless of which curriculum it belongs to.",
   "col-expected": "How far along this person should be today based on the program's designed pacing schedule. Accounts for how many days they have had the program and what the schedule calls for at this point. Compare to Actual % — if Actual is lower, they are behind pace.",
   "col-gap": "The difference between Actual % and Expected %. A negative number means behind schedule by that amount. A positive number means ahead. The color scales with severity: green when close, red when the gap is significant enough to warrant a check-in.",
-  "expected-focus-info": "Which curriculum this person should be actively working on right now based on the program's pacing schedule — Getting Started, Sales Workflow, and Core Portfolio in Week 1; Prospecting and Sales Skills in Weeks 2–3; Pipeline Management in Weeks 4–5. If a curriculum is shown in red, it should already be complete but is not.",
-  "biggest-gap-info": "The curriculum this person has fallen furthest behind on, measured by completion percentage. This is not the same as what is overdue — a curriculum can have a big gap without having passed its deadline yet. Use this to identify where to focus a coaching conversation.",
   "col-curricula": "Six colored squares, one per curriculum in program order: Getting Started, Sales Workflow, Core Portfolio, Prospecting, Sales Skills, Pipeline Management. Green = complete. Blue = in progress. Red = past its deadline and not done. Gray = not started yet. Click the row to see individual lesson detail.",
   "col-days-to-close": "How many days it took this rep to close their first Salesforce deal after starting the Accelerate program. Only deals closed within the first 45 days of the program qualify. A dash means no qualifying deal has been recorded yet.",
   "export": "Downloads a report based on whoever is currently visible — apply filters first, then export. Full Report: all visible learners with status and progress. Overdue Only: people past a course deadline with their manager's contact info for easy follow-up. Manager Summary: one row per manager with their team's headcount and progress. Example: filter to a market, then export Overdue Only to get a targeted outreach list.",
@@ -1204,12 +1201,10 @@ function renderTable() {{
     const btn = infoKey ? '<span class="info-btn print-hide" onclick="event.stopPropagation();showInfo(event,\\'' + infoKey + '\\')">?</span>' : '';
     return '<th class="' + cls + '" data-col="' + col + '" onclick="sortByCol(this.dataset.col)">' + label + arrow + btn + '</th>';
   }}
-  let hRow = '<tr>' + thS('Learner','name','','col-learner') + thS('Status','status','','col-status') + thS('Days Left','days','','col-days');
+  let hRow = '<tr>' + thS('Learner','name','','col-learner') + thS('Progress','status','','col-status');
   hRow += thS('Actual %','overall','overall-col','col-actual');
   hRow += thS('Expected %','expected','overall-col','col-expected');
   hRow += thS('Gap','gap','overall-col','col-gap');
-  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Expected Focus<span class="info-btn print-hide" onclick="showInfo(event,\\'expected-focus-info\\')">?</span></th>';
-  hRow += '<th class="curric-col" style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:normal;line-height:1.3;">Biggest Gap<span class="info-btn print-hide" onclick="showInfo(event,\\'biggest-gap-info\\')">?</span></th>';
   hRow += '<th style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;">Curricula<span class="info-btn print-hide" onclick="showInfo(event,\\'col-curricula\\')">?</span></th>';
   hRow += thS('Days to Close','daysToClose','overall-col','col-days-to-close');
   hRow += '</tr>';
@@ -1218,7 +1213,7 @@ function renderTable() {{
   // Body
   const tbody = document.getElementById('heatmap-body');
   if (!filtered.length) {{
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px;">No learners match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">No learners match the current filters.</td></tr>';
     document.getElementById('heatmap-foot').innerHTML = '';
     return;
   }}
@@ -1253,19 +1248,6 @@ function renderTable() {{
     return worst ? {{cid: worst, name: CURRIC_NAMES[worst], dl: worstDl}} : null;
   }}
 
-  function expectedFocusCell(p) {{
-    if (p.overallDone) return '<td class="pct-cell" style="text-align:center;color:var(--muted);">&mdash;</td>';
-    const ef = expectedFocus(p);
-    const names = ef.ids.map(id => CURRIC_NAMES[id]);
-    const label = names.length <= 2 ? names.join(', ') : names[0] + ' +' + (names.length - 1) + ' more';
-    if (ef.mode === 'behind') {{
-      return '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="background:#b91c1c;color:#fff;font-weight:600;" title="Should already be done: ' + escHtml(names.join(', ')) + '">Behind: ' + escHtml(label) + '</span></td>';
-    }}
-    if (ef.mode === 'active') {{
-      return '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="background:#1d4ed8;color:#fff;font-weight:600;" title="Should be working on: ' + escHtml(names.join(', ')) + '">' + escHtml(label) + '</span></td>';
-    }}
-    return '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="background:#15803d;color:#fff;font-weight:600;">Ahead of schedule</span></td>';
-  }}
 
   function biggestGapCurric(p) {{
     let worst = null, worstPct = null;
@@ -1283,11 +1265,27 @@ function renderTable() {{
     const od = overdueCount(p);
     const sdl = soonestDaysLeft(p);
     const w = worstCurric(p);
-    const wName = w ? ' <span style="color:var(--muted);font-weight:400;">(' + escHtml(w.name) + ')</span>' : '';
-    const daysStr = p.overallDone ? '&mdash;' :
-      od > 0 ? '<span style="color:var(--red);font-weight:700">' + od + ' past due</span>' + wName :
-      sdl === null ? '&mdash;' :
-      '<span style="color:var(--green)">' + sdl + 'd left</span>' + wName;
+    let progressDetail = '';
+    if (!p.overallDone) {{
+      if (od > 0) {{
+        progressDetail = od + (od === 1 ? ' course' : ' courses') + ' past due' + (w ? ' &middot; ' + escHtml(w.name) : '');
+      }} else if (sdl !== null) {{
+        progressDetail = sdl + 'd until next deadline' + (w ? ' &middot; ' + escHtml(w.name) : '');
+      }}
+    }}
+    let focusLine = '';
+    if (!p.overallDone) {{
+      const ef = expectedFocus(p);
+      if (ef.mode === 'behind') {{
+        const names = ef.ids.map(id => CURRIC_NAMES[id]);
+        const label = names.length <= 2 ? names.join(', ') : names[0] + ' +' + (names.length - 1) + ' more';
+        focusLine = '<div style="margin-top:2px;font-size:11px;color:#b91c1c;font-weight:600;" title="Should already be done per pacing schedule: ' + escHtml(names.join(', ')) + '">Behind pace &middot; ' + escHtml(label) + '</div>';
+        const gap = biggestGapCurric(p);
+        if (gap && !ef.ids.includes(gap.cid)) {{
+          focusLine += '<div style="margin-top:2px;font-size:11px;color:var(--muted);">Also lagging &middot; ' + escHtml(gap.name) + ' ' + gap.pct + '%</div>';
+        }}
+      }}
+    }}
     let dotsCell = '<td style="text-align:center;padding:5px 12px;"><div style="display:inline-flex;gap:3px;align-items:center;">';
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
@@ -1302,23 +1300,19 @@ function renderTable() {{
     const eng = pbEngagement(p);
     const dotColor = (eng.level === 'alert') ? '#b91c1c' : (eng.level === 'none') ? '#6b7280' : '#22c55e';
     const dotTip  = (eng.level === 'alert') ? 'Completing courses -- no playbook visits recorded' : (eng.level === 'none') ? 'No activity yet' : 'Using the playbook';
-    const bg = biggestGapCurric(p);
-    const bgCell = bg ?
-      '<td class="pct-cell" style="text-align:center;"><span class="pct-pill" style="' + pctPillStyle(bg.pct) + '">' + escHtml(bg.name) + ' &middot; ' + bg.pct + '%</span></td>' :
-      '<td class="pct-cell" style="text-align:center;color:var(--muted);">&mdash;</td>';
     const pSaleRow = SALES_MAP[p.email];
     const saleCell = pSaleRow
       ? '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--accent);white-space:nowrap;">' + (pSaleRow.daysToClose != null ? pSaleRow.daysToClose + 'd' : '—') + '</td>'
       : '<td class="pct-cell" style="text-align:center;color:var(--muted);opacity:.4;">&#8212;</td>';
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
       '<td class="name-cell"><span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;" title="' + dotTip + '"></span>' + escHtml(p.name) + '</td>' +
-      '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
-      '<td style="font-size:11px;">' + daysStr + '</td>' +
+      '<td><span class="status-badge ' + statusClass + '">' + status + '</span>' +
+      (progressDetail ? ' <span style="font-size:11px;color:var(--muted);">' + progressDetail + '</span>' : '') +
+      focusLine +
+      '</td>' +
       '<td class="pct-cell" style="font-weight:600;font-size:12px;">' + p.overallPct + '%</td>' +
       '<td class="pct-cell" style="font-weight:600;font-size:12px;color:var(--muted);">' + expectedPct(p) + '%</td>' +
       (function(){{ const g=gapPct(p); return '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(g) + '">' + g + '%</span></td>'; }})() +
-      expectedFocusCell(p) +
-      bgCell +
       dotsCell +
       saleCell +
     '</tr>';
@@ -1331,7 +1325,7 @@ function renderTable() {{
       if (!groups[mgr]) groups[mgr] = [];
       groups[mgr].push(p);
     }});
-    const colCount = 10;
+    const colCount = 7;
     let html = '';
     Object.keys(groups).sort().forEach(mgr => {{
       const team = groups[mgr];
@@ -1352,15 +1346,13 @@ function renderTable() {{
 
   // Footer (averages)
   const tfoot = document.getElementById('heatmap-foot');
-  let fRow = '<tr><td colspan="3" style="font-weight:700;font-size:11px;">Averages (' + filtered.length + ' learners)</td>';
+  let fRow = '<tr><td colspan="2" style="font-weight:700;font-size:11px;">Averages (' + filtered.length + ' learners)</td>';
   const oAvg = filtered.length ? Math.round(filtered.reduce((s,p) => s+p.overallPct,0)/filtered.length) : 0;
   fRow += '<td class="pct-cell" style="font-weight:700;font-size:11px;">' + oAvg + '%</td>';
   const eAvg = filtered.length ? Math.round(filtered.reduce((s,p) => s+expectedPct(p),0)/filtered.length) : 0;
   fRow += '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--muted);">' + eAvg + '%</td>';
   const gAvg = eAvg - oAvg;
   fRow += '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(gAvg) + '">' + gAvg + '%</span></td>';
-  fRow += '<td></td>';
-  fRow += '<td></td>';
   fRow += '<td></td>';
   fRow += '<td></td>';
   fRow += '</tr>';
