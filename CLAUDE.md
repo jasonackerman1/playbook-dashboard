@@ -175,6 +175,13 @@ CAUTION: verify against each new file from Resmie before regenerating.
 
 **`leaderboard_stats()` in `generate_homepage.py` uses `assignDate`** for the 45-day window check (fixed 2026-07-09). Before the fix, it was using `hireDate`, which made all 29 reps appear out-of-window since they were hired months before Accelerate launched.
 
+**Beta Cohort filter (added 2026-07-22 — ported from Resmie):** "Hide Beta Cohort" toggle button in the header. Clicking it filters out the 27 original June 4, 2026 launch cohort members from all sections (stats, charts, leaderboard, on deck, tracker, history, verification). Implementation:
+- `BETA_NAMES`: hardcoded `Set` of 27 names — stable even when the LMS reassigns `assignDate` in future pulls (which happened with the July 2026 data refresh)
+- `ALL_DEALS` / `ALL_HIRES` / `ALL_VERIFICATION`: source arrays baked in from data
+- `DEALS` / `HIRES` / `VERIFICATION`: filtered working vars set inside `renderAll()`
+- `renderAll()`: wraps all augment-hires + stat strip + all render calls. Applied beta filter at top before anything else. Called once on load and again when the toggle fires.
+- `renderMarketChart()`: extracted from an IIFE into a named function so `renderAll()` can call it.
+
 **Git push conflict pattern:** GitHub Actions auto-commits `leaderboard.html` after each push, causing diverged branches. Fix: `git pull --no-rebase -X ours && git push`.
 
 ---
