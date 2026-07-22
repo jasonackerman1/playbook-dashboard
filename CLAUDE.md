@@ -73,18 +73,18 @@ Every dashboard header shows **"Data through [date]"** — the actual date of th
 
 ## KM Academy Logo SVGs
 
-Both SVG files are local to the repo root. Do NOT use the CDN URL for `KMA-wht.svg` — a local copy exists here.
+Both SVG files live in the repo root — GitHub Pages serves them from there. All five Python scripts reference them via **absolute GitHub Pages URLs** so generated HTML files are fully self-contained when uploaded to the company server (no SVG files needed alongside).
 
 | File | Theme | `cls-2` fill |
 |---|---|---|
 | `KMA-wht.svg` | Dark backgrounds | `#fff` |
 | `KMA-drk.svg` | Light backgrounds | `#1a1e2e` |
 
-**"POWERED BY" text is baked into both SVGs** at SVG coordinates `x="93" y="9.5" font-size="10"` — centered in the negative space between the hat icon (right edge x≈35) and "KONICA MINOLTA" small text (left edge x≈151). Do not add a "Powered by" wrapper div in any HTML — it's part of the SVG.
+**"POWERED BY" text is baked into both SVGs** at SVG coordinates `x="93" y="9.5" font-size="10"`. Do not add a "Powered by" wrapper div — it's part of the SVG.
 
 All Python scripts reference:
-- Dark mode logo: `<img src="KMA-wht.svg" class="kma-logo kma-logo-dark">`
-- Light mode logo: `<img src="KMA-drk.svg" class="kma-logo kma-logo-light">`
+- Dark mode logo: `<img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark">`
+- Light mode logo: `<img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light">`
 
 ---
 
@@ -101,11 +101,15 @@ hRow += '...<span onclick="showInfo(event,\\'key\\')">?</span>...';
 ```
 For user-supplied values (names, etc.) use `data-*` attributes and read them in a JS handler — never trust single-quote escaping for dynamic content.
 
-**Current data file:** `onboarding-data/Accelerate-Curriculum-Report-07.07.2026.xlsx` (29 learners, 24 matched to playbook). Verify column positions against each new file from Resmie before regenerating.
+**Current data file:** `onboarding-data/Accelerate-Curriculum-Report-07.15.2026.xlsx` (36 learners). Verify column positions against each new file from Resmie before regenerating.
 
 **TLG always hidden:** `hideTLG = true` permanently. No toggle button — same behavior as healthcare cert dashboard. Do not add a Show/Hide TLG button.
 
-**Top filter bar (updated 2026-07-08):** Market · Status · Sort · Reset — that's it. No "search name or manager" input (removed — the progress report has its own search box). The Sort dropdown syncs `tableSort` when changed, so it also re-sorts the progress report table. Options: Name A→Z · Completion High→Low · Completion Low→High · Most Urgent First.
+**Top filter bar (updated 2026-07-22):** Market · Status · Sort · Group · Reset. The **Group** button pair (All / Hide Test Group) filters by `assignDate === '2026-06-04'` — the June 4 cohort is the Test Group. Constant `TEST_GROUP_DATE = '2026-06-04'` in JS. Reset returns Group to All. Sort dropdown syncs `tableSort`. Options: Name A→Z · Completion High→Low · Completion Low→High · Most Urgent First.
+
+**Progress column (updated 2026-07-22 — ported from Resmie):** The heatmap table "Progress" column (formerly Status + Days Left + Expected Focus + Biggest Gap — 4 separate columns) is now one cell with three stacked elements: status badge · detail line (courses past due or days until deadline) · red "Behind pace" line when behind pacing schedule. `expectedFocusCell()` function removed; logic is now inline in `personRow()`. Column count 10 → 7.
+
+**Resmie collaboration workflow:** Resmie edits `onboarding.html` directly to prototype JS changes, then gives the file back. Drop her file in the repo root (whatever she names it — do NOT replace `onboarding.html`). Use `diff` to identify her changes vs the generated file, port them into `update_onboarding_dashboard.py`, regenerate, then delete her file.
 
 **Progress report search (dual-mode, updated 2026-07-08):** The `table-search` input at the top of the progress report section is context-aware:
 - **Individual view** — placeholder "Search name..." — filters learner rows by `data-name`
