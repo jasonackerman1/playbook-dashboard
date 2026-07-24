@@ -820,8 +820,18 @@ const TLG_SET = new Set([
 ]);
 
 let hideTLG = true;
-let testGroupFilter = 'all'; // 'all' | 'only' | 'hide'
-const TEST_GROUP_DATE = '2026-06-04';
+let testGroupFilter = 'all'; // 'all' | 'hide'
+// Fixed roster of the original June 4 cohort — stable even when the LMS
+// reassigns assignDate in future pulls (which happened July 2026).
+const TEST_GROUP_NAMES = new Set([
+  'Alford Wood', 'Anthony Petretta', 'Christopher Melton', 'Daniel Zepeda',
+  'Dillon Basnight', 'Dre Ante Noel', 'Dylan McDonough', 'Emily Olstein',
+  'Frances Rogers', 'Gregory Christie', 'Jared Poplawski', 'Kelsey Carrington',
+  'Kevin Kojouri', 'Kyle Baker', 'Meagan Blythe', 'Michael Shields',
+  'Paolo Castellon', 'Patrick Meagher', 'RICHARD ALLEN', 'Randahl Bradley',
+  'Sophia Krawczak', 'Spencer Larson', 'Taylor Hill', 'Tracy Hendricks',
+  'Ty Foster', 'Valencia Gilford', 'William Birkett'
+]);
 
 function setTestGroup(val, btn) {{
   testGroupFilter = val;
@@ -1155,7 +1165,7 @@ function applyFilters() {{
 
   filtered = PEOPLE.filter(p => {{
     if (hideTLG && TLG_SET.has(p.name.toLowerCase())) return false;
-    if (testGroupFilter === 'hide' && p.assignDate === TEST_GROUP_DATE) return false;
+    if (testGroupFilter === 'hide' && TEST_GROUP_NAMES.has(p.name)) return false;
     if (mkt && p.market !== mkt) return false;
     const st = computeStatus(p);
     if (status && st !== status) return false;
