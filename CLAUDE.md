@@ -105,7 +105,7 @@ For user-supplied values (names, etc.) use `data-*` attributes and read them in 
 
 **TLG always hidden:** `hideTLG = true` permanently. No toggle button — same behavior as healthcare cert dashboard. Do not add a Show/Hide TLG button.
 
-**Top filter bar (updated 2026-07-22):** Market · Status · Sort · Group · Reset. The **Group** button pair (All / Hide Test Group) filters by `assignDate === '2026-06-04'` — the June 4 cohort is the Test Group. Constant `TEST_GROUP_DATE = '2026-06-04'` in JS. Reset returns Group to All. Sort dropdown syncs `tableSort`. Options: Name A→Z · Completion High→Low · Completion Low→High · Most Urgent First.
+**Top filter bar (updated 2026-07-22):** Market · Status · Sort · Group · Reset. The **Group** button pair (All / Hide Test Group) filters by `TEST_GROUP_NAMES.has(p.name)` — the June 4 cohort is the Test Group. **Do NOT use `assignDate` for this check** — the LMS resets `Curriculum Assignment Date` to the report generation date on each pull (July 2026 data showed 23 of 27 cohort members with `2026-07-10` instead of `2026-06-04`). `TEST_GROUP_NAMES` is a hardcoded `Set` of the 27 original cohort members — same list as the leaderboard's `BETA_NAMES`. Reset returns Group to All. Sort dropdown syncs `tableSort`.
 
 **Progress column (updated 2026-07-22 — ported from Resmie):** The heatmap table "Progress" column (formerly Status + Days Left + Expected Focus + Biggest Gap — 4 separate columns) is now one cell with three stacked elements: status badge · detail line (courses past due or days until deadline) · red "Behind pace" line when behind pacing schedule. `expectedFocusCell()` function removed; logic is now inline in `personRow()`. Column count 10 → 7.
 
