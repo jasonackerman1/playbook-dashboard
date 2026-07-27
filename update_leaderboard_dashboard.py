@@ -11,17 +11,18 @@ LEADERBOARD_DIR = 'leaderboard-data'
 OUTPUT_FILE     = 'leaderboard.html'
 WINDOW_DAYS     = 45
 
-# LMS column indices (0-based)
-COL_FIRST           = 3
-COL_LAST            = 4
-COL_EMAIL           = 5
-COL_JOBTITLE        = 6
-COL_REGION          = 7
-COL_MARKET          = 8
-COL_BRANCH          = 9
-COL_HIRE_DATE       = 15
-COL_CURRIC_COMPLETE = 20
-COL_ASSIGN_DATE     = 21
+# LMS column indices (0-based) — verified against Accelerate-Curriculum-Report-07.27.2026.xlsx
+# Old file had duplicate Email at col 0; new file removed it, shifting all cols left by 1
+COL_FIRST           = 2
+COL_LAST            = 3
+COL_EMAIL           = 4
+COL_JOBTITLE        = 5
+COL_REGION          = 6
+COL_MARKET          = 7
+COL_BRANCH          = 8
+COL_HIRE_DATE       = 14
+COL_CURRIC_COMPLETE = 19
+COL_ASSIGN_DATE     = 20
 
 # ---------------------------------------------------------------------------
 # HTML-as-XLS parser (Salesforce exports .xls files that are actually HTML)
@@ -63,6 +64,29 @@ def _parse_html_xls(path):
         return []
     headers = p.rows[0]
     return [dict(zip(headers, row)) for row in p.rows[1:] if row]
+
+
+def _parse_xlsx_sf(path):
+    """Parse a real Excel (.xlsx) Salesforce export via openpyxl."""
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
+    if not rows:
+        return []
+    headers = [str(h) if h is not None else '' for h in rows[0]]
+    result = []
+    for row in rows[1:]:
+        if any(c is not None for c in row):
+            result.append(dict(zip(headers, ['' if c is None else str(c) for c in row])))
+    return result
+
+
+def _parse_sf_file(path):
+    """Route to the right Salesforce parser based on file extension."""
+    if path.lower().endswith('.xlsx'):
+        return _parse_xlsx_sf(path)
+    return _parse_html_xls(path)
 
 
 # ---------------------------------------------------------------------------
@@ -108,26 +132,42 @@ def _file_dt(fname):
 # File detection
 # ---------------------------------------------------------------------------
 def _find_files():
-    xlsx_files = glob.glob(os.path.join(LEADERBOARD_DIR, '*.xlsx'))
-    xls_files  = glob.glob(os.path.join(LEADERBOARD_DIR, '*.xls'))
+    # LMS: new naming convention first, fall back to old
+    lms_candidates = sorted(glob.glob(os.path.join(LEADERBOARD_DIR, 'Accelerate-Curriculum-Report-*.xlsx')))
+    if not lms_candidates:
+        lms_candidates = sorted(glob.glob(os.path.join(LEADERBOARD_DIR, 'Accelerate Leaderboard Curriculum Report*.xlsx')))
+    if not lms_candidates:
+        raise FileNotFoundError('No LMS .xlsx file found in leaderboard-data/')
+    lms_path = lms_candidates[-1]
 
-    if not xlsx_files:
-        raise FileNotFoundError('No .xlsx LMS file in leaderboard-data/')
-    lms_path = sorted(xlsx_files)[-1]
+    # Closed Won: new xlsx naming first, fall back to old xls content sniff
+    cw_candidates = sorted(glob.glob(os.path.join(LEADERBOARD_DIR, 'New-Opportunities-Report-*.xlsx')))
+    if cw_candidates:
+        cw_path = cw_candidates[-1]
+    else:
+        cw_path = None
+        for p in sorted(glob.glob(os.path.join(LEADERBOARD_DIR, '*.xls'))):
+            with open(p, encoding='utf-8', errors='ignore') as f:
+                if 'Opportunity Owner Email' in f.read(2000):
+                    cw_path = p
+                    break
 
-    cw_path = sh_path = None
-    for p in xls_files:
-        with open(p, encoding='utf-8', errors='ignore') as f:
-            chunk = f.read(2000)
-        if 'Opportunity Owner Email' in chunk:
-            cw_path = p
-        elif 'From Stage' in chunk:
-            sh_path = p
+    # Stage History: new xlsx naming first, fall back to old xls content sniff
+    sh_candidates = sorted(glob.glob(os.path.join(LEADERBOARD_DIR, 'New-Opportunity-History-Report-*.xlsx')))
+    if sh_candidates:
+        sh_path = sh_candidates[-1]
+    else:
+        sh_path = None
+        for p in sorted(glob.glob(os.path.join(LEADERBOARD_DIR, '*.xls'))):
+            with open(p, encoding='utf-8', errors='ignore') as f:
+                if 'From Stage' in f.read(2000):
+                    sh_path = p
+                    break
 
     if not cw_path:
-        raise FileNotFoundError('Closed Won .xls not found in leaderboard-data/')
+        raise FileNotFoundError('Closed Won file not found in leaderboard-data/')
     if not sh_path:
-        raise FileNotFoundError('Stage History .xls not found in leaderboard-data/')
+        raise FileNotFoundError('Stage History file not found in leaderboard-data/')
 
     return lms_path, cw_path, sh_path
 
@@ -1016,8 +1056,8 @@ def main():
     hires, cohort_start = _parse_lms(lms_path)
     print(f'  {len(hires)} hires, cohort start {cohort_start}')
 
-    cw_rows = _parse_html_xls(cw_path)
-    sh_rows = _parse_html_xls(sh_path)
+    cw_rows = _parse_sf_file(cw_path)
+    sh_rows = _parse_sf_file(sh_path)
     print(f'  {len(cw_rows)} Closed Won rows, {len(sh_rows)} Stage History rows')
 
     stage_idx = _stage_index(sh_rows)
