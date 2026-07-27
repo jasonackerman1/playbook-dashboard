@@ -1796,8 +1796,8 @@ def main():
 
     # ── New two-file HC format (auto-detect latest file for each type) ──────
     import glob
-    hc_cert_matches  = sorted(glob.glob(os.path.join(cert_dir, 'Healthcare*Certification-Report-*.xlsx')), key=os.path.getmtime)
-    hc_learn_matches = sorted(glob.glob(os.path.join(cert_dir, 'Healthcare-Certification-Foundations-Curricula-Report-*.xlsx')), key=os.path.getmtime)
+    hc_cert_matches  = sorted(glob.glob(os.path.join(cert_dir, 'Healthcare*Certification-Report-*.xlsx')))
+    hc_learn_matches = sorted(glob.glob(os.path.join(cert_dir, 'Healthcare-Certification-Foundations-Curricula-Report-*.xlsx')))
     hc_cert_path  = hc_cert_matches[-1]  if hc_cert_matches  else None
     hc_learn_path = hc_learn_matches[-1] if hc_learn_matches else None
 

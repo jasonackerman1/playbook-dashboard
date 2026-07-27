@@ -82,8 +82,8 @@ def playbook_stats():
 def hc_cert_stats():
     import glob as _glob
     cert_dir = SCRIPT_DIR / 'cert-data'
-    hc_cert_matches  = sorted(_glob.glob(str(cert_dir / 'Healthcare*Certification-Report-*.xlsx')), key=os.path.getmtime)
-    hc_learn_matches = sorted(_glob.glob(str(cert_dir / 'Healthcare-Certification-Foundations-Curricula-Report-*.xlsx')), key=os.path.getmtime)
+    hc_cert_matches  = sorted(_glob.glob(str(cert_dir / 'Healthcare*Certification-Report-*.xlsx')))
+    hc_learn_matches = sorted(_glob.glob(str(cert_dir / 'Healthcare-Certification-Foundations-Curricula-Report-*.xlsx')))
     hc_cert_path  = Path(hc_cert_matches[-1])  if hc_cert_matches  else None
     hc_learn_path = Path(hc_learn_matches[-1]) if hc_learn_matches else None
 

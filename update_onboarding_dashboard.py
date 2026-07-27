@@ -347,7 +347,7 @@ def generate_html(records, sales_map=None):
     try:
         _lms_dir   = 'onboarding-data'
         _lms_files = [f for f in os.listdir(_lms_dir) if f.endswith('.xlsx')]
-        _lms_files.sort(key=lambda f: os.path.getmtime(os.path.join(_lms_dir, f)))
+        _lms_files.sort()
         _lms_label = _file_date_label(os.path.join(_lms_dir, _lms_files[-1])) if _lms_files else date.today().strftime('%B %-d, %Y')
     except Exception:
         _lms_label = date.today().strftime('%B %-d, %Y')
