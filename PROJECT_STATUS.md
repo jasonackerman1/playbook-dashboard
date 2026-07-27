@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-07-27
+Last updated: 2026-07-27 (evening)
 
 ---
 
@@ -13,11 +13,23 @@ Last updated: 2026-07-27
 | Healthcare Certification | `cert-healthcare.html` | July 27, 2026 | 45 enrolled, 0 certified |
 | Public Sector Certification | `cert-publicsector.html` | May 2026 | 33 people, 6 certified |
 | Accelerate Onboarding | `onboarding.html` | July 22, 2026 | 36 learners |
-| Accelerate Leaderboard | `leaderboard.html` | July 22, 2026 | Beta cohort filter live |
+| Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 
 ---
 
-## Recent Changes (this session — 2026-07-27)
+## Recent Changes (2026-07-27 evening)
+
+### Leaderboard updated for new Salesforce file format
+- **New file names:** `New-Opportunities-Report-07.27.2026.xlsx` (Closed Won) and `New-Opportunity-History-Report-07.27.2026.xlsx` (Stage History) — previously `report*.xls` HTML-disguised exports
+- **File detection:** switched from content-sniffing (reading first 2000 bytes) to filename-pattern matching. Falls back to old `.xls` content sniff if new-format files not present.
+- **New parser:** `_parse_xlsx_sf()` uses openpyxl for real Excel files. `_parse_sf_file()` routes by extension.
+- **LMS column shift:** new `Accelerate-Curriculum-Report-07.27.2026.xlsx` dropped the duplicate `Email Address` col at position 0, shifting all columns left by 1. Updated constants: COL_FIRST=2, COL_LAST=3, COL_EMAIL=4, COL_JOBTITLE=5, COL_REGION=6, COL_MARKET=7, COL_BRANCH=8, COL_HIRE_DATE=14, COL_CURRIC_COMPLETE=19, COL_ASSIGN_DATE=20.
+- **Result:** 37 hires, cohort start 2026-06-04, 26 cohort deals, 37 verification entries.
+- **Health check:** if a future run shows `cohort start None` or hires < 30, the LMS columns shifted again — re-verify against the new file.
+
+---
+
+## Earlier Changes (2026-07-27 morning)
 
 ### Healthcare Cert dashboard updated to 07.27 data
 - New files: `cert-data/Healthcare-Certification-Report-07.27.2026.xlsx` and `cert-data/Healthcare-Certification-Foundations-Curricula-Report-07.27.2026.xlsx`
