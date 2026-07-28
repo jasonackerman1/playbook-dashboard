@@ -2463,6 +2463,10 @@ function personStatus(p){{
   if(p.overallPct > 0)      return "In Progress";
   return "Not Started";
 }}
+function isManager(p){{
+  var t = (p.JobTitle || "").toLowerCase();
+  return t.indexOf("director of sales") !== -1 || t.indexOf("vice president") !== -1;
+}}
 function pFiscalQtr(d){{
   if(!d) return null;
   var pts = d.split("-"), yr = +pts[0], mo = +pts[1];
@@ -2603,16 +2607,18 @@ function renderCharts(){{
     }}
   }});
 
-  // Chart 2: certifications over time by fiscal quarter
-  var qtrMap = {{}};
+  // Chart 2: certifications over time by fiscal quarter — split by Reps vs Managers
+  var qtrMapReps = {{}}, qtrMapMgrs = {{}};
   filtered.forEach(function(p){{
     if(p.Certified === "Yes" && p.CertQtr){{
-      qtrMap[p.CertQtr] = (qtrMap[p.CertQtr] || 0) + 1;
+      var map = isManager(p) ? qtrMapMgrs : qtrMapReps;
+      map[p.CertQtr] = (map[p.CertQtr] || 0) + 1;
     }}
   }});
   function parseQtr(s){{ var m = s.match(/FY(\d+)\s+Q(\d)/); return m ? +m[1] * 10 + +m[2] : 0; }}
-  var trendLabels = Object.keys(qtrMap).sort(function(a,b){{ return parseQtr(a) - parseQtr(b); }});
-  var trendData   = trendLabels.map(function(q){{ return qtrMap[q]; }});
+  var trendLabels = Object.keys(Object.assign({{}}, qtrMapReps, qtrMapMgrs)).sort(function(a,b){{ return parseQtr(a) - parseQtr(b); }});
+  var trendDataReps = trendLabels.map(function(q){{ return qtrMapReps[q] || 0; }});
+  var trendDataMgrs = trendLabels.map(function(q){{ return qtrMapMgrs[q] || 0; }});
   var trendEmpty = sel("trend-empty");
   if(trendEmpty) trendEmpty.style.display = trendLabels.length === 0 ? "flex" : "none";
 
@@ -2621,22 +2627,29 @@ function renderCharts(){{
     type: "bar",
     data: {{
       labels: trendLabels,
-      datasets: [{{
-        data: trendData,
-        backgroundColor: cv("--green") + "bb",
-        borderRadius: 3,
-        borderSkipped: false
-      }}]
+      datasets: [
+        {{ label: "Reps",     data: trendDataReps, backgroundColor: cv("--green") + "bb", borderRadius: 3, borderSkipped: false, stack: "certs" }},
+        {{ label: "Managers", data: trendDataMgrs, backgroundColor: cv("--accent") + "bb", borderRadius: 3, borderSkipped: false, stack: "certs" }}
+      ]
     }},
     options: {{
       responsive: true, maintainAspectRatio: false,
       plugins: {{
-        legend: {{ display: false }},
-        tooltip: {{ callbacks: {{ label: function(ctx){{ return ctx.raw + " certified this quarter"; }} }} }}
+        legend: {{ display: true, position: "bottom", labels: {{ color: labelColor, font: {{ size: 11 }}, padding: 12, boxWidth: 12 }} }},
+        tooltip: {{
+          mode: "index",
+          callbacks: {{
+            label: function(ctx){{ return " " + ctx.dataset.label + ": " + ctx.raw; }},
+            afterBody: function(items){{
+              var total = items.reduce(function(s, i){{ return s + i.raw; }}, 0);
+              return ["─────────", "Total: " + total];
+            }}
+          }}
+        }}
       }},
       scales: {{
-        x: {{ grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 10 }}, maxRotation: 45 }} }},
-        y: {{ grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 11 }}, stepSize: 1 }} }}
+        x: {{ stacked: true, grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 10 }}, maxRotation: 45 }} }},
+        y: {{ stacked: true, grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 11 }}, stepSize: 1 }} }}
       }}
     }}
   }});
