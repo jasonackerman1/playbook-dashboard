@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-07-27 (evening)
+Last updated: 2026-07-28
 
 ---
 
@@ -12,12 +12,24 @@ Last updated: 2026-07-27 (evening)
 | Playbook Traffic | `playbook.html` | June 29, 2026 | |
 | Healthcare Certification | `cert-healthcare.html` | July 27, 2026 | 45 enrolled, 0 certified |
 | Public Sector Certification | `cert-publicsector.html` | May 2026 | 33 people, 6 certified |
-| Accelerate Onboarding | `onboarding.html` | July 22, 2026 | 36 learners |
+| Accelerate Onboarding | `onboarding.html` | July 28, 2026 | 39 learners (37 US + 2 Canadian) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 
 ---
 
-## Recent Changes (2026-07-27 evening)
+## Recent Changes (2026-07-28)
+
+### Onboarding Dashboard — Canadian Learner Support
+- **New data file:** `Accelerate-Curriculum-Report-07.28.2026.xlsx` — first file with Canadian learners (39 total: 37 US + 2 Canadian: Jonathan Griffith/Ontario, Laud Vidal/BC)
+- **Bug fixed:** Canadian learners were showing 0% on all curricula because the script only knew US curriculum IDs (`ACCELERATE_GS` etc.). Fixed by detecting `Parent Curriculum ID = 'ACCELERATE_BCA'` and dynamically appending `_BCA` suffix when reading curriculum rows. Data is stored under US keys so the JS heatmap is unchanged.
+- **New column constant:** `COL_PARENT_CURRIC = 16`
+- **Location filter added:** All / 🇺🇸 US / 🇨🇦 Canada button group in the filter bar
+- **Flag icon:** 🇨🇦 appears next to Canadian learner names in the progress table
+- **Course differences confirmed:** CA has CASL (GS), TRUEBLUE (CP instead of BlueIrisIQ), KMpriceHUB + FINTRAC (SS); Prospecting is identical between US and CA
+
+---
+
+## Earlier Changes (2026-07-27 evening)
 
 ### Leaderboard updated for new Salesforce file format
 - **New file names:** `New-Opportunities-Report-07.27.2026.xlsx` (Closed Won) and `New-Opportunity-History-Report-07.27.2026.xlsx` (Stage History) — previously `report*.xls` HTML-disguised exports
