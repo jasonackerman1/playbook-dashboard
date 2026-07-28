@@ -10,7 +10,7 @@ Last updated: 2026-07-28
 |---|---|---|---|
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
 | Playbook Traffic | `playbook.html` | June 29, 2026 | |
-| Healthcare Certification | `cert-healthcare.html` | July 27, 2026 | 45 enrolled, 0 certified |
+| Healthcare Certification | `cert-healthcare.html` | July 28, 2026 | 45 enrolled, 0 certified; Reps/Managers chart split live |
 | Public Sector Certification | `cert-publicsector.html` | May 2026 | 33 people, 6 certified |
 | Accelerate Onboarding | `onboarding.html` | July 28, 2026 | 39 learners (37 US + 2 Canadian) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
@@ -18,6 +18,14 @@ Last updated: 2026-07-28
 ---
 
 ## Recent Changes (2026-07-28)
+
+### Healthcare Cert — Certifications Over Time chart split (Reps vs Managers)
+- Ported from Resmie's prototype (`cert-healthcare-07-28-2026.html`, now deleted)
+- `isManager(p)` — job title contains "Director of Sales" or "Vice President" → Manager; everyone else → Rep
+- Chart 2 now renders as a **stacked bar** with two datasets: Reps (green) and Managers (blue)
+- Legend visible at bottom; tooltip shows per-segment count + "Total:" line on hover
+- Currently all 4 certified people are Managers (Directors of Sales), so only the Manager segment shows — Rep segment appears once reps start certifying
+- New data files added: `Healthcare-Certification-Report-07.28.2026.xlsx` + Foundations Curricula variant
 
 ### Onboarding Dashboard — Canadian Learner Support
 - **New data file:** `Accelerate-Curriculum-Report-07.28.2026.xlsx` — first file with Canadian learners (39 total: 37 US + 2 Canadian: Jonathan Griffith/Ontario, Laud Vidal/BC)
