@@ -34,6 +34,7 @@ COL_ITEM_TYPE  = 23  # Item Type (ONLINE/VILT)
 COL_ITEM_DATE  = 27  # Item Completion Date
 COL_ITEM_STS   = 29  # Item Completion Status Description
 COL_ITEM_REQ   = 30  # Item Required Date
+COL_PARENT_CURRIC = 16  # Parent Curriculum ID (ACCELERATE or ACCELERATE_BCA)
 
 # ── Playbook traffic columns ──────────────────────────────────────────────────
 PB_FIRST = 1
@@ -162,16 +163,21 @@ def load_lms():
             if pkey(first, last) in TLG:
                 continue
 
+            # Detect Canadian learner — parent curriculum is ACCELERATE_BCA
+            is_canada = any(str(r[COL_PARENT_CURRIC] or '').endswith('_BCA') for r in prows)
+            suffix    = '_BCA' if is_canada else ''
+            parent_id = f'ACCELERATE{suffix}'
+
             # Parent curriculum row (overall program)
-            parent = next((r for r in prows if r[COL_CURRIC_ID] == 'ACCELERATE'), None)
+            parent = next((r for r in prows if r[COL_CURRIC_ID] == parent_id), None)
             assign_date  = parent[COL_ASSIGN_DT]  if parent else None
             overall_done = (parent[COL_CURRIC_CMP] == 'Yes') if parent else False
             days_rem_lms = None  # computed in JS from assignDate
 
-            # Per sub-curriculum data
+            # Per sub-curriculum data — always stored under US key so JS heatmap works unchanged
             curricula_data = {}
             for cid, cname in CURRICULA:
-                crows = [r for r in prows if r[COL_CURRIC_ID] == cid]
+                crows = [r for r in prows if r[COL_CURRIC_ID] == cid + suffix]
                 if not crows:
                     continue
 
@@ -216,6 +222,7 @@ def load_lms():
                 'last':        last,
                 'jobTitle':    str(prows[0][COL_JOBTITLE]  or ''),
                 'market':      str(prows[0][COL_MARKET]    or ''),
+                'isCanada':    is_canada,
                 'manager':     f"{prows[0][COL_MGR_FIRST] or ''} {prows[0][COL_MGR_LAST] or ''}".strip(),
                 'mgrEmail':    str(prows[0][COL_MGR_EMAIL] or ''),
                 'mgrTitle':    str(prows[0][COL_MGR_TITLE] or ''),
@@ -666,6 +673,12 @@ def generate_html(records, sales_map=None):
     <button class="active" onclick="setTestGroup('all',this)">All</button>
     <button onclick="setTestGroup('hide',this)">Hide Test Group</button>
   </div>
+  <span class="filter-label">Location</span>
+  <div class="btn-group" id="location-btns">
+    <button class="active" onclick="setLocation('all',this)">All</button>
+    <button onclick="setLocation('us',this)">&#127482;&#127480; US</button>
+    <button onclick="setLocation('ca',this)">&#127464;&#127462; Canada</button>
+  </div>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <span class="info-btn" onclick="showInfo(event,'filters-info')" style="margin-left:4px;">?</span>
   <span class="result-count" id="result-count"></span>
@@ -821,6 +834,7 @@ const TLG_SET = new Set([
 
 let hideTLG = true;
 let testGroupFilter = 'all'; // 'all' | 'hide'
+let locationFilter = 'all';  // 'all' | 'us' | 'ca'
 // Fixed roster of the original June 4 cohort — stable even when the LMS
 // reassigns assignDate in future pulls (which happened July 2026).
 const TEST_GROUP_NAMES = new Set([
@@ -836,6 +850,12 @@ const TEST_GROUP_NAMES = new Set([
 function setTestGroup(val, btn) {{
   testGroupFilter = val;
   document.querySelectorAll('#test-group-btns button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}}
+function setLocation(val, btn) {{
+  locationFilter = val;
+  document.querySelectorAll('#location-btns button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   applyFilters();
 }}
@@ -1154,6 +1174,8 @@ function resetFilters() {{
   document.getElementById('table-search').value = '';
   testGroupFilter = 'all';
   document.querySelectorAll('#test-group-btns button').forEach((b,i) => b.classList.toggle('active', i===0));
+  locationFilter = 'all';
+  document.querySelectorAll('#location-btns button').forEach((b,i) => b.classList.toggle('active', i===0));
   filterTableRows();
   applyFilters();
 }}
@@ -1166,6 +1188,8 @@ function applyFilters() {{
   filtered = PEOPLE.filter(p => {{
     if (hideTLG && TLG_SET.has(p.name.toLowerCase())) return false;
     if (testGroupFilter === 'hide' && TEST_GROUP_NAMES.has(p.name)) return false;
+    if (locationFilter === 'us' && p.isCanada) return false;
+    if (locationFilter === 'ca' && !p.isCanada) return false;
     if (mkt && p.market !== mkt) return false;
     const st = computeStatus(p);
     if (status && st !== status) return false;
@@ -1315,7 +1339,7 @@ function renderTable() {{
       ? '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--accent);white-space:nowrap;">' + (pSaleRow.daysToClose != null ? pSaleRow.daysToClose + 'd' : '—') + '</td>'
       : '<td class="pct-cell" style="text-align:center;color:var(--muted);opacity:.4;">&#8212;</td>';
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
-      '<td class="name-cell"><span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;" title="' + dotTip + '"></span>' + escHtml(p.name) + '</td>' +
+      '<td class="name-cell"><span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;" title="' + dotTip + '"></span>' + escHtml(p.name) + (p.isCanada ? ' <span title="Canada" style="font-size:0.85em;">&#127464;&#127462;</span>' : '') + '</td>' +
       '<td><span class="status-badge ' + statusClass + '">' + status + '</span>' +
       (progressDetail ? ' <span style="font-size:11px;color:var(--muted);">' + progressDetail + '</span>' : '') +
       focusLine +
