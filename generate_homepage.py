@@ -169,6 +169,27 @@ def ps_cert_stats():
     return {'total': total, 'certified': certified, 'rate': rate,
             'in_progress': in_progress, 'not_started': not_started}
 
+# ── Layered Security stats ────────────────────────────────────────────────────
+def ls_cert_stats():
+    try:
+        from update_layered_security_dashboard import load_ls_data
+        orig = os.getcwd()
+        try:
+            os.chdir(str(SCRIPT_DIR))
+            people, date_label = load_ls_data()
+        finally:
+            os.chdir(orig)
+        total     = len(people)
+        complete  = sum(1 for p in people if p['Complete'] == 'Yes')
+        in_prog   = sum(1 for p in people if p['overallPct'] > 0 and p['Complete'] != 'Yes')
+        not_start = total - complete - in_prog
+        rate      = round(complete / total * 100) if total else 0
+        return {'total': total, 'complete': complete, 'in_progress': in_prog,
+                'not_started': not_start, 'rate': rate, 'date_label': date_label}
+    except Exception as e:
+        print(f"    Layered Security stats error: {e}")
+        return None
+
 # ── Onboarding stats ──────────────────────────────────────────────────────────
 def onboarding_stats():
     from update_onboarding_dashboard import load_lms
@@ -232,7 +253,7 @@ def leaderboard_stats():
 
 
 # ── HTML generation ───────────────────────────────────────────────────────────
-def generate_html(pb, hc, ps, ob, lb=None):
+def generate_html(pb, hc, ps, ob, lb=None, ls=None):
     today = datetime.now().strftime('%B %-d, %Y')
 
     pb_views = pb['total_views']   if pb else '—'
@@ -266,6 +287,12 @@ def generate_html(pb, hc, ps, ob, lb=None):
     lb_in_window = lb['in_window'] if lb else '—'
     lb_on_board  = lb['on_board']  if lb else '—'
     lb_total_rev = lb['total_rev'] if lb else '—'
+
+    ls_total      = ls['total']       if ls else '—'
+    ls_complete   = ls['complete']    if ls else '—'
+    ls_in_prog    = ls['in_progress'] if ls else '—'
+    ls_not_start  = ls['not_started'] if ls else '—'
+    ls_rate       = ls['rate']        if ls else '—'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -508,6 +535,33 @@ def generate_html(pb, hc, ps, ob, lb=None):
       </div>
     </div>
 
+    <!-- Layered Security Curriculum -->
+    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Healthcare_Playbook_Images/HealthcareHomeReduced.jpg')">
+      <div class="card-head">
+        <span class="card-icon">&#128274;</span>
+        <div>
+          <div class="card-title">Layered Security Curriculum</div>
+          <div class="card-desc">Direct Sales &mdash; 11-module curriculum</div>
+        </div>
+      </div>
+      <div>
+        <div class="stat-main">
+          <span class="stat-num" style="color:var(--accent)">{ls_total}</span>
+          <span class="stat-unit">total learners</span>
+        </div>
+        <div class="stat-sub">{ls_rate}% completion rate</div>
+      </div>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-green">&#10003; {ls_complete} complete</span>
+          <span class="pill pill-blue">&#9679; {ls_in_prog} in progress</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-muted">&#9675; {ls_not_start} not started</span>
+        </div>
+        <a href="cert-layered-security.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -618,7 +672,14 @@ def main():
     else:
         print("    No leaderboard data found")
 
-    html = generate_html(pb, hc, ps, ob, lb)
+    print("  Reading Layered Security data...")
+    ls = ls_cert_stats()
+    if ls:
+        print(f"    {ls['complete']} of {ls['total']} complete ({ls['rate']}%)")
+    else:
+        print("    No Layered Security data found")
+
+    html = generate_html(pb, hc, ps, ob, lb, ls)
     out  = SCRIPT_DIR / 'index.html'
     out.write_text(html, encoding='utf-8')
     print(f"\nHomepage written to: {out}")

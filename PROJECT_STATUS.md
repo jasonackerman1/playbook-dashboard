@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-07-28
+Last updated: 2026-07-29
 
 ---
 
@@ -17,7 +17,16 @@ Last updated: 2026-07-28
 
 ---
 
-## Recent Changes (2026-07-28)
+## Recent Changes (2026-07-29)
+
+### Onboarding — Progress table simplified
+- **Playbook dot removed** from learner name cells — engagement info still in the individual modal card
+- **Legend simplified** — removed the "Playbook ●" section; Gap + Curricula ■ keys remain
+- **Progress column** — shows only the status badge (On Track / Overdue / Completed); sub-detail lines (X courses past due, Xd until deadline, Behind pace, Also lagging) removed from table view
+
+---
+
+## Earlier Changes (2026-07-28)
 
 ### Healthcare Cert — Certifications Over Time chart split (Reps vs Managers)
 - Ported from Resmie's prototype (`cert-healthcare-07-28-2026.html`, now deleted)

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How the Layered Security Curriculum Dashboard Works</title>
+<style>
+  :root{
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+    --accent:#4f8ef7; --text:#e8ecf4; --muted:#9aa2bf; --green:#3ecf8e;
+    --amber:#f7c94f; --red:#f76f6f; --gold:#d4a72c;
+    --font:'Segoe UI',system-ui,sans-serif; --mono:'SFMono-Regular',Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.6;}
+  .wrap{max-width:840px;margin:0 auto;padding:48px 28px 100px;}
+  h1{font-size:26px;font-weight:700;margin:0 0 6px;}
+  .subtitle{color:var(--muted);font-size:14px;margin-bottom:36px;}
+  h2{font-size:18px;font-weight:700;margin:44px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  h2 .num{color:var(--accent);font-family:var(--mono);font-size:14px;}
+  h3{font-size:14.5px;font-weight:700;margin:22px 0 8px;color:var(--text);}
+  p{margin:0 0 12px;font-size:14px;color:#c9cee0;}
+  ul,ol{margin:0 0 14px;padding-left:22px;font-size:14px;color:#c9cee0;}
+  li{margin-bottom:6px;}
+  code{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:12.5px;color:var(--amber);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:14px 0;}
+  .card.note{border-left:3px solid var(--accent);}
+  .card.warn{border-left:3px solid var(--gold);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:640px){.grid{grid-template-columns:1fr;}}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 9px;border-radius:20px;margin-right:6px;}
+  .pill.green{color:var(--green);background:#3ecf8e22;border:1px solid #3ecf8e44;}
+  .pill.amber{color:var(--amber);background:#f7c94f22;border:1px solid #f7c94f44;}
+  .pill.red{color:var(--red);background:#f76f6f22;border:1px solid #f76f6f44;}
+  .pill.gold{color:var(--gold);background:#d4a72c22;border:1px solid #d4a72c66;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 18px;}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;font-family:var(--mono);font-size:12.5px;}
+  .flow span.step{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;}
+  .flow span.arrow{color:var(--muted);}
+  footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>How the Layered Security Curriculum Dashboard Works</h1>
+  <p class="subtitle">A plain-language walkthrough of <code>Layered_Security_Certification_Dashboard.html</code> — what data it holds, how each section is calculated, and how the pieces talk to each other.</p>
+
+  <div class="card note">
+    <p style="margin:0"><b>In one sentence:</b> it's a single, self-contained HTML file with the entire learner roster baked in as JSON, which JavaScript filters, aggregates, and renders into cards, charts, and a roster the moment the page loads — no server, database, or login required.</p>
+  </div>
+
+  <h2><span class="num">01</span> What data is inside it</h2>
+  <p>The file embeds one JavaScript array called <code>PEOPLE</code> — 33 learners assigned to the <b>Layered Security Certification – Direct Sales</b> curriculum, built from the LMS export you provided. Solutions Consultants and anyone in the Commercial Print market were deliberately excluded per your instructions.</p>
+  <p>Each person is one JSON object with:</p>
+  <table>
+    <tr><th>Field</th><th>What it holds</th></tr>
+    <tr><td><code>FirstName / LastName / Email</code></td><td>Identity</td></tr>
+    <tr><td><code>JobTitle / Market / Manager / MgrEmail</code></td><td>Org placement, used for grouping and filtering</td></tr>
+    <tr><td><code>HireDate / AssignDate / DaysRemaining</code></td><td>Timeline fields; negative <code>DaysRemaining</code> plus not-yet-complete drives the "Past Due" flag</td></tr>
+    <tr><td><code>Complete</code> (Yes/No)</td><td>Whether all 11 curriculum modules are finished</td></tr>
+    <tr><td><code>CompleteDate / CompleteQtr</code></td><td>Date of the last module finished, and its fiscal quarter</td></tr>
+    <tr><td><code>ls.items[]</code></td><td>The 11 individual modules, each with <code>done</code> (true/false) and a completion <code>date</code></td></tr>
+    <tr><td><code>overallDone / overallPct</code></td><td>Modules finished out of 11, and that as a percentage</td></tr>
+  </table>
+  <p>Nothing is fetched from a server — this array is the entire dataset, sitting in a <code>&lt;script&gt;</code> tag near the bottom of the file.</p>
+
+  <h2><span class="num">02</span> The three-tier status model</h2>
+  <p>Every calculation in the dashboard boils down to one of three curriculum states, computed by a single function (<code>personStatus</code>) that everything else reuses:</p>
+  <div class="flow">
+    <span class="pill red">Not Started</span><span class="arrow">→</span>
+    <span class="pill amber">In Progress</span><span class="arrow">→</span>
+    <span class="pill green">Complete</span>
+  </div>
+  <p>This is deliberately kept separate from an entirely different concept — <b>actual certification</b>, which your organization only grants once someone has also hit $5,000 in qualifying sales, tracked in an external system this file has no access to. The dashboard never conflates the two: finishing all 11 modules only ever shows as "Complete," never "Certified."</p>
+
+  <h2><span class="num">03</span> Section-by-section</h2>
+
+  <h3>Header</h3>
+  <p>Title, current data date, an <b>Import Sales Certification</b> button (see §5), the <b>Export</b> menu (see §6), and a light/dark theme toggle that's remembered in the browser via <code>localStorage</code>.</p>
+
+  <h3>Filter bar</h3>
+  <p>Two dropdowns (Status, Market) and a search box. Changing any of them re-runs one function, <code>applyFilters()</code>, which rebuilds a <code>filtered</code> array from <code>PEOPLE</code> and then re-renders every stat, chart, and roster row from that filtered set — so the whole page always reflects the current filter combination.</p>
+
+  <h3>Stat cards</h3>
+  <div class="grid">
+    <div class="card"><b>Total Enrolled</b><br><span style="color:#c9cee0;font-size:13px">Count of everyone in the current filter</span></div>
+    <div class="card"><b>Curriculum Complete</b><br><span style="color:#c9cee0;font-size:13px">Count where <code>Complete === "Yes"</code></span></div>
+    <div class="card"><b>Certified</b><br><span style="color:#c9cee0;font-size:13px">Count confirmed by an <i>imported</i> sales file — reads "—" until one is loaded</span></div>
+    <div class="card"><b>In Progress / Not Started</b><br><span style="color:#c9cee0;font-size:13px">Split by whether any modules are done yet</span></div>
+    <div class="card"><b>Past Due</b><br><span style="color:#c9cee0;font-size:13px">Not complete <i>and</i> <code>DaysRemaining &lt; 0</code></span></div>
+    <div class="card"><b>Completion Rate</b><br><span style="color:#c9cee0;font-size:13px">Complete ÷ Total, as a percentage</span></div>
+  </div>
+
+  <h3>Charts</h3>
+  <p>Both are drawn with Chart.js (loaded from a CDN):</p>
+  <ul>
+    <li><b>Completion Pipeline</b> — one horizontal bar per status (Not Started / In Progress / Complete), so you can see the shape of the funnel at a glance.</li>
+    <li><b>Learners by Market</b> — a stacked horizontal bar per sales market, so you can spot which markets are lagging.</li>
+  </ul>
+  <p>Both charts destroy and redraw themselves every time filters change, so they always match the roster below them.</p>
+
+  <h3>Roster</h3>
+  <p>A two-pane layout: a scrollable list of people on the left, and a detail panel on the right.</p>
+  <ul>
+    <li><b>Individual view</b> — sortable by Name, Status, or Completion %.</li>
+    <li><b>By Manager view</b> — the same people, grouped into collapsible sections under their manager, with a per-team completion count in the group header.</li>
+    <li>Each card is color-striped (green/yellow/red) by status, and shows small pills for module progress, a <span class="pill red">Past Due</span> flag when relevant, and a <span class="pill gold">Certified Layered Security Specialist</span> pill once that person is confirmed via an imported sales file.</li>
+    <li>Clicking a card opens the full detail panel: contact info, manager, hire/assign dates, days remaining, a certification badge, and an expandable checklist of all 11 modules with their individual completion dates.</li>
+  </ul>
+
+  <h2><span class="num">04</span> Where the numbers come from — a worked example</h2>
+  <p>Say you filter Status to "In Progress" and Market to "Heartland Sls." Here's the chain of events:</p>
+  <div class="flow">
+    <span class="step">applyFilters() reads both dropdowns</span><span class="arrow">→</span>
+    <span class="step">PEOPLE.filter(...)</span><span class="arrow">→</span>
+    <span class="step">renderStats() recounts the 6 cards</span><span class="arrow">→</span>
+    <span class="step">renderCharts() redraws both charts</span><span class="arrow">→</span>
+    <span class="step">renderRoster() rebuilds the left-hand list</span>
+  </div>
+  <p>Nothing is precomputed — every one of those steps runs fresh, in order, on every filter change, directly against the in-memory <code>PEOPLE</code> array.</p>
+
+  <h2><span class="num">05</span> The Certified/sales-import mechanism</h2>
+  <p>Because real certification depends on sales data this file doesn't have, the dashboard includes a way to bring that data in yourself, entirely in-browser:</p>
+  <ol>
+    <li>Click <b>Import Sales Certification</b> and choose a <code>.csv</code> or <code>.xlsx</code> file.</li>
+    <li>The file is read with SheetJS (also loaded from a CDN) and converted to rows of key/value pairs.</li>
+    <li>The code looks for a column whose name contains "email" (case-insensitive) to match people, an optional column containing "certif" (Yes/No, True/False, 1/0) to decide who's certified, and an optional column containing "date" to show alongside the badge.</li>
+    <li>If there's no certification column at all, everyone whose email appears in the file is simply treated as certified.</li>
+    <li>The result is saved to <code>localStorage</code> under the key <code>ls-sales-cert</code>, so it survives a page reload — but it lives only in that one browser, not shared with anyone else who opens the file.</li>
+  </ol>
+  <div class="card warn">
+    <p style="margin:0"><b>Worth knowing:</b> because the import is local to each browser, this only works as a "confirm once, see everywhere" solution if everyone imports the same file themselves, or if the data is baked directly into the file for you ahead of time.</p>
+  </div>
+
+  <h2><span class="num">06</span> Exporting</h2>
+  <p>The Export menu offers three report types, each available as a browser print (formatted for a printer-friendly PDF) or a downloaded Excel workbook, and each respects whatever filters are currently applied:</p>
+  <ul>
+    <li><b>Full Report</b> — everyone currently shown, with module completion %, status, and manager.</li>
+    <li><b>Not Complete</b> — a contact list of people still working through the curriculum, sorted by manager, meant for follow-up.</li>
+    <li><b>Manager Summary</b> — one row per manager, with team size and completion counts, sorted best-to-worst.</li>
+  </ul>
+
+  <h2><span class="num">07</span> Technical notes</h2>
+  <ul>
+    <li>Single HTML file — CSS, data, and JavaScript are all inline. No build step, no server, works by double-clicking it or opening it in any modern browser.</li>
+    <li>Two external libraries are pulled from a CDN at load time: <code>Chart.js</code> (charts) and <code>SheetJS/xlsx</code> (reading imports and writing Excel exports). An internet connection is needed the first time those load.</li>
+    <li>All state (theme choice, imported certification data) lives in the browser's <code>localStorage</code> — clearing browser data resets it.</li>
+  </ul>
+
+  <footer>Generated to document Layered_Security_Certification_Dashboard.html.</footer>
+</div>
+</body>
+</html>

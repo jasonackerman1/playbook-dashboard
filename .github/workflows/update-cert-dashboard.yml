@@ -5,6 +5,7 @@ on:
     paths:
       - 'cert-data/*.xlsx'
       - 'update_cert_dashboard.py'
+      - 'update_layered_security_dashboard.py'
   workflow_dispatch:
 
 permissions:
@@ -29,6 +30,9 @@ jobs:
 
       - name: Run cert dashboard update
         run: python update_cert_dashboard.py
+
+      - name: Run Layered Security dashboard update
+        run: python update_layered_security_dashboard.py
 
       - name: Regenerate homepage
         run: python generate_homepage.py
