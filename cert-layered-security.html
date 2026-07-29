@@ -25,7 +25,9 @@
   body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}
 
   /* ── Header ── */
-  .header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}
+  .header-center{display:flex;justify-content:center;align-items:center;}
+  .header-right{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;}
   .header h1{font-size:18px;font-weight:700;letter-spacing:.3px;cursor:pointer;user-select:none;}
   .header h1 span{color:var(--muted);font-weight:400;}
   .header-date{font-size:11px;color:var(--muted);margin-top:2px;}
@@ -204,21 +206,23 @@
     <h1 id="dash-title" title="Triple-click to return to the Analytics Hub">Layered Security <span>Curriculum Dashboard &mdash; Direct Sales</span></h1>
     <div class="header-date">Data through July 29, 2026</div>
   </div>
-  <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;flex-wrap:wrap;">
+  <div class="header-center">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark print-hide" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light print-hide" alt="KM Academy">
+  </div>
+  <div class="header-right print-hide">
     <input type="file" id="cert-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleCertFileImport(event)">
-    <button class="btn-theme print-hide" id="btn-import-cert" onclick="sel('cert-file-input').click()">&#128196; Import Sales Certification</button>
-    <span class="info-btn print-hide" onclick="showInfo(event,'import-cert')">?</span>
-    <div class="export-drop print-hide" id="export-drop">
+    <button class="btn-theme" id="btn-import-cert" onclick="sel('cert-file-input').click()">&#128196; Import Sales Certification</button>
+    <span class="info-btn" onclick="showInfo(event,'import-cert')">?</span>
+    <div class="export-drop" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
         <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
         <div class="export-parent">Not Complete<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('not-complete')">PDF</button><button class="export-item" onclick="runExportXLSX('not-complete')">Excel</button></div></div>
         <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
       </div>
-    </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
-    <button class="btn-theme print-hide" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
-    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark print-hide" alt="KM Academy">
-    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light print-hide" alt="KM Academy">
+    </div><span class="info-btn" onclick="showInfo(event,'export')">?</span>
+    <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
   </div>
 </div>
 <div class="curriculum-note print-hide">This dashboard tracks <b>curriculum completion</b> only. Full certification also requires $5,000 in qualifying sales, tracked in an external system not reflected here. Use <b>Import Sales Certification</b> above to load that file once it&rsquo;s available &mdash; until then, the Certified stat shows &ldquo;&mdash;&rdquo;.</div>
