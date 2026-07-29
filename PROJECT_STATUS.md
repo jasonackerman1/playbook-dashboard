@@ -14,10 +14,19 @@ Last updated: 2026-07-29
 | Public Sector Certification | `cert-publicsector.html` | May 2026 | 33 people, 6 certified |
 | Accelerate Onboarding | `onboarding.html` | July 28, 2026 | 39 learners (37 US + 2 Canadian) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
+| Layered Security Curriculum | `cert-layered-security.html` | July 29, 2026 | 33 learners, 20 complete (61%) |
 
 ---
 
 ## Recent Changes (2026-07-29)
+
+### Layered Security Curriculum Dashboard — NEW
+- New script: `update_layered_security_dashboard.py` reads `cert-data/Layered-Security-Curricula-Report-*.xlsx`
+- Generates `cert-layered-security.html` — 33 Direct Sales learners (excludes Solutions Consultants + Commercial Print market)
+- 11-module curriculum (`LSFDS`): 20 complete (61%), 13 in progress or not started
+- Features: stat cards, completion pipeline + market charts, individual/manager roster views, course-level checklist, PDF + Excel exports, sales certification import
+- Actions workflow updated — triggers on `update_layered_security_dashboard.py` + `cert-data/*.xlsx`
+- Homepage card added showing completion stats
 
 ### Onboarding — Progress table simplified
 - **Playbook dot removed** from learner name cells — engagement info still in the individual modal card
