@@ -22,7 +22,7 @@ Last updated: 2026-07-28
 ### Healthcare Cert — Certifications Over Time chart split (Reps vs Managers)
 - Ported from Resmie's prototype (`cert-healthcare-07-28-2026.html`, now deleted)
 - `isManager(p)` — job title contains "Director of Sales" or "Vice President" → Manager; everyone else → Rep
-- Chart 2 now renders as a **stacked bar** with two datasets: Reps (green) and Managers (blue)
+- Chart 2 now renders as a **stacked bar** with two datasets: Reps (purple `#8b5cf6`) and Managers (blue)
 - Legend visible at bottom; tooltip shows per-segment count + "Total:" line on hover
 - Currently all 4 certified people are Managers (Directors of Sales), so only the Manager segment shows — Rep segment appears once reps start certifying
 - New data files added: `Healthcare-Certification-Report-07.28.2026.xlsx` + Foundations Curricula variant
