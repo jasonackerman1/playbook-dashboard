@@ -738,33 +738,6 @@ def generate_html(records, sales_map=None):
       <input type="text" id="table-search" oninput="filterTableRows()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);">
-    <div>
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Playbook &#9679;</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        <span class="leg"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px;flex-shrink:0;"></span>Using playbook</span>
-        <span class="leg"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Completing without playbook</span>
-        <span class="leg"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b7280;margin-right:4px;flex-shrink:0;"></span>No activity yet</span>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Gap</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;margin-right:4px;flex-shrink:0;"></span>On pace or ahead (0% or less)</span>
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b45309;margin-right:4px;flex-shrink:0;"></span>Check-in (1&ndash;40%)</span>
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Coaching needed (41%+)</span>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Curricula &#9632;</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#15803d;margin-right:4px;flex-shrink:0;"></span>Done</span>
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1d4ed8;margin-right:4px;flex-shrink:0;"></span>In Progress</span>
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b91c1c;margin-right:4px;flex-shrink:0;"></span>Past Due</span>
-        <span class="leg"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#6b7280;margin-right:4px;flex-shrink:0;"></span>Not Started</span>
-      </div>
-    </div>
-  </div>
   <div class="table-wrap">
     <table>
       <thead id="heatmap-head"></thead>
@@ -1087,7 +1060,7 @@ const INFO = {{
   "curric-chart": "Average completion percentage per curriculum across the whole cohort. Hover over a bar to see how many reps have finished, are in progress, have not started, or are past the deadline for that curriculum. A short bar is where reps are getting stuck.",
   "heatmap": "One row per learner. Click any row to open their full detail — every individual lesson, completion dates, curriculum breakdown, and playbook activity timeline.",
   "col-learner": "The colored dot to the left of the name shows whether this person is using the Accelerate Playbook alongside their LMS courses. Green = visiting the playbook. Red = completing courses with no playbook visits recorded. Gray = no activity yet. Click any row to see their full playbook and course history.",
-  "col-status": "Each person's current standing in the program, plus the reason. Completed = finished all required courses. Overdue = past the LMS deadline for at least one course; the detail line shows how many courses and which curriculum. On Track = within all deadlines so far; the detail line shows days until the next one. A red 'Behind pace' line appears when someone has fallen behind the program's designed weekly pacing schedule, even if they haven't missed an LMS deadline yet — this can catch problems earlier than the deadline-based status alone. Note: On Track does not mean ahead of pace — check the Gap column too.",
+  "col-status": "Each person's current standing in the program. Completed = finished all required courses. Overdue = past the LMS deadline for at least one course. On Track = within all deadlines so far. Click a row to see full detail including which curricula are overdue or behind pace.",
   "col-actual": "Weighted overall completion percentage. Calculated as total lessons completed divided by total lessons assigned across all six curricula. Each lesson counts equally regardless of which curriculum it belongs to.",
   "col-expected": "How far along this person should be today based on the program's designed pacing schedule. Accounts for how many days they have had the program and what the schedule calls for at this point. Compare to Actual % — if Actual is lower, they are behind pace.",
   "col-gap": "The difference between Actual % and Expected %. A negative number means behind schedule by that amount. A positive number means ahead. The color scales with severity: green when close, red when the gap is significant enough to warrant a check-in.",
@@ -1296,30 +1269,6 @@ function renderTable() {{
   function personRow(p) {{
     const status = computeStatus(p);
     const statusClass = status === 'Completed' ? 'sb-completed' : status === 'On Track' ? 'sb-ontrack' : 'sb-overdue';
-    const od = overdueCount(p);
-    const sdl = soonestDaysLeft(p);
-    const w = worstCurric(p);
-    let progressDetail = '';
-    if (!p.overallDone) {{
-      if (od > 0) {{
-        progressDetail = od + (od === 1 ? ' course' : ' courses') + ' past due' + (w ? ' &middot; ' + escHtml(w.name) : '');
-      }} else if (sdl !== null) {{
-        progressDetail = sdl + 'd until next deadline' + (w ? ' &middot; ' + escHtml(w.name) : '');
-      }}
-    }}
-    let focusLine = '';
-    if (!p.overallDone) {{
-      const ef = expectedFocus(p);
-      if (ef.mode === 'behind') {{
-        const names = ef.ids.map(id => CURRIC_NAMES[id]);
-        const label = names.length <= 2 ? names.join(', ') : names[0] + ' +' + (names.length - 1) + ' more';
-        focusLine = '<div style="margin-top:2px;font-size:11px;color:#b91c1c;font-weight:600;" title="Should already be done per pacing schedule: ' + escHtml(names.join(', ')) + '">Behind pace &middot; ' + escHtml(label) + '</div>';
-        const gap = biggestGapCurric(p);
-        if (gap && !ef.ids.includes(gap.cid)) {{
-          focusLine += '<div style="margin-top:2px;font-size:11px;color:var(--muted);">Also lagging &middot; ' + escHtml(gap.name) + ' ' + gap.pct + '%</div>';
-        }}
-      }}
-    }}
     let dotsCell = '<td style="text-align:center;padding:5px 12px;"><div style="display:inline-flex;gap:3px;align-items:center;">';
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
@@ -1332,18 +1281,13 @@ function renderTable() {{
     }});
     dotsCell += '</div></td>';
     const eng = pbEngagement(p);
-    const dotColor = (eng.level === 'alert') ? '#b91c1c' : (eng.level === 'none') ? '#6b7280' : '#22c55e';
-    const dotTip  = (eng.level === 'alert') ? 'Completing courses -- no playbook visits recorded' : (eng.level === 'none') ? 'No activity yet' : 'Using the playbook';
     const pSaleRow = SALES_MAP[p.email];
     const saleCell = pSaleRow
       ? '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--accent);white-space:nowrap;">' + (pSaleRow.daysToClose != null ? pSaleRow.daysToClose + 'd' : '—') + '</td>'
       : '<td class="pct-cell" style="text-align:center;color:var(--muted);opacity:.4;">&#8212;</td>';
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
-      '<td class="name-cell"><span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;" title="' + dotTip + '"></span>' + escHtml(p.name) + (p.isCanada ? ' <span title="Canada" style="font-size:0.85em;">&#127464;&#127462;</span>' : '') + '</td>' +
-      '<td><span class="status-badge ' + statusClass + '">' + status + '</span>' +
-      (progressDetail ? ' <span style="font-size:11px;color:var(--muted);">' + progressDetail + '</span>' : '') +
-      focusLine +
-      '</td>' +
+      '<td class="name-cell">' + escHtml(p.name) + (p.isCanada ? ' <span title="Canada" style="font-size:0.85em;">&#127464;&#127462;</span>' : '') + '</td>' +
+      '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
       '<td class="pct-cell" style="font-weight:600;font-size:12px;">' + p.overallPct + '%</td>' +
       '<td class="pct-cell" style="font-weight:600;font-size:12px;color:var(--muted);">' + expectedPct(p) + '%</td>' +
       (function(){{ const g=gapPct(p); return '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(g) + '">' + g + '%</span></td>'; }})() +
