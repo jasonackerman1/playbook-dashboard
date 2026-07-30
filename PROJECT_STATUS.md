@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 ---
 
@@ -12,13 +12,30 @@ Last updated: 2026-07-29
 | Playbook Traffic | `playbook.html` | June 29, 2026 | |
 | Healthcare Certification | `cert-healthcare.html` | July 28, 2026 | 45 enrolled, 0 certified; Reps/Managers chart split live |
 | Public Sector Certification | `cert-publicsector.html` | May 2026 | 33 people, 6 certified |
-| Accelerate Onboarding | `onboarding.html` | July 28, 2026 | 39 learners (37 US + 2 Canadian) |
+| Accelerate Onboarding | `onboarding.html` | July 30, 2026 | 37 learners; 18 reps with Closed Won deals |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Curriculum | `cert-layered-security.html` | July 29, 2026 | 33 learners, 20 complete (61%) |
 
 ---
 
-## Recent Changes (2026-07-29)
+## Recent Changes (2026-07-30)
+
+### Onboarding Dashboard — v4 changes (ported from Resmie)
+- **New LMS file:** `Accelerate-Curriculum-Report-07.30.2026.xlsx` (37 learners — Jonathan Griffith + Laud Vidal no longer in export, likely graduated out)
+- **New Salesforce file:** `onboarding-data/New-Opportunities-Report-07.30.2026.xlsx` — replaces old leaderboard-data approach entirely. 18 reps with Closed Won deals (up from 2). `Age` field used directly as days-to-close.
+- **Schedule-aware Expected %:** Was linear (days elapsed ÷ 35). Now per-curriculum: GS/SW/CP day 1–7, Prospecting 1–14, Sales Skills 8–21, Pipeline Mgmt 22–35. Item-count weighted. Flows through table column, sorting, modal metric grid, and schedule table.
+- **Overdue severity badge:** Progress column now shows "Overdue · 14d" inline. Amber at 10+ days, red at 20+ days, based on worst single curriculum. Hover names which curriculum is driving it.
+- **Modal expanded:** Risk banner (green/amber/red + recommended next step), metric grid (Overall %, Pacing Target, Curricula Done, Est. Completion), per-curriculum schedule table (Due By / Should Be At / Actually At). Modal widened 760→860px.
+- **Column reorder:** Learner → Actual % → Expected % → Gap → Progress → Curricula → Days to Close
+- **Averages row removed** from bottom of heatmap table
+- **Amber CSS variable centralized:** `--amber` is now theme-aware; dark=#eab308, light=#92400e
+- **`_date()` extended:** Now handles integer Excel serial dates (days since 1899-12-30) — new LMS files return integers for date cells with `openpyxl read_only=True`
+- **Days to First Sale stat card fixed:** Now respects active filters (was averaging all reps regardless of filter state)
+- Cleaned up: deleted `onboarding_dashboard_v4.html` and `dashboard_changelog.md` after porting
+
+---
+
+## Earlier Changes (2026-07-29)
 
 ### Layered Security Curriculum Dashboard — NEW
 - New script: `update_layered_security_dashboard.py` reads `cert-data/Layered-Security-Curricula-Report-*.xlsx`
