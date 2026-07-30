@@ -85,11 +85,18 @@ def pkey(first, last):
 
 
 def _date(val):
-    """Return YYYY-MM-DD string from a datetime object, YYYY-MM-DD string, or LMS M/D/YYYY format."""
+    """Return YYYY-MM-DD string from a datetime, YYYY-MM-DD string, LMS M/D/YYYY format, or Excel serial int."""
     if not val:
         return None
     if hasattr(val, 'strftime'):
         return val.strftime('%Y-%m-%d')
+    if isinstance(val, (int, float)):
+        # Excel date serial number (days since 1899-12-30)
+        from datetime import date as _d, timedelta
+        try:
+            return (_d(1899, 12, 30) + timedelta(days=int(val))).strftime('%Y-%m-%d')
+        except Exception:
+            return None
     s = str(val).strip()
     if not s:
         return None
@@ -193,7 +200,7 @@ def load_lms():
                         'title': title,
                         'type':  str(ir[COL_ITEM_TYPE] or 'ONLINE'),
                         'done':  bool(ir[COL_ITEM_STS]),
-                        'date':  ir[COL_ITEM_DATE].strftime('%Y-%m-%d') if ir[COL_ITEM_DATE] else None,
+                        'date':  _date(ir[COL_ITEM_DATE]),
                         'req':   _date(ir[COL_ITEM_REQ]),
                     })
 
@@ -226,8 +233,8 @@ def load_lms():
                 'manager':     f"{prows[0][COL_MGR_FIRST] or ''} {prows[0][COL_MGR_LAST] or ''}".strip(),
                 'mgrEmail':    str(prows[0][COL_MGR_EMAIL] or ''),
                 'mgrTitle':    str(prows[0][COL_MGR_TITLE] or ''),
-                'hireDate':    prows[0][COL_HIRE_DATE].strftime('%Y-%m-%d') if prows[0][COL_HIRE_DATE] else None,
-                'assignDate':  assign_date.strftime('%Y-%m-%d') if assign_date else None,
+                'hireDate':    _date(prows[0][COL_HIRE_DATE]),
+                'assignDate':  _date(assign_date),
                 'daysRem':     days_rem_lms,
                 'overallDone': overall_done,
                 'overallPct':  overall_pct,
@@ -296,48 +303,57 @@ def _parse_html_xls(path):
 
 
 def _load_salesforce(records):
-    """Read Closed Won Salesforce export from leaderboard-data/, return first CW deal per cohort email."""
+    """Read Closed Won opps from onboarding-data/ xlsx (or leaderboard-data/ xls fallback), return first CW deal per cohort email."""
     import glob
-    xls_files = glob.glob(os.path.join('leaderboard-data', '*.xls'))
-    cw_path = None
-    for p in xls_files:
-        with open(p, encoding='utf-8', errors='ignore') as f:
-            chunk = f.read(2000)
-        if 'Opportunity Owner Email' in chunk:
-            cw_path = p
-            break
-    if not cw_path:
-        return {}
+    xlsx_files = sorted(glob.glob(os.path.join('onboarding-data', 'New-Opportunities-Report-*.xlsx')))
+    if xlsx_files:
+        import openpyxl
+        wb = openpyxl.load_workbook(xlsx_files[-1], read_only=True, data_only=True)
+        ws = wb.active
+        rows_iter = iter(ws.rows)
+        headers = [str(c.value).strip() if c.value is not None else '' for c in next(rows_iter)]
+        raw_rows = [dict(zip(headers, [c.value for c in row])) for row in rows_iter]
+        wb.close()
+    else:
+        xls_files = glob.glob(os.path.join('leaderboard-data', '*.xls'))
+        cw_path = None
+        for p in xls_files:
+            with open(p, encoding='utf-8', errors='ignore') as f:
+                chunk = f.read(2000)
+            if 'Opportunity Owner Email' in chunk:
+                cw_path = p
+                break
+        if not cw_path:
+            return {}
+        raw_rows = _parse_html_xls(cw_path)
 
-    rows = _parse_html_xls(cw_path)
     sales = {}
-    for row in rows:
-        if row.get('Stage', '').strip() != 'Closed Won':
+    for row in raw_rows:
+        if str(row.get('Stage', '') or '').strip() != 'Closed Won':
             continue
-        email = row.get('Opportunity Owner Email', '').strip().lower()
+        email = str(row.get('Opportunity Owner Email', '') or '').strip().lower()
         if email not in records:
             continue
+        # Age = Close Date - Created Date, already computed by Salesforce (integer days)
+        try:
+            days_to_close = int(row.get('Age') or 0)
+            if days_to_close < 0:
+                days_to_close = None
+        except (ValueError, TypeError):
+            days_to_close = None
         try:
             amount = float(str(row.get('Amount', '0') or '0').replace(',', '').strip())
-        except ValueError:
+        except (ValueError, TypeError):
             amount = 0.0
-        raw_date = str(row.get('Close Date', ''))
-        m = re.match(r'(\d{1,2})/(\d{1,2})/(\d{4})', raw_date)
-        close_date = f'{int(m.group(3)):04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}' if m else raw_date[:10]
-        # Only count deals closed within the rep's first 45 days of the program
-        assign_date = records[email].get('assignDate')
-        days_to_close = None
-        if assign_date and close_date:
-            try:
-                from datetime import date as _d
-                atc = (_d.fromisoformat(close_date) - _d.fromisoformat(assign_date)).days
-                if atc < 0 or atc > 45:
-                    continue
-                days_to_close = atc
-            except Exception:
-                continue
-        account = row.get('Account Name', '').strip().title()
-        # Keep the earliest closed deal (true "first sale")
+        raw_date = row.get('Close Date', '')
+        if hasattr(raw_date, 'strftime'):
+            close_date = raw_date.strftime('%Y-%m-%d')
+        else:
+            raw_date = str(raw_date or '')
+            m = re.match(r'(\d{1,2})/(\d{1,2})/(\d{4})', raw_date)
+            close_date = f'{int(m.group(3)):04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}' if m else raw_date[:10]
+        account = str(row.get('Account Name', '') or '').strip().title()
+        # Keep earliest closed deal per rep (true "first sale")
         if email not in sales or close_date < sales[email]['closeDate']:
             sales[email] = {'amount': amount, 'accountName': account, 'closeDate': close_date, 'daysToClose': days_to_close}
     return sales
@@ -422,15 +438,15 @@ def generate_html(records, sales_map=None):
     --bg:#0d1117; --surface:#161b22; --surface2:#1e2530; --border:#30363d;
     --accent:#3b82f6; --accent2:#6d28d9; --accent3:#d97706;
     --text:#e6edf3; --muted:#8b949e; --green:#22c55e; --red:#ef4444;
-    --amber:#f59e0b; --teal:#14b8a6;
-    --green-subtle:#22c55e22; --red-subtle:#ef444422; --amber-subtle:#f59e0b22;
+    --amber:#eab308; --teal:#14b8a6;
+    --green-subtle:#22c55e22; --red-subtle:#ef444422; --amber-subtle:#eab30822;
     --font:'Segoe UI',system-ui,sans-serif;
   }}
   body.light-mode {{
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#eef1f7; --border:#d0d7e8;
     --accent:#2563eb; --text:#1a1d27; --muted:#475569; --green:#059669;
-    --red:#dc2626; --amber:#d97706; --teal:#0f766e;
-    --green-subtle:#05966922; --red-subtle:#dc262622; --amber-subtle:#d9770622;
+    --red:#dc2626; --amber:#92400e; --teal:#0f766e;
+    --green-subtle:#05966922; --red-subtle:#dc262622; --amber-subtle:#92400e22;
   }}
   body.light-mode select,body.light-mode input{{color-scheme:light;}}
   *{{box-sizing:border-box;margin:0;padding:0;}}
@@ -524,8 +540,8 @@ def generate_html(records, sales_map=None):
   tbody tr:last-child{{border-bottom:none;}}
   tbody tr:hover td{{background:var(--surface2) !important;}}
   tbody tr.selected td{{background:#3b82f611 !important;}}
-  td{{padding:8px 12px;vertical-align:middle;font-size:12px;}}
-  td.name-cell{{font-weight:500;white-space:nowrap;display:flex;align-items:center;gap:8px;}}
+  td{{padding:9px 12px;vertical-align:middle;font-size:13px;}}
+  td.name-cell{{font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:8px;}}
   td.market-cell{{font-size:11px;color:var(--muted);white-space:nowrap;}}
   td.pct-cell{{text-align:center;padding:5px 4px;}}
   tfoot tr{{border-top:2px solid var(--border);background:var(--surface2);}}
@@ -543,13 +559,36 @@ def generate_html(records, sales_map=None):
   /* ── Modal overlay ── */
   .modal-overlay{{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}}
   .modal-overlay.open{{display:flex;}}
-  .modal-card{{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:760px;position:relative;}}
+  .modal-card{{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:860px;position:relative;}}
   .modal-close{{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px 8px;border-radius:4px;}}
   .modal-close:hover{{color:var(--text);background:var(--surface2);}}
   .modal-header{{padding:20px 24px 16px;border-bottom:1px solid var(--border);}}
   .modal-name{{font-size:18px;font-weight:700;margin-bottom:4px;}}
   .modal-meta{{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:12px;}}
   .modal-body{{padding:20px 24px;}}
+
+  /* ── Report-card risk banner + metric grid ── */
+  .rc-riskbar{{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:10px;margin-bottom:18px;flex-wrap:wrap;}}
+  .rc-riskbar.risk-red{{background:var(--red-subtle);}}
+  .rc-riskbar.risk-amber{{background:var(--amber-subtle);}}
+  .rc-riskbar.risk-green{{background:var(--green-subtle);}}
+  .rc-riskbar .rc-risklabel{{font-size:14px;font-weight:800;}}
+  .rc-riskbar.risk-red .rc-risklabel{{color:var(--red);}}
+  .rc-riskbar.risk-amber .rc-risklabel{{color:var(--amber);}}
+  .rc-riskbar.risk-green .rc-risklabel{{color:var(--green);}}
+  .rc-riskbar .rc-riskaction{{font-size:12.5px;color:var(--text);flex:1;min-width:200px;}}
+  .metric-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;}}
+  .metric-box{{background:var(--surface2);border-radius:8px;padding:10px 12px;}}
+  .metric-box .mb-label{{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;}}
+  .metric-box .mb-value{{font-size:17px;font-weight:800;line-height:1.15;}}
+  .metric-box .mb-sub{{font-size:10.5px;color:var(--muted);margin-top:2px;}}
+  .sched-table{{width:100%;border-collapse:collapse;margin-bottom:20px;}}
+  .sched-table th{{text-align:left;padding:5px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border);}}
+  .sched-table th.c{{text-align:center;}}
+  .sched-table td{{padding:7px 10px;font-size:12.5px;border-bottom:1px solid var(--border);}}
+  .sched-table td.c{{text-align:center;}}
+  .sched-table tr:last-child td{{border-bottom:none;}}
+  .sched-table .sched-actual{{font-weight:700;}}
 
   /* ── 45-day progress ── */
   .progress-section{{margin-bottom:20px;}}
@@ -922,6 +961,29 @@ function overdueCount(p) {{
   return Object.values(p.curricula).filter(c => curricTrackStatus(c) === 'Overdue').length;
 }}
 
+function worstOverdueCurric(p) {{
+  let worstCid = null, worstDl = null;
+  Object.keys(p.curricula).forEach(cid => {{
+    const dl = curricDaysLeft(p.curricula[cid]);
+    if (dl === null) return;
+    if (worstDl === null || dl < worstDl) {{ worstDl = dl; worstCid = cid; }}
+  }});
+  return worstCid ? {{cid: worstCid, dl: worstDl}} : null;
+}}
+function maxDaysOverdue(p) {{
+  const w = worstOverdueCurric(p);
+  if (!w || w.dl > 0) return 0;
+  return -w.dl;
+}}
+function interventionInfo(p) {{
+  const days = maxDaysOverdue(p);
+  const w = worstOverdueCurric(p);
+  const curricName = w ? CURRIC_NAMES[w.cid] : null;
+  if (days >= 20) return {{tier: 2, days, label: 'Intervention 2', level: 'red', curricName}};
+  if (days >= 10) return {{tier: 1, days, label: 'Intervention 1', level: 'amber', curricName}};
+  return {{tier: 0, days, label: null, level: null, curricName: null}};
+}}
+
 function soonestDaysLeft(p) {{
   const vals = Object.values(p.curricula).map(curricDaysLeft).filter(v => v !== null);
   if (vals.length) return Math.min(...vals);
@@ -943,8 +1005,35 @@ function computedDaysLeft(p) {{
   if (!p.assignDate) return null;
   return PROGRAM_DAYS - daysElapsed(p);
 }}
+function curricExpectedPct(cid, d) {{
+  const range = CURRIC_WEEK_RANGE[cid] || [1, PROGRAM_DAYS];
+  if (d >= range[1]) return 100;
+  if (d < range[0]) return 0;
+  const span = range[1] - range[0] + 1;
+  const progressed = Math.min(span, d - range[0] + 1);
+  return Math.round(progressed / span * 100);
+}}
+function curricDueDate(p, cid) {{
+  if (!p.assignDate) return null;
+  const range = CURRIC_WEEK_RANGE[cid] || [1, PROGRAM_DAYS];
+  const dt = new Date(p.assignDate + 'T00:00:00');
+  dt.setDate(dt.getDate() + range[1] - 1);
+  return dt;
+}}
 function expectedPct(p) {{
-  return Math.min(100, Math.round(daysElapsed(p) / PROGRAM_DAYS * 100));
+  const d = daysElapsed(p);
+  const ids = Object.keys(p.curricula);
+  if (!ids.length) return 0;
+  let totalItems = 0, expectedDone = 0;
+  ids.forEach(cid => {{
+    const c = p.curricula[cid];
+    const total = c.total || 0;
+    if (!total) return;
+    totalItems += total;
+    expectedDone += total * (curricExpectedPct(cid, d) / 100);
+  }});
+  if (!totalItems) return 0;
+  return Math.min(100, Math.round(expectedDone / totalItems * 100));
 }}
 function gapPct(p) {{
   return expectedPct(p) - p.overallPct;
@@ -976,12 +1065,12 @@ function expectedFocus(p) {{
 }}
 function gapStyle(g) {{
   if (g > 40) return 'background:#b91c1c;color:#fff;font-weight:700';
-  if (g > 0)  return 'background:#b45309;color:#fff;font-weight:700';
+  if (g > 0)  return 'background:#a16207;color:#fff;font-weight:700';
   return 'background:#15803d;color:#fff;font-weight:700';
 }}
 function pctPillStyle(pct) {{
   if (pct === 0)  return 'background:#b91c1c;color:#fff;font-weight:600';
-  if (pct < 50)   return 'background:#b45309;color:#fff;font-weight:600';
+  if (pct < 50)   return 'background:#a16207;color:#fff;font-weight:600';
   return 'background:#6b7280;color:#fff;font-weight:600';
 }}
 function urlSlug(url) {{
@@ -1072,7 +1161,7 @@ const INFO = {{
   "overdue": "People who have missed the LMS deadline for at least one required course. Deadlines are set per course relative to each person's program start date — for example, Getting Started items may be due within the first week. Click any row to see exactly which courses are overdue.",
   "ontrack": "People who have not missed any course deadlines yet. They may or may not be keeping pace — check the Gap column to see who is falling behind even if they are technically still on time. Click any row to see which courses still need attention.",
   "completed": "People who have finished every required course across all six curricula in the Accelerate program.",
-  "first-sale": "Average number of days from each rep's Accelerate program start date to their first Closed Won deal. Only deals closed within the first 45 days of the program qualify. Open pipeline is not included. Data pulled from Salesforce.",
+  "first-sale": "Average number of days from opportunity creation to each rep's first Closed Won deal. Only the learner's earliest qualifying deal is counted. Open pipeline is not included. Data pulled from Salesforce.",
   "filters-info": "Market: narrow the table to one market. Status: show only people who are Completed, On Track, or Overdue. Sort: change the default row order. All filters work together — for example, filter to a market and sort by Most Urgent to quickly find who needs attention there. Use Reset to clear everything.",
   "view-toggle": "Individual view shows one row per learner. By Manager groups learners under their manager so you can see how each team is tracking. The search box updates automatically — in Individual view it searches by learner name, in By Manager view it searches by manager name.",
   "market-chart": "Average overall completion percentage by market. Hover over a bar to see how many reps in that market are done, on track, or overdue. A short bar is a signal that market may need extra support.",
@@ -1081,10 +1170,10 @@ const INFO = {{
   "col-learner": "The colored dot to the left of the name shows whether this person is using the Accelerate Playbook alongside their LMS courses. Green = visiting the playbook. Red = completing courses with no playbook visits recorded. Gray = no activity yet. Click any row to see their full playbook and course history.",
   "col-status": "Each person's current standing in the program. Completed = finished all required courses. Overdue = past the LMS deadline for at least one course. On Track = within all deadlines so far. Click a row to see full detail including which curricula are overdue or behind pace.",
   "col-actual": "Weighted overall completion percentage. Calculated as total lessons completed divided by total lessons assigned across all six curricula. Each lesson counts equally regardless of which curriculum it belongs to.",
-  "col-expected": "How far along this person should be today based on the program's designed pacing schedule. Accounts for how many days they have had the program and what the schedule calls for at this point. Compare to Actual % — if Actual is lower, they are behind pace.",
-  "col-gap": "The difference between Actual % and Expected %. A negative number means behind schedule by that amount. A positive number means ahead. The color scales with severity: green when close, red when the gap is significant enough to warrant a check-in.",
+  "col-expected": "How far along this person should be today based on each curriculum's own due-date window (e.g. Getting Started/Sales Workflow/Core Portfolio are due by day 7, Prospecting by day 14, Sales Skills weeks 8-21, Pipeline Mgmt weeks 22-35), weighted by how many items each curriculum contains. Compare to Actual % — if Actual is lower, they are behind pace.",
+  "col-gap": "Expected % minus Actual %. A positive number means behind schedule by that amount. A negative (or zero) number means on pace or ahead. The color scales with severity: green when at/ahead, amber when a little behind, red when the gap is significant enough to warrant a check-in.",
   "col-curricula": "Six colored squares, one per curriculum in program order: Getting Started, Sales Workflow, Core Portfolio, Prospecting, Sales Skills, Pipeline Management. Green = complete. Blue = in progress. Red = past its deadline and not done. Gray = not started yet. Click the row to see individual lesson detail.",
-  "col-days-to-close": "How many days it took this rep to close their first Salesforce deal after starting the Accelerate program. Only deals closed within the first 45 days of the program qualify. A dash means no qualifying deal has been recorded yet.",
+  "col-days-to-close": "How many days it took this rep to close their first Salesforce deal (from opportunity creation to close). Calculated from their earliest Closed Won deal. A dash means no deal has been recorded yet.",
   "export": "Downloads a report based on whoever is currently visible — apply filters first, then export. Full Report: all visible learners with status and progress. Overdue Only: people past a course deadline with their manager's contact info for easy follow-up. Manager Summary: one row per manager with their team's headcount and progress. Example: filter to a market, then export Overdue Only to get a targeted outreach list.",
 }};
 function showInfo(e, key) {{
@@ -1211,7 +1300,7 @@ function renderStats() {{
   document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past a curriculum deadline' : '';
   document.getElementById('s-ontrack').textContent = ontrack;
   document.getElementById('s-completed').textContent = completed;
-  const salesVals = Object.values(SALES_MAP).filter(v => v.daysToClose != null);
+  const salesVals = filtered.map(p => SALES_MAP[p.email]).filter(v => v && v.daysToClose != null);
   const avgDays = salesVals.length ? Math.round(salesVals.reduce((s,v) => s + v.daysToClose, 0) / salesVals.length) : null;
   document.getElementById('s-sales').textContent = avgDays !== null ? avgDays + 'd' : '—';
 }}
@@ -1227,10 +1316,11 @@ function renderTable() {{
     const btn = infoKey ? '<span class="info-btn print-hide" onclick="event.stopPropagation();showInfo(event,\\'' + infoKey + '\\')">?</span>' : '';
     return '<th class="' + cls + '" data-col="' + col + '" onclick="sortByCol(this.dataset.col)">' + label + arrow + btn + '</th>';
   }}
-  let hRow = '<tr>' + thS('Learner','name','','col-learner') + thS('Progress','status','','col-status');
+  let hRow = '<tr>' + thS('Learner','name','','col-learner');
   hRow += thS('Actual %','overall','overall-col','col-actual');
   hRow += thS('Expected %','expected','overall-col','col-expected');
   hRow += thS('Gap','gap','overall-col','col-gap');
+  hRow += thS('Progress','status','','col-status');
   hRow += '<th style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:center;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;">Curricula<span class="info-btn print-hide" onclick="showInfo(event,\\'col-curricula\\')">?</span></th>';
   hRow += thS('Days to Close','daysToClose','overall-col','col-days-to-close');
   hRow += '</tr>';
@@ -1288,6 +1378,14 @@ function renderTable() {{
   function personRow(p) {{
     const status = computeStatus(p);
     const statusClass = status === 'Completed' ? 'sb-completed' : status === 'On Track' ? 'sb-ontrack' : 'sb-overdue';
+    const info = interventionInfo(p);
+    let progressExtra = '';
+    let progressTitle = '';
+    if (status === 'Overdue' && info.days > 0) {{
+      const dayColor = info.level === 'red' ? 'var(--red)' : 'var(--amber)';
+      progressExtra = ' <span style="font-weight:800;color:' + dayColor + ';">&middot; ' + info.days + 'd</span>';
+      progressTitle = ' title="' + escHtml(info.curricName + ': ' + info.days + 'd overdue') + '"';
+    }}
     let dotsCell = '<td style="text-align:center;padding:5px 12px;"><div style="display:inline-flex;gap:3px;align-items:center;">';
     CURRIC_IDS.forEach(cid => {{
       const c = p.curricula[cid];
@@ -1306,10 +1404,10 @@ function renderTable() {{
       : '<td class="pct-cell" style="text-align:center;color:var(--muted);opacity:.4;">&#8212;</td>';
     return '<tr data-email="' + escHtml(p.email) + '" data-name="' + escHtml(p.name.toLowerCase()) + '" onclick="openModal(this.dataset.email)" title="Click to see full detail">' +
       '<td class="name-cell">' + escHtml(p.name) + (p.isCanada ? ' <span title="Canada" style="font-size:0.85em;">&#127464;&#127462;</span>' : '') + '</td>' +
-      '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
       '<td class="pct-cell" style="font-weight:600;font-size:12px;">' + p.overallPct + '%</td>' +
       '<td class="pct-cell" style="font-weight:600;font-size:12px;color:var(--muted);">' + expectedPct(p) + '%</td>' +
       (function(){{ const g=gapPct(p); return '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(g) + '">' + g + '%</span></td>'; }})() +
+      '<td><span class="status-badge ' + statusClass + '"' + progressTitle + '>' + status + progressExtra + '</span></td>' +
       dotsCell +
       saleCell +
     '</tr>';
@@ -1341,19 +1439,7 @@ function renderTable() {{
     tbody.innerHTML = display.map(personRow).join('');
   }}
 
-  // Footer (averages)
-  const tfoot = document.getElementById('heatmap-foot');
-  let fRow = '<tr><td colspan="2" style="font-weight:700;font-size:11px;">Averages (' + filtered.length + ' learners)</td>';
-  const oAvg = filtered.length ? Math.round(filtered.reduce((s,p) => s+p.overallPct,0)/filtered.length) : 0;
-  fRow += '<td class="pct-cell" style="font-weight:700;font-size:11px;">' + oAvg + '%</td>';
-  const eAvg = filtered.length ? Math.round(filtered.reduce((s,p) => s+expectedPct(p),0)/filtered.length) : 0;
-  fRow += '<td class="pct-cell" style="font-weight:700;font-size:11px;color:var(--muted);">' + eAvg + '%</td>';
-  const gAvg = eAvg - oAvg;
-  fRow += '<td class="pct-cell"><span class="pct-pill" style="' + gapStyle(gAvg) + '">' + gAvg + '%</span></td>';
-  fRow += '<td></td>';
-  fRow += '<td></td>';
-  fRow += '</tr>';
-  tfoot.innerHTML = fRow;
+  document.getElementById('heatmap-foot').innerHTML = '';
 }}
 
 function escHtml(s) {{
@@ -1501,6 +1587,82 @@ function renderCurricChart() {{
       }}
     }}
   }});
+}}
+
+/* ── Report-card helpers ── */
+function scheduleCheckHtml(p) {{
+  const d = daysElapsed(p);
+  let rows = '';
+  CURRIC_IDS.forEach(cid => {{
+    const c = p.curricula[cid];
+    if (!c) return;
+    const due = curricDueDate(p, cid);
+    const dueLabel = due ? fmtDate(due.toISOString().slice(0,10)) : '—';
+    const should = curricExpectedPct(cid, d);
+    const actual = c.pct;
+    const color = c.complete ? 'var(--green)' : actual >= should ? 'var(--green)' : (should - actual) > 25 ? 'var(--red)' : 'var(--amber)';
+    rows += '<tr>' +
+      '<td>' + escHtml(c.title) + '</td>' +
+      '<td class="c" style="color:var(--muted);white-space:nowrap;">' + dueLabel + '</td>' +
+      '<td class="c">' + should + '%</td>' +
+      '<td class="c sched-actual" style="color:' + color + '">' + actual + '%</td>' +
+    '</tr>';
+  }});
+  return '<div style="margin-bottom:6px;">' +
+    '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Progress by Curriculum</div>' +
+    '<table class="sched-table"><thead><tr>' +
+      '<th>Curriculum</th><th class="c">Due By</th><th class="c">Should Be At</th><th class="c">Actually At</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table>' +
+  '</div>';
+}}
+function curriculaCompletedCount(p) {{
+  const ids = Object.keys(p.curricula);
+  const done = ids.filter(cid => p.curricula[cid].complete).length;
+  return {{done, total: ids.length}};
+}}
+function overdueItemsCount(p) {{
+  let n = 0;
+  Object.values(p.curricula).forEach(c => {{
+    c.items.forEach(it => {{
+      if (!it.done && it.req) {{
+        const dl = itemDaysLeft(it);
+        if (dl !== null && dl <= 0) n++;
+      }}
+    }});
+  }});
+  return n;
+}}
+function cohortAvgPct() {{
+  if (!PEOPLE.length) return 0;
+  return Math.round(PEOPLE.reduce((s,p) => s + p.overallPct, 0) / PEOPLE.length);
+}}
+function projectedCompletionDate(p) {{
+  if (p.overallDone) return null;
+  if (!p.assignDate) return null;
+  const elapsed = daysElapsed(p);
+  if (elapsed <= 0 || p.overallPct <= 0) return null;
+  const ratePerDay = p.overallPct / elapsed;
+  if (ratePerDay <= 0) return null;
+  const daysToFinish = Math.ceil((100 - p.overallPct) / ratePerDay);
+  const proj = new Date(p.assignDate);
+  proj.setDate(proj.getDate() + elapsed + daysToFinish);
+  return proj;
+}}
+function riskInfo(p, status) {{
+  const mgrName = p.manager || 'their manager';
+  const firstName = p.first || p.name.split(' ')[0];
+  if (status === 'Completed') {{
+    return {{level:'green', label:'Program Complete', action:'No action needed — worth recognizing the completion with ' + mgrName + '.'}};
+  }}
+  const g = gapPct(p);
+  const od = overdueCount(p);
+  if (status === 'Overdue' && (g > 40 || od >= 2)) {{
+    return {{level:'red', label:'High Risk — Coaching Needed', action:'Schedule a 1:1 with ' + firstName + ' and ' + mgrName + ' this week — ' + od + ' curricul' + (od===1?'um is':'a are') + ' past deadline.'}};
+  }}
+  if (status === 'Overdue') {{
+    return {{level:'amber', label:'Overdue — Check In', action:'Send a check-in reminder; ' + od + ' curricul' + (od===1?'um':'a') + ' past its deadline.'}};
+  }}
+  return {{level:'green', label:'On Track', action:'No action needed — progressing at or ahead of the pacing schedule.'}};
 }}
 
 /* ── User detail modal ── */
@@ -1656,6 +1818,30 @@ function openModal(email) {{
   const saleHtml = pSale
     ? '<span>&middot; First Sale: <strong style="color:var(--accent)">' + (pSale.daysToClose != null ? pSale.daysToClose + 'd' : '') + '</strong> &middot; $' + Math.round(pSale.amount).toLocaleString('en-US') + ' &middot; ' + escHtml(pSale.accountName) + ' &middot; ' + fmtDate(pSale.closeDate) + '</span>'
     : '<span style="color:var(--muted);">&middot; First Sale: None yet</span>';
+  const risk = riskInfo(p, status);
+  const riskIcon = risk.level === 'red' ? '&#9888;&#65039; ' : risk.level === 'amber' ? '&#9679; ' : '&#10003; ';
+  const curricCounts = curriculaCompletedCount(p);
+  const overdueItems = overdueItemsCount(p);
+  const cohortAvg = cohortAvgPct();
+  const vsCohort = p.overallPct - cohortAvg;
+  const projDate = projectedCompletionDate(p);
+  const projLabel = p.overallDone ? 'Complete' : (projDate ? fmtDate(projDate.toISOString().slice(0,10)) : '—');
+  const projSub = p.overallDone ? '' : (projDate ? 'at current pace' : 'not enough data yet');
+  const riskBannerHtml =
+    '<div class="rc-riskbar risk-' + risk.level + '">' +
+      '<span class="rc-risklabel">' + riskIcon + risk.label + '</span>' +
+      '<span class="rc-riskaction">' + risk.action + '</span>' +
+    '</div>' +
+    '<div class="metric-grid">' +
+      '<div class="metric-box"><div class="mb-label">Overall Progress</div><div class="mb-value">' + p.overallPct + '%</div>' +
+        '<div class="mb-sub">' + (vsCohort >= 0 ? vsCohort + '% above' : Math.abs(vsCohort) + '% below') + ' cohort avg (' + cohortAvg + '%)</div></div>' +
+      '<div class="metric-box"><div class="mb-label">Pacing Target</div><div class="mb-value">' + expectedPct(p) + '%</div>' +
+        '<div class="mb-sub">day ' + daysElapsed(p) + ' of ' + PROGRAM_DAYS + '</div></div>' +
+      '<div class="metric-box"><div class="mb-label">Curricula Done</div><div class="mb-value">' + curricCounts.done + ' / ' + curricCounts.total + '</div>' +
+        '<div class="mb-sub">' + overdueItems + ' item' + (overdueItems !== 1 ? 's' : '') + ' overdue</div></div>' +
+      '<div class="metric-box"><div class="mb-label">Est. Completion</div><div class="mb-value">' + projLabel + '</div>' +
+        '<div class="mb-sub">' + projSub + '</div></div>' +
+    '</div>';
   const content = `
     <div class="modal-header" style="padding-right:52px;">
       <div style="position:absolute;top:17px;right:54px;">${{statusBadge}}</div>
@@ -1670,6 +1856,7 @@ function openModal(email) {{
       ${{p.manager ? '<div class="modal-meta" style="margin-top:3px;gap:6px;"><span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;">Manager</span><span>' + escHtml(p.manager) + '</span><span>&middot; ' + escHtml(p.mgrTitle) + '</span><span>&middot; <a href="mailto:' + escHtml(p.mgrEmail) + '" style="color:var(--accent)">' + escHtml(p.mgrEmail) + '</a></span></div>' : ''}}
     </div>
     <div class="modal-body">
+      ${{riskBannerHtml}}
       <div class="progress-section">
         <div class="progress-label">
           <span>35-Day LMS Window</span>
@@ -1681,10 +1868,11 @@ function openModal(email) {{
         <div class="progress-sublabel" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
           <span>Actual: <strong>${{p.overallPct}}%</strong></span>
           <span style="color:var(--muted)">Expected: <strong style="color:var(--text)">${{expectedPct(p)}}%</strong></span>
-          <span>Gap: <strong style="color:${{gapPct(p) > 40 ? 'var(--red)' : gapPct(p) > 0 ? '#b45309' : 'var(--green)'}}">${{gapPct(p)}}%</strong>
-            ${{gapPct(p) > 40 ? '<span style="font-size:11px;color:var(--red)">— coaching recommended</span>' : gapPct(p) > 0 ? '<span style="font-size:11px;color:var(--muted)">— check in</span>' : '<span style="font-size:11px;color:var(--green)">— on pace</span>'}}</span>
+          <span>Gap: <strong style="color:${{gapPct(p) > 40 ? 'var(--red)' : gapPct(p) > 0 ? 'var(--amber)' : 'var(--green)'}}">${{gapPct(p)}}%</strong></span>
         </div>
       </div>
+
+      ${{scheduleCheckHtml(p)}}
 
       ${{pbSummaryHtml(p)}}
 
