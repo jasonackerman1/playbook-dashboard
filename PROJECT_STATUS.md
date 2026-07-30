@@ -33,6 +33,16 @@ Last updated: 2026-07-30
 - **Days to First Sale stat card fixed:** Now respects active filters (was averaging all reps regardless of filter state)
 - Cleaned up: deleted `onboarding_dashboard_v4.html` and `dashboard_changelog.md` after porting
 
+### Onboarding — LMS loader scoped to correct files (2026-07-30)
+- **Bug:** `load_lms()` was loading every `.xlsx` in `onboarding-data/`. When `New-Opportunities-Report-07.30.2026.xlsx` was added to that folder today, the LMS loader accidentally read it as an LMS file, injecting Salesforce job titles as fake learner records (Dir IP Packaging & Label, Lead Customer Success Manager, etc.).
+- **Fix:** Scoped the glob to `Accelerate-Curriculum-Report-*.xlsx` only. The Salesforce loader already uses its own specific pattern and was unaffected. No corrected LMS report needed — the 07.30 file was fine all along.
+- **Rule:** Any new file type dropped into `onboarding-data/` is safe — the LMS loader ignores anything that isn't an LMS report.
+
+### Onboarding — LMS loader scoped to correct files (2026-07-30)
+- **Bug:** `load_lms()` was loading every `.xlsx` in `onboarding-data/`. When `New-Opportunities-Report-07.30.2026.xlsx` was added to that folder today, the LMS loader accidentally read it as an LMS file, injecting Salesforce job titles as fake learner records (Dir IP Packaging & Label, Lead Customer Success Manager, etc.).
+- **Fix:** Scoped the glob to `Accelerate-Curriculum-Report-*.xlsx` only. The Salesforce loader already uses its own specific pattern and was unaffected.
+- **Rule:** Any new file type dropped into `onboarding-data/` is safe — the LMS loader ignores anything that isn't an LMS report.
+
 ---
 
 ## Earlier Changes (2026-07-29)
@@ -129,5 +139,4 @@ Last updated: 2026-07-30
 
 ## Pending
 
-- **Corrected 07.30 LMS report (waiting on Resmie):** The current `Accelerate-Curriculum-Report-07.30.2026.xlsx` includes 9 extra people with unexpected job titles (Dir IP Packaging & Label, Lead Customer Success Manager, Procurement Sales Associate, Video Solutions Sr. Account Manager, etc.) that don't belong in the Accelerate new hire cohort. Believed to be an export mistake. When Resmie sends the corrected file: drop in `onboarding-data/`, push — Actions regenerates automatically.
 - HC sub-certifications: still not live in LMS. Restore from `_snapshots/update_cert_dashboard-full-subcurricula-2026-06-29.py` when they go live.
