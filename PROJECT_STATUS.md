@@ -44,6 +44,10 @@ Last updated: 2026-07-30
 - **Rule:** Any new file type dropped into `onboarding-data/` is safe — the LMS loader ignores anything that isn't an LMS report.
 - **Verified clean (2026-07-30):** All 37 learner records sanity-checked after the fix — per-curriculum percentages match item counts, no missing assign dates, no data gaps.
 
+### Onboarding — extract_date sort bug fixed (2026-07-30)
+- **Bug:** `extract_date()` regex looked for `YYYY-MM` format but filenames use `MM.DD.YYYY`. Every file returned the same sort key `'0000-00'`, making `files[-1]` non-deterministic — Actions could pick any file, not necessarily the latest one. Same class of bug as the CI file sort fix on 2026-07-27.
+- **Fix:** Updated regex to parse `MM.DD.YYYY` first (converting to `YYYY-MM-DD` for correct sort), with `YYYY-MM` as a fallback. Now reliably picks `07.30.2026` as the latest file.
+
 ---
 
 ## Earlier Changes (2026-07-29)
