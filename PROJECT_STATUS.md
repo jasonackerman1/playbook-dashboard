@@ -129,5 +129,5 @@ Last updated: 2026-07-30
 
 ## Pending
 
-- Onboarding 07.27 data: Resmie said 45 people enrolled but `onboarding-data/` only goes to 07.22 (36 learners). Waiting on `Accelerate-Curriculum-Report-07.27.2026.xlsx` from Resmie.
+- **Corrected 07.30 LMS report (waiting on Resmie):** The current `Accelerate-Curriculum-Report-07.30.2026.xlsx` includes 9 extra people with unexpected job titles (Dir IP Packaging & Label, Lead Customer Success Manager, Procurement Sales Associate, Video Solutions Sr. Account Manager, etc.) that don't belong in the Accelerate new hire cohort. Believed to be an export mistake. When Resmie sends the corrected file: drop in `onboarding-data/`, push — Actions regenerates automatically.
 - HC sub-certifications: still not live in LMS. Restore from `_snapshots/update_cert_dashboard-full-subcurricula-2026-06-29.py` when they go live.
