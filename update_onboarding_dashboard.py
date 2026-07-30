@@ -142,11 +142,12 @@ def page_label(url):
 
 def load_lms():
     folder = 'onboarding-data'
-    files = sorted(
-        [f for f in os.listdir(folder) if f.endswith('.xlsx')],
+    all_files = sorted(
+        [f for f in os.listdir(folder) if f.startswith('Accelerate-Curriculum-Report-') and f.endswith('.xlsx')],
         key=extract_date
     )
-    seen = {}  # email -> record (latest file wins)
+    files = all_files[-1:]  # only use the most recent file — people not in it have left the program
+    seen = {}  # email -> record
 
     for fname in files:
         wb = openpyxl.load_workbook(f"{folder}/{fname}", read_only=True, data_only=True)
