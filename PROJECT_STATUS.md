@@ -42,6 +42,7 @@ Last updated: 2026-07-30
 - **Bug:** `load_lms()` was loading every `.xlsx` in `onboarding-data/`. When `New-Opportunities-Report-07.30.2026.xlsx` was added to that folder today, the LMS loader accidentally read it as an LMS file, injecting Salesforce job titles as fake learner records (Dir IP Packaging & Label, Lead Customer Success Manager, etc.).
 - **Fix:** Scoped the glob to `Accelerate-Curriculum-Report-*.xlsx` only. The Salesforce loader already uses its own specific pattern and was unaffected.
 - **Rule:** Any new file type dropped into `onboarding-data/` is safe — the LMS loader ignores anything that isn't an LMS report.
+- **Verified clean (2026-07-30):** All 37 learner records sanity-checked after the fix — per-curriculum percentages match item counts, no missing assign dates, no data gaps.
 
 ---
 
