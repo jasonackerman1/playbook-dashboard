@@ -108,7 +108,10 @@ def _date(val):
 
 
 def extract_date(fname):
-    m = re.search(r'(\d{4}-\d{2})', os.path.basename(fname))
+    base = os.path.basename(fname)
+    m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', base)  # MM.DD.YYYY
+    if m: return f'{m.group(3)}-{m.group(1)}-{m.group(2)}'
+    m = re.search(r'(\d{4}-\d{2})', base)               # YYYY-MM fallback
     return m.group(1) if m else '0000-00'
 
 
