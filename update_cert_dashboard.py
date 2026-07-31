@@ -2803,7 +2803,7 @@ function buildPersonCard(p){{
   h += "</div>";
   h += '<div class="roster-bottom">';
   h += '<div class="roster-pills">';
-  h += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/11</span>";
+  h += '<span class="pill ' + lsClass  + '">Layered Sec ' + p.ls.done + "/12</span>";
   h += '<span class="pill ' + hcfClass + '">HC Foundations ' + p.hcf.done + "/10</span>";
   h += "</div>";
   h += '<span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span>";
