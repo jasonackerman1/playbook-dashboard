@@ -2100,7 +2100,7 @@ def load_rows_healthcare_v2(cert_file, learning_file):
         ls  = _build_curriculum(LS_ORDER,  'LSFDS')
 
         overall_done = hcf['done'] + ls['done']
-        overall_pct  = round(overall_done / 21 * 100)
+        overall_pct  = round(overall_done / 22 * 100)
 
         rows.append({
             'FirstName':   person['FirstName'],
@@ -2942,7 +2942,7 @@ function showDetail(email){{
   detailHtml += curriculumSection("Layered Security · " + p.ls.done + " / 12 courses", p.ls, "ls-" + email.replace(/[^a-z0-9]/gi, ""));
   detailHtml += curriculumSection("Healthcare Foundations · " + p.hcf.done + " / 10 courses", p.hcf, "hcf-" + email.replace(/[^a-z0-9]/gi, ""));
   detailHtml += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);">';
-  detailHtml += p.overallDone + " of 21 courses complete (" + p.overallPct + "%)";
+  detailHtml += p.overallDone + " of 22 courses complete (" + p.overallPct + "%)";
   detailHtml += "</div>";
   sel("roster-right").innerHTML = detailHtml;
 }}
