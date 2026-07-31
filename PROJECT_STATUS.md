@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-07-30
+Last updated: 2026-07-31
 
 ---
 
@@ -11,10 +11,49 @@ Last updated: 2026-07-30
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
 | Playbook Traffic | `playbook.html` | June 29, 2026 | |
 | Healthcare Certification | `cert-healthcare.html` | July 28, 2026 | 45 enrolled, 0 certified; Reps/Managers chart split live |
-| Public Sector Certification | `cert-publicsector.html` | May 2026 | 33 people, 6 certified |
+| Public Sector Certification | `cert-publicsector.html` | July 31, 2026 | 118 active people, 74 completed (63%) — "Curricula" report format |
 | Accelerate Onboarding | `onboarding.html` | July 30, 2026 | 37 learners; 18 reps with Closed Won deals |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Curriculum | `cert-layered-security.html` | July 29, 2026 | 33 learners, 20 complete (61%) |
+
+---
+
+## Recent Changes (2026-07-31)
+
+### Public Sector Cert — New data file + loader rewrite + terminology fix
+
+- **New data file:** `cert-data/PublicSector-Certification-Curricula-Report-07.31.2026.xlsx`
+  — new "Curricula" format (one row per curriculum item per person, not one row per person)
+- **118 people, 74 completed (63%)** — up from 33 people in the old FY26 file; old file was a
+  completely different format/scope
+- **120 → 118 fix:** old FY26 file was being accumulated alongside new file, dragging in
+  Braden McCargar and Stephen Langdon (inactive/departed — they dropped off the new report
+  because it only includes active users). PS now uses latest-file-only (not accumulation).
+- **Loader rewritten:** `load_rows_publicsector` now groups items by person internally,
+  returns 118 unique rows directly. No downstream dedup needed (though it's harmless).
+- **Completions Over Time chart fixed:** col 21 in new format is "Days Remaining" (not a
+  cert date). Now uses max Item Completion Date (col 27) across all item rows per person as
+  the completion date for `CertDate`/`CertQtr`. Trend chart now has real quarterly data.
+- **Terminology:** "Certified/Certification" → "Completed/Completion" throughout the entire
+  PS dashboard (stat cards, charts, filter dropdown, roster, exports, tooltips, print reports).
+  Healthcare and Layered Security dashboards unchanged — those ARE certifications.
+- **`extract_file_date` fix:** cert script was only matching `YYYY-MM` filenames; new PS file
+  uses `MM.DD.YYYY`. Same class of bug as the onboarding sort fix from 2026-07-27.
+
+### PS column map (new Curricula format — verified 2026-07-31)
+```
+col 0: User            col 14: Hire Date             col 22: Item ID
+col 2: First Name      col 16: Parent Curriculum ID   col 26: Item Title
+col 3: Last Name       col 17: Curriculum ID           col 27: Item Completion Date ← CertDate proxy
+col 4: Email Address   col 18: Curriculum Title        col 28: Item Completion Status ID
+col 5: Job Title       col 19: Curriculum Complete     col 29: Item Completion Status Description
+col 6: Region          col 20: Curriculum Assignment Date
+col 7: Market          col 21: Days Remaining          ← NOT a cert date (was PS_COL_CERT_DATE=21)
+col 9: ManagerFirstName
+col 10: ManagerLastName
+col 11: SUPEMAILADDR (Manager email)
+col 12: Manager JobTitle
+```
 
 ---
 
