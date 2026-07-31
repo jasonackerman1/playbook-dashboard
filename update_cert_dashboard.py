@@ -118,8 +118,11 @@ def fmt_date_label(yyyy_mm):
 
 
 def extract_file_date(fname):
-    """Extract YYYY-MM from filename for chronological ordering of monthly files."""
-    m = re.search(r'(\d{4}-\d{2})', os.path.basename(fname))
+    """Extract YYYY-MM-DD (or YYYY-MM) from filename for chronological ordering of monthly files."""
+    base = os.path.basename(fname)
+    m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', base)  # MM.DD.YYYY
+    if m: return f'{m.group(3)}-{m.group(1)}-{m.group(2)}'
+    m = re.search(r'(\d{4}-\d{2})', base)               # YYYY-MM fallback
     return m.group(1) if m else '0000-00'
 
 
@@ -180,32 +183,56 @@ def load_rows(filepath):
 
 
 def load_rows_publicsector(filepath):
-    """Load Public Sector rows — single curriculum, no sub-certs."""
+    """Load Public Sector rows — groups items by person, returns one dict per person.
+    Uses max Item Completion Date (col 27) across all item rows as the completion date
+    for the trend chart, since there is no separate curriculum completion date column."""
+    PS_COL_ITEM_DATE = 27  # Item Completion Date
     wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
     ws = wb.active
-    rows = []
+
+    def _d(v): return v.strftime('%Y-%m-%d') if v and hasattr(v, 'strftime') else ''
+    def _cert(v): return str(v).strip() if v else 'No'
+
+    people = {}  # dedup key -> person dict
+    max_dates = {}  # dedup key -> max item completion datetime
+
     for raw in ws.iter_rows(min_row=2, values_only=True):
         if raw[COL_FIRST] is None:
             continue
-        def _date(v): return v.strftime('%Y-%m-%d') if v and hasattr(v, 'strftime') else ''
-        def _cert(v): return str(v).strip() if v else 'No'
-        def _qtr_from_date(v):
-            return km_fiscal_quarter(v) if v and hasattr(v, 'month') else ''
-        rows.append({
-            'FirstName':   str(raw[COL_FIRST]).strip(),
-            'LastName':    str(raw[COL_LAST]).strip(),
-            'Email':       str(raw[COL_EMAIL]).strip() if raw[COL_EMAIL] else '',
-            'JobTitle':    str(raw[COL_JOBTITLE]).strip() if raw[COL_JOBTITLE] else '',
-            'Market':      str(raw[COL_MARKET]).strip() if raw[COL_MARKET] else '',
-            'Manager':     ((str(raw[COL_MGR_FIRST]).strip() + ' ' + str(raw[COL_MGR_LAST]).strip()).strip()) if raw[COL_MGR_FIRST] else '',
-            'MgrEmail':    str(raw[COL_MGR_EMAIL]).strip() if raw[COL_MGR_EMAIL] else '',
-            'MgrTitle':    str(raw[COL_MGR_TITLE]).strip() if raw[COL_MGR_TITLE] else '',
-            'HireDate':    _date(raw[COL_HIRE_DATE]),
-            'PublicSector': _cert(raw[PS_COL_COMPLETE]),
-            'Date':        _date(raw[PS_COL_DATE]),
-            'CertDate':    _date(raw[PS_COL_CERT_DATE]),
-            'CertQtr':     _qtr_from_date(raw[PS_COL_CERT_DATE]),
-        })
+        email = str(raw[COL_EMAIL]).strip() if raw[COL_EMAIL] else ''
+        first = str(raw[COL_FIRST]).strip()
+        last  = str(raw[COL_LAST]).strip()
+        key   = email.lower() if email else f'{first} {last}'.lower()
+
+        if key not in people:
+            people[key] = {
+                'FirstName':    first,
+                'LastName':     last,
+                'Email':        email,
+                'JobTitle':     str(raw[COL_JOBTITLE]).strip() if raw[COL_JOBTITLE] else '',
+                'Market':       str(raw[COL_MARKET]).strip() if raw[COL_MARKET] else '',
+                'Manager':      ((str(raw[COL_MGR_FIRST]).strip() + ' ' + str(raw[COL_MGR_LAST]).strip()).strip()) if raw[COL_MGR_FIRST] else '',
+                'MgrEmail':     str(raw[COL_MGR_EMAIL]).strip() if raw[COL_MGR_EMAIL] else '',
+                'MgrTitle':     str(raw[COL_MGR_TITLE]).strip() if raw[COL_MGR_TITLE] else '',
+                'HireDate':     _d(raw[COL_HIRE_DATE]),
+                'PublicSector': _cert(raw[PS_COL_COMPLETE]),
+                'Date':         _d(raw[PS_COL_DATE]),
+            }
+            max_dates[key] = None
+
+        # Track the latest item completion date across all this person's rows
+        item_dt = raw[PS_COL_ITEM_DATE]
+        if item_dt and hasattr(item_dt, 'strftime'):
+            if max_dates[key] is None or item_dt > max_dates[key]:
+                max_dates[key] = item_dt
+
+    rows = []
+    for key, p in people.items():
+        max_dt = max_dates[key]
+        p['CertDate'] = _d(max_dt)
+        p['CertQtr']  = km_fiscal_quarter(max_dt) if max_dt else ''
+        rows.append(p)
+
     wb.close()
     return rows
 
@@ -1084,7 +1111,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{name} Certification Dashboard</title>
+<title>{name} Curriculum Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -1210,7 +1237,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
 <div class="header">
   <div class="header-left">
     <div>
-      <h1>{name} <span>Certification Dashboard</span></h1>
+      <h1>{name} <span>Curriculum Dashboard</span></h1>
       <div class="header-date">Data through {date_label}</div>
     </div>
   </div>
@@ -1223,7 +1250,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
         <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
-        <div class="export-parent">Not Certified<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('not-certified')">PDF</button><button class="export-item" onclick="runExportXLSX('not-certified')">Excel</button></div></div>
+        <div class="export-parent">Not Completed<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('not-certified')">PDF</button><button class="export-item" onclick="runExportXLSX('not-certified')">Excel</button></div></div>
         <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
       </div>
     </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
@@ -1235,8 +1262,8 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   <span class="filter-label">Status</span>
   <select id="f-status">
     <option value="">All</option>
-    <option value="Yes">Certified</option>
-    <option value="No">Not Certified</option>
+    <option value="Yes">Completed</option>
+    <option value="No">Not Completed</option>
   </select>
   <span class="filter-label">Market</span>
   <select id="f-market"><option value="">All Markets</option></select>
@@ -1254,11 +1281,11 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
     <div class="stat-value" id="s-total">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
+    <div class="stat-label">Completed <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
     <div class="stat-value green" id="s-certified">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Not Yet Certified <span class="info-btn" onclick="showInfo(event,'not-certified')">?</span></div>
+    <div class="stat-label">Not Yet Completed <span class="info-btn" onclick="showInfo(event,'not-certified')">?</span></div>
     <div class="stat-value red" id="s-not">&#8212;</div>
   </div>
   <div class="stat">
@@ -1270,11 +1297,11 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
 
 <div class="charts">
   <div class="chart-card">
-    <div class="chart-title">Certification Pipeline <span class="info-btn" onclick="showInfo(event,'pipeline')">?</span></div>
+    <div class="chart-title">Completion Pipeline <span class="info-btn" onclick="showInfo(event,'pipeline')">?</span></div>
     <div class="chart-wrap"><canvas id="pipelineChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'over-time')">?</span></div>
+    <div class="chart-title">Completions Over Time <span class="info-btn" onclick="showInfo(event,'over-time')">?</span></div>
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
 </div>
@@ -1282,7 +1309,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
 <div class="section">
   <div class="section-header">
     <div>
-      <div class="section-title">Certification Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
+      <div class="section-title">Completion Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
       <div class="section-hint">Click a person to see their details &mdash; sorted by status then name</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -1305,7 +1332,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
         <circle cx="7" cy="7" r="6" fill="var(--green-subtle)" stroke="var(--green)" stroke-width="1.5"/>
         <text x="7" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="var(--green)">&#10003;</text>
       </svg>
-      Certified
+      Completed
     </span>
   </div>
   <div class="roster-wrap">
@@ -1387,31 +1414,31 @@ function runExport(type){{
   const now=new Date().toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}});
 
   if(type==='full'){{
-    setupPrintHeader('{name} Certification Report',`Generated: ${{now}}  |  ${{filtered.length}} People`);
+    setupPrintHeader('{name} Curriculum Completion Report',`Generated: ${{now}}  |  ${{filtered.length}} People`);
     var pTotal=filtered.length, pCert=filtered.filter(p=>p.PublicSector==='Yes').length;
     var pNot=pTotal-pCert, pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
-    sel('print-stats').innerHTML=pBox(pTotal,'Total Assigned')+pBox(pCert,'Certified')+pBox(pNot,'Not Certified')+pBox(pRate+'%','Completion Rate');
+    sel('print-stats').innerHTML=pBox(pTotal,'Total Assigned')+pBox(pCert,'Completed')+pBox(pNot,'Not Completed')+pBox(pRate+'%','Completion Rate');
     var qMap={{}};
     filtered.filter(p=>p.PublicSector==='Yes'&&p.CertDate).forEach(p=>{{var q=pFiscalQtr(p.CertDate);if(q)qMap[q]=(qMap[q]||0)+1;}});
     var qRows=Object.entries(qMap).sort((a,b)=>a[0].localeCompare(b[0]));
     if(!qRows.length) qRows=[['No data','-']];
-    sel('print-charts').innerHTML=pSection('Certification Pipeline',[['In Progress',pNot],['Certified',pCert]])+pSection('Certifications by Quarter',qRows);
-    sel('print-roster-head').innerHTML=thRow(['#','Name','Market','Job Title','Status','Cert Date','Manager','Email']);
+    sel('print-charts').innerHTML=pSection('Completion Pipeline',[['In Progress',pNot],['Completed',pCert]])+pSection('Completions by Quarter',qRows);
+    sel('print-roster-head').innerHTML=thRow(['#','Name','Market','Job Title','Status','Completion Date','Manager','Email']);
     sel('print-roster-body').innerHTML=filtered.map((p,i)=>{{
-      const status=p.PublicSector==='Yes'?'Certified':'Not Certified';
+      const status=p.PublicSector==='Yes'?'Completed':'Not Completed';
       return tds([i+1,`<b>${{p.FirstName}} ${{p.LastName}}</b>`,p.Market||'-',p.JobTitle||'-',status,p.CertDate||'-',p.Manager||'-',`<small>${{p.Email||'-'}}</small>`]);
     }}).join('');
     doPrint(false);
 
   }} else if(type==='not-certified'){{
     const notCert=filtered.filter(p=>p.PublicSector!=='Yes');
-    setupPrintHeader('Not Certified: {name}',`Generated: ${{now}}  |  ${{notCert.length}} Employees`);
+    setupPrintHeader('Not Completed: {name}',`Generated: ${{now}}  |  ${{notCert.length}} Employees`);
     sel('print-roster-head').innerHTML=thRow(['#','Name','Job Title','Market','Email','Manager','Manager Email']);
     sel('print-roster-body').innerHTML=notCert.length
       ? notCert.sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName))
           .map((p,i)=>tds([i+1,`<b>${{p.FirstName}} ${{p.LastName}}</b>`,p.JobTitle||'-',p.Market||'-',p.Email||'-',p.Manager||'-',p.MgrEmail||'-'])).join('')
-      : '<tr><td colspan="7" style="color:#999;font-style:italic;padding:10px 8px">All employees are certified</td></tr>';
-    sel('ph-desc').textContent='Employees who have not yet earned {name} certification, sorted by manager. Use this list to contact employees and their managers to drive completion.';
+      : '<tr><td colspan="7" style="color:#999;font-style:italic;padding:10px 8px">All employees have completed the curriculum</td></tr>';
+    sel('ph-desc').textContent='Employees who have not yet completed the {name} curriculum, sorted by manager. Use this list to contact employees and their managers to drive completion.';
     sel('ph-desc').style.display='block';
     doPrint(true);
 
@@ -1425,11 +1452,11 @@ function runExport(type){{
     }});
     const mgrs=Object.values(mgrMap).sort((a,b)=>(b.cert/b.total)-(a.cert/a.total));
     setupPrintHeader('Manager Summary: {name}',`Generated: ${{now}}  |  ${{mgrs.length}} Managers`);
-    sel('print-roster-head').innerHTML=thRow(['Manager','Manager Email','Team Size','Certified','Not Certified','Completion %']);
+    sel('print-roster-head').innerHTML=thRow(['Manager','Manager Email','Team Size','Completed','Not Completed','Completion %']);
     sel('print-roster-body').innerHTML=mgrs.map(m=>tds([
       `<b>${{m.name}}</b>`,m.email,m.total,m.cert,m.total-m.cert,`<b>${{Math.round(m.cert/m.total*100)}}%</b>`
     ])).join('');
-    sel('ph-desc').textContent='Certification completion rates by manager, sorted highest to lowest. Teams at the bottom of the list have the most employees still working toward certification and need the most follow-up.';
+    sel('ph-desc').textContent='Curriculum completion rates by manager, sorted highest to lowest. Teams at the bottom of the list have the most employees still working toward completion and need the most follow-up.';
     sel('ph-desc').style.display='block';
     doPrint(true);
   }}
@@ -1446,14 +1473,14 @@ document.addEventListener('click', function(e){{
 }});
 
 const INFO_MSGS={{
-  'total-assigned':  'Total number of people currently assigned the {name} certification, after any active filters.',
-  'certified':       'People who have earned the {name} certification.',
-  'not-certified':   'People assigned the certification who have not yet earned it.',
-  'completion-rate': 'Percentage of assigned people who have earned certification. Calculated as Certified ÷ Total Assigned.',
-  'pipeline':        'Two stages of the certification journey: In Progress (assigned but not yet certified) and Certified (fully certified).',
-  'over-time':       'Certifications earned per KM fiscal quarter. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
-  'roster':          'Full list of assigned people with their certification status. Click a name to see job title, market, cert date, and manager info. Use the View toggle to group by manager.',
-  'export':          'Export a printable report of the data currently on screen. Apply filters first; the report only includes what is currently shown. Examples: filter to a specific region then export for a regional snapshot; hide TLG then export to share with managers; set Status = Not Certified then export for a targeted outreach list. Full Report lists everyone with full detail. Not Certified is a contact list for outreach. Manager Summary rolls up team count and completion % per manager.',
+  'total-assigned':  'Total number of people currently assigned the {name} curriculum assignment, after any active filters.',
+  'certified':       'People who have completed the {name} curriculum.',
+  'not-certified':   'People assigned the curriculum who have not yet completed it.',
+  'completion-rate': 'Percentage of assigned people who have completed the curriculum. Calculated as Completed ÷ Total Assigned.',
+  'pipeline':        'Two stages of the completion journey: In Progress (assigned but not yet complete) and Completed (curriculum finished).',
+  'over-time':       'Curriculum completions per KM fiscal quarter. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
+  'roster':          'Full list of assigned people with their completion status. Click a name to see job title, market, completion date, and manager info. Use the View toggle to group by manager.',
+  'export':          'Export a printable report of the data currently on screen. Apply filters first; the report only includes what is currently shown. Examples: filter to a specific region then export for a regional snapshot; hide TLG then export to share with managers; set Status = Not Completed then export for a targeted outreach list. Full Report lists everyone with full detail. Not Completed is a contact list for outreach. Manager Summary rolls up team count and completion % per manager.',
 }};
 function showInfo(e, key){{
   const pop=sel('info-popover');
@@ -1502,7 +1529,7 @@ function render(){{
   pipelineChart=new Chart(sel('pipelineChart'),{{
     type:'bar',
     data:{{
-      labels:['In Progress','Certified'],
+      labels:['In Progress','Completed'],
       datasets:[{{
         data:[notCert,certified],
         backgroundColor:[cv('--red')+'cc',cv('--green')+'cc'],
@@ -1530,7 +1557,7 @@ function render(){{
     data:{{
       labels:trendQtrs.length?trendQtrs:['No data yet'],
       datasets:[{{
-        label:'Certified',
+        label:'Completed',
         data:trendData.length?trendData:[0],
         backgroundColor:cv('--green')+'bb',
         borderRadius:3, borderSkipped:false,
@@ -1569,7 +1596,7 @@ function certIndicator(p){{
   const bg=isCert?color+'33':'var(--surface2)';
   const border=isCert?color:'var(--border)';
   const txt=isCert?color:'var(--muted)';
-  return `<div title="${{isCert?'Certified':'Not Certified'}}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${{bg}};border:1.5px solid ${{border}};color:${{txt}}">${{isCert?'&#10003;':''}}</div>`;
+  return `<div title="${{isCert?'Completed':'Not Completed'}}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${{bg}};border:1.5px solid ${{border}};color:${{txt}}">${{isCert?'&#10003;':''}}</div>`;
 }}
 
 function renderRosterList(){{
@@ -1598,7 +1625,7 @@ function renderRosterList(){{
         <div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">
           <div>
             <div style="font-size:12px;font-weight:600;color:var(--text)">${{mgr}}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${{team.length}} rep${{team.length!==1?'s':''}} &middot; ${{cert}} certified</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${{team.length}} rep${{team.length!==1?'s':''}} &middot; ${{cert}} completed</div>
           </div>
           <span class="mgr-chevron">&#9660;</span>
         </div>
@@ -1660,14 +1687,14 @@ function rosterSelect(el){{
   sel('roster-right').innerHTML=`
     <div class="roster-right-header">
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">${{p.FirstName}} ${{p.LastName}}</div>
-      <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'Certified':'Not Yet Certified'}}</span>
+      <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'Completed':'Not Yet Completed'}}</span>
       ${{isCert&&p.CertDate?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${{fmtDate(p.CertDate)}}</span>`:''}}
     </div>
     <div class="detail-grid">
       <div><div class="detail-label">Job Title</div><div class="detail-value">${{p.JobTitle||'&#8212;'}}</div></div>
       <div><div class="detail-label">Market</div><div class="detail-value">${{p.Market||'&#8212;'}}</div></div>
       <div><div class="detail-label">Assigned</div><div class="detail-value">${{fmtDate(p.Date)}}</div></div>
-      <div><div class="detail-label">Cert Date</div><div class="detail-value">${{fmtDate(p.CertDate)}}</div></div>
+      <div><div class="detail-label">Completion Date</div><div class="detail-value">${{fmtDate(p.CertDate)}}</div></div>
       <div><div class="detail-label">Cert Quarter</div><div class="detail-value">${{p.CertQtr||'&#8212;'}}</div></div>
       <div><div class="detail-label">Hire Date</div><div class="detail-value">${{fmtDate(p.HireDate)}}</div></div>
       <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
@@ -1706,19 +1733,19 @@ function runExportXLSX(type){{
     const pNot=pTotal-pCert;
     const pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
     const sumRows=[
-      ['Public Sector Certification Report'],
+      ['Public Sector Curriculum Completion Report'],
       ['Generated:',now],
       [],
       ['SUMMARY'],
       ['Total Assigned',pTotal],
-      ['Certified',pCert],
-      ['Not Certified',pNot],
+      ['Completed',pCert],
+      ['Not Completed',pNot],
       ['Completion Rate',pRate+'%'],
     ];
     XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),'Summary');
-    const rRows=[['Name','Market','Job Title','Status','Cert Date','Manager','Email']];
+    const rRows=[['Name','Market','Job Title','Status','Completion Date','Manager','Email']];
     filtered.forEach(p=>{{
-      const status=p.PublicSector==='Yes'?'Certified':'Not Certified';
+      const status=p.PublicSector==='Yes'?'Completed':'Not Completed';
       rRows.push([p.FirstName+' '+p.LastName,p.Market||'-',p.JobTitle||'-',status,p.CertDate||'-',p.Manager||'-',p.Email||'-']);
     }});
     XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,28,32]),'Roster');
@@ -1727,7 +1754,7 @@ function runExportXLSX(type){{
     const notCert=filtered.filter(p=>p.PublicSector!=='Yes').sort((a,b)=>(a.Manager||'').localeCompare(b.Manager||'')||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName));
     const rows=[['Name','Job Title','Market','Email','Manager','Manager Email']];
     notCert.forEach(p=>rows.push([p.FirstName+' '+p.LastName,p.JobTitle||'-',p.Market||'-',p.Email||'-',p.Manager||'-',p.MgrEmail||'-']));
-    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,28,18,32,28,32]),'Not Certified');
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,28,18,32,28,32]),'Not Completed');
     dlXLSX('ps-not-certified',wb);
   }} else if(type==='manager-summary'){{
     const mgrMap={{}};
@@ -1737,7 +1764,7 @@ function runExportXLSX(type){{
       mgrMap[k].total++;
       if(p.PublicSector==='Yes') mgrMap[k].cert++;
     }});
-    const rows=[['Manager','Manager Email','Team Size','Certified','Not Certified','Completion %']];
+    const rows=[['Manager','Manager Email','Team Size','Completed','Not Completed','Completion %']];
     Object.values(mgrMap).sort((a,b)=>(b.cert/b.total)-(a.cert/a.total)).forEach(m=>{{
       rows.push([m.name,m.email,m.total,m.cert,m.total-m.cert,Math.round(m.cert/m.total*100)+'%']);
     }});
@@ -1771,7 +1798,7 @@ applyFilters();
   <table class="ptable" id="print-roster-table">
     <thead id="print-roster-head"><tr>
       <th>#</th><th>Name</th><th>Market</th><th>Job Title</th>
-      <th>Status</th><th>Cert Date</th><th>Manager</th><th>Email</th>
+      <th>Status</th><th>Completion Date</th><th>Manager</th><th>Email</th>
     </tr></thead>
     <tbody id="print-roster-body"></tbody>
   </table>
@@ -1844,6 +1871,12 @@ def main():
             print(f'  No loader for vertical "{slug}" — skipping')
             continue
 
+        # PS: only use the most recent file — each report is a full active-user snapshot
+        # (inactive/departed people drop off the report; accumulating old files would
+        # resurface people who have left the team)
+        if slug == 'publicsector':
+            fnames = fnames[-1:]
+
         # Load all files in order, tag each row with its file date
         all_rows = []
         for fname in fnames:
@@ -1857,7 +1890,7 @@ def main():
             if slug == 'healthcare':
                 print(f'    {len(rows)} rows  ({sum(1 for r in rows if r["Healthcare"]=="Yes")} HC certified, {sum(1 for r in rows if r["Complete"]=="Yes")} curriculum complete)')
             elif slug == 'publicsector':
-                print(f'    {len(rows)} rows  ({sum(1 for r in rows if r["PublicSector"]=="Yes")} certified)')
+                print(f'    {len(rows)} rows  ({sum(1 for r in rows if r["PublicSector"]=="Yes")} completed)')
 
         # Deduplicate: later files overwrite earlier ones for the same person
         all_rows.sort(key=lambda r: r['_file_date'])
@@ -1875,7 +1908,7 @@ def main():
             html = generate_html(slug, vert_name, deduped)
         elif slug == 'publicsector':
             ps_cert = sum(1 for r in deduped if r['PublicSector'] == 'Yes')
-            print(f'  → {len(deduped)} unique people  ({ps_cert} certified, {len(deduped)-ps_cert} not yet)')
+            print(f'  → {len(deduped)} unique people  ({ps_cert} completed, {len(deduped)-ps_cert} not yet)')
             ps_date_label = _file_date_label(os.path.join(cert_dir, fnames[-1]))
             html = generate_html_publicsector(slug, vert_name, deduped, ps_date_label)
 
