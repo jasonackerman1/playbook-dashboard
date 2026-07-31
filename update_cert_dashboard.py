@@ -192,36 +192,39 @@ def load_rows_publicsector(filepath):
 
     def _d(v): return v.strftime('%Y-%m-%d') if v and hasattr(v, 'strftime') else ''
     def _cert(v): return str(v).strip() if v else 'No'
+    def _col(row, idx): return row[idx] if idx < len(row) else None  # bounds-safe column access
 
     people = {}  # dedup key -> person dict
     max_dates = {}  # dedup key -> max item completion datetime
 
     for raw in ws.iter_rows(min_row=2, values_only=True):
-        if raw[COL_FIRST] is None:
+        if _col(raw, COL_FIRST) is None:
             continue
-        email = str(raw[COL_EMAIL]).strip() if raw[COL_EMAIL] else ''
-        first = str(raw[COL_FIRST]).strip()
-        last  = str(raw[COL_LAST]).strip()
+        email = str(_col(raw, COL_EMAIL)).strip() if _col(raw, COL_EMAIL) else ''
+        first = str(_col(raw, COL_FIRST)).strip()
+        last  = str(_col(raw, COL_LAST)).strip()
         key   = email.lower() if email else f'{first} {last}'.lower()
 
         if key not in people:
+            mgr_first = _col(raw, COL_MGR_FIRST)
+            mgr_last  = _col(raw, COL_MGR_LAST)
             people[key] = {
                 'FirstName':    first,
                 'LastName':     last,
                 'Email':        email,
-                'JobTitle':     str(raw[COL_JOBTITLE]).strip() if raw[COL_JOBTITLE] else '',
-                'Market':       str(raw[COL_MARKET]).strip() if raw[COL_MARKET] else '',
-                'Manager':      ((str(raw[COL_MGR_FIRST]).strip() + ' ' + str(raw[COL_MGR_LAST]).strip()).strip()) if raw[COL_MGR_FIRST] else '',
-                'MgrEmail':     str(raw[COL_MGR_EMAIL]).strip() if raw[COL_MGR_EMAIL] else '',
-                'MgrTitle':     str(raw[COL_MGR_TITLE]).strip() if raw[COL_MGR_TITLE] else '',
-                'HireDate':     _d(raw[COL_HIRE_DATE]),
-                'PublicSector': _cert(raw[PS_COL_COMPLETE]),
-                'Date':         _d(raw[PS_COL_DATE]),
+                'JobTitle':     str(_col(raw, COL_JOBTITLE)).strip() if _col(raw, COL_JOBTITLE) else '',
+                'Market':       str(_col(raw, COL_MARKET)).strip() if _col(raw, COL_MARKET) else '',
+                'Manager':      ((str(mgr_first).strip() + ' ' + str(mgr_last).strip()).strip()) if mgr_first else '',
+                'MgrEmail':     str(_col(raw, COL_MGR_EMAIL)).strip() if _col(raw, COL_MGR_EMAIL) else '',
+                'MgrTitle':     str(_col(raw, COL_MGR_TITLE)).strip() if _col(raw, COL_MGR_TITLE) else '',
+                'HireDate':     _d(_col(raw, COL_HIRE_DATE)),
+                'PublicSector': _cert(_col(raw, PS_COL_COMPLETE)),
+                'Date':         _d(_col(raw, PS_COL_DATE)),
             }
             max_dates[key] = None
 
         # Track the latest item completion date across all this person's rows
-        item_dt = raw[PS_COL_ITEM_DATE]
+        item_dt = _col(raw, PS_COL_ITEM_DATE)
         if item_dt and hasattr(item_dt, 'strftime'):
             if max_dates[key] is None or item_dt > max_dates[key]:
                 max_dates[key] = item_dt
