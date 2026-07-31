@@ -14,7 +14,34 @@ Last updated: 2026-07-31
 | Public Sector Certification | `cert-publicsector.html` | July 31, 2026 | 118 active people, 74 completed (63%) — "Curricula" report format |
 | Accelerate Onboarding | `onboarding.html` | July 30, 2026 | 37 learners; 18 reps with Closed Won deals |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
-| Layered Security Curriculum | `cert-layered-security.html` | July 29, 2026 | 33 learners, 20 complete (61%) |
+| Layered Security Curriculum | `cert-layered-security.html` | July 29, 2026 | 33 learners, 20 complete (61%) — awaiting correctly-scoped 07.31 file from Resmie |
+
+---
+
+## Recent Changes (2026-07-31 — session 2)
+
+### PS Cert — Curriculum items breakdown in roster detail panel
+- Clicking any person now shows all 3 curriculum items with completion status and date
+- Pending items shown as "Not yet completed" (Jason confirmed: include incomplete items too)
+- Same pattern as Healthcare's per-course checklist in the detail panel
+- Script: `update_cert_dashboard.py` → `load_rows_publicsector` now stores `p['items']`
+
+### LS + HC Cert — New course added: LSC_IAPO
+- **New course:** "Layered Security Certification Introduction and Program Overview" (ID: `LSC_IAPO`)
+- Added as first item in `ITEM_ORDER` in `update_layered_security_dashboard.py`
+- Added as first item in `LS_ORDER` in `update_cert_dashboard.py`
+- Course count updated 11 → 12 in tooltips and roster display in both scripts
+- **Warning mechanism added:** both scripts now print a WARNING line when a file contains an
+  item ID not in the order list — catches new courses automatically on the next data drop
+
+### LS — Incorrect-scope 07.31 file removed
+- `Layered-Security-Curricula-Report-07.31.2026.xlsx` had 505 people (company-wide pull)
+  instead of the expected ~33 Direct Sales learners — removed from `cert-data/`
+- Dashboard reverted to 07.29 data (33 learners, 20 complete)
+- **Root cause of silent drop:** both LS and HC scripts had hardcoded `ITEM_ORDER`/`LS_ORDER`
+  lists; any item ID not in the list was silently skipped with no warning
+- **Next step:** Resmie to send a correctly-scoped 07.31 LS file (Direct Sales only); when
+  dropped in `cert-data/`, `LSC_IAPO` will appear automatically — script is already ready
 
 ---
 
