@@ -186,7 +186,9 @@ def load_rows_publicsector(filepath):
     """Load Public Sector rows — groups items by person, returns one dict per person.
     Uses max Item Completion Date (col 27) across all item rows as the completion date
     for the trend chart, since there is no separate curriculum completion date column."""
-    PS_COL_ITEM_DATE = 27  # Item Completion Date
+    PS_COL_ITEM_TITLE  = 26  # Item Title
+    PS_COL_ITEM_DATE   = 27  # Item Completion Date
+    PS_COL_ITEM_STATUS = 29  # Item Completion Status Description
     wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
     ws = wb.active
 
@@ -194,8 +196,10 @@ def load_rows_publicsector(filepath):
     def _cert(v): return str(v).strip() if v else 'No'
     def _col(row, idx): return row[idx] if idx < len(row) else None  # bounds-safe column access
 
-    people = {}  # dedup key -> person dict
-    max_dates = {}  # dedup key -> max item completion datetime
+    people = {}    # key -> person dict
+    max_dates = {} # key -> max item completion datetime
+    items = {}     # key -> list of item dicts in file order (one per row)
+    seen_items = {}  # key -> set of titles already added (avoid duplicates)
 
     for raw in ws.iter_rows(min_row=2, values_only=True):
         if _col(raw, COL_FIRST) is None:
@@ -222,10 +226,25 @@ def load_rows_publicsector(filepath):
                 'Date':         _d(_col(raw, PS_COL_DATE)),
             }
             max_dates[key] = None
+            items[key] = []
+            seen_items[key] = set()
 
-        # Track the latest item completion date across all this person's rows
-        item_dt = _col(raw, PS_COL_ITEM_DATE)
-        if item_dt and hasattr(item_dt, 'strftime'):
+        # Track items (avoid duplicates — same title can appear on multiple rows)
+        item_title  = _col(raw, PS_COL_ITEM_TITLE)
+        item_status = str(_col(raw, PS_COL_ITEM_STATUS) or '').strip()
+        item_dt     = _col(raw, PS_COL_ITEM_DATE)
+        done        = item_status == 'Online-Complete'
+
+        if item_title and item_title not in seen_items[key]:
+            seen_items[key].add(item_title)
+            items[key].append({
+                'title': str(item_title).strip(),
+                'done':  done,
+                'date':  _d(item_dt) if done else '',
+            })
+
+        # Track max completion date for CertDate / trend chart
+        if done and item_dt and hasattr(item_dt, 'strftime'):
             if max_dates[key] is None or item_dt > max_dates[key]:
                 max_dates[key] = item_dt
 
@@ -234,6 +253,7 @@ def load_rows_publicsector(filepath):
         max_dt = max_dates[key]
         p['CertDate'] = _d(max_dt)
         p['CertQtr']  = km_fiscal_quarter(max_dt) if max_dt else ''
+        p['items']    = items[key]
         rows.append(p)
 
     wb.close()
@@ -1709,6 +1729,20 @@ function rosterSelect(el){{
         <div><div class="detail-label">Title</div><div class="detail-value">${{p.MgrTitle||'&#8212;'}}</div></div>
         <div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.MgrEmail}}" style="color:var(--accent);text-decoration:none">${{p.MgrEmail||'&#8212;'}}</a></div></div>
       </div>
+    </div>`:''}}
+    ${{p.items&&p.items.length?`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Curriculum Items</div>
+      ${{p.items.map(item=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+            background:${{item.done?'var(--green-subtle)':'var(--surface2)'}};
+            border:1.5px solid ${{item.done?'var(--green)':'var(--border)'}};
+            color:${{item.done?'var(--green)':'var(--muted)'}}">${{item.done?'&#10003;':''}}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:var(--text)">${{item.title}}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${{item.done?fmtDate(item.date):'Not yet completed'}}</div>
+          </div>
+        </div>`).join('')}}
     </div>`:''}}
   `;
 }}
