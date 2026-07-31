@@ -22,7 +22,7 @@ COL_ITEM_DATE  = 27
 COL_ITEM_STS   = 29   # "Online-Complete" = done
 
 ITEM_ORDER = [
-    "LS_ITM", "DS", "UA_ACCESSCONTROL", "BIZHUB_BSMFP",
+    "LSC_IAPO", "LS_ITM", "DS", "UA_ACCESSCONTROL", "BIZHUB_BSMFP",
     "MFPPT_BSBSNB", "BREACH_IDADB", "CSMWSG",
     "LSSW", "LSSB_HI", "LSSB_NONPROFIT", "LSSB_GOV"
 ]
@@ -159,6 +159,11 @@ def load_ls_data():
             idone  = str(irow[COL_ITEM_STS]  or '').strip() == 'Online-Complete'
             if iid:
                 item_map[iid] = {'id': iid, 'title': ititle, 'done': idone, 'date': idate or ''}
+
+        # Warn if file has items not in ITEM_ORDER (catches new courses on next data drop)
+        for iid in item_map:
+            if iid not in ITEM_ORDER:
+                print(f"WARNING: unknown item ID '{iid}' ({item_map[iid]['title']}) — add to ITEM_ORDER")
 
         # Build ordered items list; fill in any missing items as not done
         items = []
@@ -674,13 +679,13 @@ function handleCertFileImport(event){{
 // ── Info tooltip ──
 var INFO_MSGS = {{
   "total-enrolled":  "The total number of people currently assigned to the Layered Security curriculum (Direct Sales). Use the Status and Market filters above to narrow this to a specific group.",
-  "complete":        "People who have completed all 11 required modules in the Layered Security curriculum. This reflects curriculum completion only — actual certification also requires $5,000 in qualifying sales, tracked in an external system not shown here.",
+  "complete":        "People who have completed all 12 required modules in the Layered Security curriculum. This reflects curriculum completion only — actual certification also requires $5,000 in qualifying sales, tracked in an external system not shown here.",
   "in-progress":     "People who have started the curriculum and completed at least one module, but haven't finished everything yet.",
   "not-started":     "People who are assigned to the curriculum but haven't completed any modules yet.",
   "past-due":        "People who have not finished the curriculum and have passed their required completion date (negative days remaining in the LMS export).",
   "sales-certified": "People confirmed as fully certified by the external sales system — curriculum completion plus $5,000 in qualifying sales. This stays empty until a sales certification file is imported with the button above.",
   "import-cert":     "Upload a .csv or .xlsx file with an Email column (and optionally a Certified column and a date column) to mark people as certified. Anyone not in the file is treated as not yet certified. The import is saved in this browser so it persists on reload — re-import any time the sales data updates.",
-  "completion-rate": "The percentage of assigned people who have finished all 11 curriculum modules so far. Updates when you apply filters.",
+  "completion-rate": "The percentage of assigned people who have finished all 12 curriculum modules so far. Updates when you apply filters.",
   "pipeline-chart":  "A quick snapshot of where everyone stands: how many haven't started yet, how many are actively working through the modules, and how many have finished all 11.",
   "market-chart":    "Curriculum progress broken down by sales market. Each bar shows how many people in that market are Complete, In Progress, or Not Started. Hover for exact counts. Updates when you apply filters.",
   "roster":          "The full list of people in the curriculum. Each card shows name, job title, module progress, overall completion %, and current status. Click any card to see a full course-by-course breakdown in the panel on the right.",

@@ -1974,7 +1974,7 @@ def load_rows_healthcare_v2(cert_file, learning_file):
 
     HCF_ORDER = ['HCF_HBT','HC_PLAYBOOK','HCF_MFP','HCF_DPMS','HCF_ACS',
                  'HCF_HBMF','HCF_HIPAACS','HCF_DPFH','HCF_OW','HCF_HHSPD']
-    LS_ORDER  = ['LS_ITM','DS','UA_ACCESSCONTROL','BIZHUB_BSMFP','MFPPT_BSBSNB',
+    LS_ORDER  = ['LSC_IAPO','LS_ITM','DS','UA_ACCESSCONTROL','BIZHUB_BSMFP','MFPPT_BSBSNB',
                  'BREACH_IDADB','CSMWSG','LSSW','LSSB_HI','LSSB_NONPROFIT','LSSB_GOV']
 
     def _date(v):
@@ -2059,6 +2059,15 @@ def load_rows_healthcare_v2(cert_file, learning_file):
         }
     wb_l.close()
 
+    # Warn about any item IDs in the file that aren't in our order lists (catches new courses)
+    known_ids = set(LS_ORDER) | set(HCF_ORDER)
+    for email_items in learning.values():
+        for curr_id, items_dict in email_items.items():
+            for iid in items_dict:
+                if iid not in known_ids:
+                    print(f"WARNING: unknown item ID '{iid}' in {curr_id} — add to LS_ORDER or HCF_ORDER")
+                    known_ids.add(iid)  # only warn once per ID
+
     # ── Build output rows — only people in cert file ──────────────────────────
     rows = []
     for email, person in cert_map.items():
@@ -2120,7 +2129,7 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
     """Generate the Healthcare v2 certification dashboard HTML.
 
     Supports two curricula displayed as course-level progress:
-      HC Foundations (10 items) and Layered Security (11 items).
+      HC Foundations (10 items) and Layered Security (12 items).
 
     Uses double-brace escaping throughout for f-string safety.
     All JS string literals use double quotes to avoid apostrophe breakage.
@@ -2930,7 +2939,7 @@ function showDetail(email){{
   }}
   detailHtml += "</div>";
   detailHtml += '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">';
-  detailHtml += curriculumSection("Layered Security · " + p.ls.done + " / 11 courses", p.ls, "ls-" + email.replace(/[^a-z0-9]/gi, ""));
+  detailHtml += curriculumSection("Layered Security · " + p.ls.done + " / 12 courses", p.ls, "ls-" + email.replace(/[^a-z0-9]/gi, ""));
   detailHtml += curriculumSection("Healthcare Foundations · " + p.hcf.done + " / 10 courses", p.hcf, "hcf-" + email.replace(/[^a-z0-9]/gi, ""));
   detailHtml += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);">';
   detailHtml += p.overallDone + " of 21 courses complete (" + p.overallPct + "%)";
