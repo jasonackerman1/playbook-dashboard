@@ -18,6 +18,18 @@ Last updated: 2026-07-31
 
 ---
 
+## Recent Changes (2026-08-01)
+
+### HC Cert — Two more hardcoded denominators fixed after adding LSC_IAPO
+- **LS pill on roster cards:** left-column pill was showing "Layered Sec X/11" → fixed to "/12"
+- **overallPct calculation:** `round(overall_done / 21 * 100)` → `/ 22` — people who finished
+  all 22 courses (12 LS + 10 HCF) were showing 105% instead of 100%
+- **Detail panel label:** "X of 21 courses complete" → "X of 22 courses complete"
+- **Pattern note:** when adding a course to LS_ORDER, check ALL three hardcoded denominators:
+  (1) left-column pill label `/N`, (2) Python `overallPct` divisor, (3) detail panel label "of N courses"
+
+---
+
 ## Recent Changes (2026-07-31 — session 2)
 
 ### PS Cert — Curriculum items breakdown in roster detail panel
