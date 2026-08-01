@@ -27,6 +27,21 @@ ITEM_ORDER = [
     "LSSW", "LSSB_HI", "LSSB_NONPROFIT", "LSSB_GOV"
 ]
 
+ITEM_TITLES = {
+    "LSC_IAPO":         "Layered Security Certification Introduction and Program Overview",
+    "LS_ITM":           "Layered Security: Introducing the Model",
+    "DS":               "Document Security",
+    "UA_ACCESSCONTROL": "User Authentication and Access Control",
+    "BIZHUB_BSMFP":     "bizhub Security at the MFP",
+    "MFPPT_BSBSNB":     "MFP Protection Team: bizhub SECURE, bizhub SECURE Notifier, Bitdefender",
+    "BREACH_IDADB":     "BreachAlert- Identify Document and Data Breaches at the Multi-Functional Device",
+    "CSMWSG":           "Centralized Security Management with Shield Guard",
+    "LSSW":             "Secure Workflow",
+    "LSSB_HI":          "Layered Security Success Study - Healthcare Industry",
+    "LSSB_NONPROFIT":   "Layered Security Success Study - Non-profit",
+    "LSSB_GOV":         "Layered Security Success Study - Government",
+}
+
 TLG = {n.lower() for n in [
     "Jason Ackerman","Bianca Davis","James Parker","Resmie Biba",
     "Chris Curtis","Sara Thompson","Jeremy MacBean","Bradley Pierce",
@@ -171,8 +186,7 @@ def load_ls_data():
             if iid in item_map:
                 items.append(item_map[iid])
             else:
-                # Try to get title from any data or use a fallback
-                items.append({'id': iid, 'title': iid, 'done': False, 'date': ''})
+                items.append({'id': iid, 'title': ITEM_TITLES.get(iid, iid), 'done': False, 'date': ''})
 
         done_count = sum(1 for it in items if it['done'])
         total      = len(items)

@@ -1976,6 +1976,20 @@ def load_rows_healthcare_v2(cert_file, learning_file):
                  'HCF_HBMF','HCF_HIPAACS','HCF_DPFH','HCF_OW','HCF_HHSPD']
     LS_ORDER  = ['LSC_IAPO','LS_ITM','DS','UA_ACCESSCONTROL','BIZHUB_BSMFP','MFPPT_BSBSNB',
                  'BREACH_IDADB','CSMWSG','LSSW','LSSB_HI','LSSB_NONPROFIT','LSSB_GOV']
+    LS_TITLES = {
+        'LSC_IAPO':         'Layered Security Certification Introduction and Program Overview',
+        'LS_ITM':           'Layered Security: Introducing the Model',
+        'DS':               'Document Security',
+        'UA_ACCESSCONTROL': 'User Authentication and Access Control',
+        'BIZHUB_BSMFP':     'bizhub Security at the MFP',
+        'MFPPT_BSBSNB':     'MFP Protection Team: bizhub SECURE, bizhub SECURE Notifier, Bitdefender',
+        'BREACH_IDADB':     'BreachAlert- Identify Document and Data Breaches at the Multi-Functional Device',
+        'CSMWSG':           'Centralized Security Management with Shield Guard',
+        'LSSW':             'Secure Workflow',
+        'LSSB_HI':          'Layered Security Success Study - Healthcare Industry',
+        'LSSB_NONPROFIT':   'Layered Security Success Study - Non-profit',
+        'LSSB_GOV':         'Layered Security Success Study - Government',
+    }
 
     def _date(v):
         return v.strftime('%Y-%m-%d') if v and hasattr(v, 'strftime') else ''
@@ -2080,10 +2094,7 @@ def load_rows_healthcare_v2(cert_file, learning_file):
             for iid in order:
                 raw_item = curr_items.get(iid, {})
                 is_done  = raw_item.get('done', False)
-                # Attempt to find a title from the data; fall back to item ID
-                title = raw_item.get('title', iid)
-                if not title:
-                    title = iid
+                title = raw_item.get('title') or LS_TITLES.get(iid, iid)
                 items.append({
                     'id':    iid,
                     'title': title,
