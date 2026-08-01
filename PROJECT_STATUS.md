@@ -14,7 +14,33 @@ Last updated: 2026-07-31
 | Public Sector Certification | `cert-publicsector.html` | July 31, 2026 | 118 active people, 74 completed (63%) — "Curricula" report format |
 | Accelerate Onboarding | `onboarding.html` | July 30, 2026 | 37 learners; 18 reps with Closed Won deals |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
-| Layered Security Curriculum | `cert-layered-security.html` | July 29, 2026 | 33 learners, 20 complete (61%) — awaiting correctly-scoped 07.31 file from Resmie |
+| Layered Security Curriculum | `cert-layered-security.html` | July 29, 2026 | 33 learners, 20 complete (61%) — **PENDING:** 07.31 file removed, waiting on Resmie to confirm scope |
+
+---
+
+## Open Question — LS July 31 File (as of 2026-08-01)
+
+The `Layered-Security-Curricula-Report-07.31.2026.xlsx` file was removed from `cert-data/`
+because it showed 517 enrolled (vs 33 from July 29) — a 10x jump. Jason and Resmie are
+investigating whether this is correct or an accidental over-broad pull.
+
+**What the file actually contains:** 6,658 rows, ~505 unique people, all taking LSFDS curriculum,
+across all 6 Direct Sales regions (Central, Southeast, West, Mid-Atlantic, Heartland, Northeast).
+517 enrolled = 505 from July 31 + ~12 from July 29 not in July 31, minus exclusions
+(Solutions Consultants, Commercial Print market, TLG).
+
+**Clarification — "Direct Sales only" was a script interpretation, not a column in the file.**
+There is no "Direct Sales" column. The original exclusion rules (remove Solutions Consultants +
+Commercial Print) produced 33 people from the July 29 file. That framing was an interpretation.
+The actual scope is determined by whoever pulls the LMS report.
+
+**Two possible outcomes:**
+1. **File is correct** → LS curriculum was expanded to all Direct Sales nationwide; put the file
+   back, dashboard shows ~517 enrolled, 29 complete. No code changes needed.
+2. **File was over-broad** → Resmie re-pulls with the right scope and sends a new file; drop it
+   in `cert-data/` and push. Dashboard regenerates automatically with `LSC_IAPO` already wired.
+
+**Next step:** Resmie confirms scope → act on outcome 1 or 2 above.
 
 ---
 
