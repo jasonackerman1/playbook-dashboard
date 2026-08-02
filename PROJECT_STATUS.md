@@ -14,37 +14,45 @@ Last updated: 2026-07-31
 | Public Sector Certification | `cert-publicsector.html` | July 31, 2026 | 118 active people, 74 completed (63%) — "Curricula" report format |
 | Accelerate Onboarding | `onboarding.html` | July 30, 2026 | 37 learners; 18 reps with Closed Won deals |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
-| Layered Security Curriculum | `cert-layered-security.html` | July 29, 2026 | 33 learners, 20 complete (61%) — **PENDING:** 07.31 file removed, waiting on Resmie to confirm scope |
+| Layered Security Curriculum | `cert-layered-security.html` | August 1, 2026 | 517 learners, 30 complete — **PENDING:** Resmie confirming whether this is the correct audience scope |
 
 ---
 
-## Open Question — LS July 31 File (as of 2026-08-01)
+## Open Question — LS Audience Scope (as of 2026-08-01)
 
-The `Layered-Security-Curricula-Report-07.31.2026.xlsx` file was removed from `cert-data/`
-because it showed 517 enrolled (vs 33 from July 29) — a 10x jump. Jason and Resmie are
-investigating whether this is correct or an accidental over-broad pull.
+`Layered-Security-Curricula-Report-08.01.2026.xlsx` is now live in `cert-data/`. Dashboard
+shows 517 learners, 30 complete. This is Resmie's replacement for the 07.31 file.
 
-**What the file actually contains:** 6,658 rows, ~505 unique people, all taking LSFDS curriculum,
-across all 6 Direct Sales regions (Central, Southeast, West, Mid-Atlantic, Heartland, Northeast).
-517 enrolled = 505 from July 31 + ~12 from July 29 not in July 31, minus exclusions
-(Solutions Consultants, Commercial Print market, TLG).
+**Pending:** Resmie is still confirming whether 517 is the correct audience (all Direct Sales
+nationwide) or whether the pull was too broad. If she re-pulls with a tighter scope, drop
+the new file in `cert-data/` and push — script is ready, no code changes needed either way.
 
-**Clarification — "Direct Sales only" was a script interpretation, not a column in the file.**
-There is no "Direct Sales" column. The original exclusion rules (remove Solutions Consultants +
-Commercial Print) produced 33 people from the July 29 file. That framing was an interpretation.
-The actual scope is determined by whoever pulls the LMS report.
-
-**Two possible outcomes:**
-1. **File is correct** → LS curriculum was expanded to all Direct Sales nationwide; put the file
-   back, dashboard shows ~517 enrolled, 29 complete. No code changes needed.
-2. **File was over-broad** → Resmie re-pulls with the right scope and sends a new file; drop it
-   in `cert-data/` and push. Dashboard regenerates automatically with `LSC_IAPO` already wired.
-
-**Next step:** Resmie confirms scope → act on outcome 1 or 2 above.
+**Background:** "Direct Sales only" was never a column in the file. The original exclusion rules
+(remove Solutions Consultants + Commercial Print) produced 33 people from the July 29 file.
+Scope is entirely set by whoever pulls the LMS report.
 
 ---
 
-## Recent Changes (2026-08-01)
+## Recent Changes (2026-08-01) — session 2
+
+### LS + HC Cert — Raw item ID showing instead of course name (fixed)
+- **Bug:** When a person's LMS data had no row for `LSC_IAPO` (not yet started), the fallback
+  was the raw item ID string — showing "LSC_IAPO" in the roster detail panel instead of the
+  full course name.
+- **Fix:** Added `ITEM_TITLES` dict in `update_layered_security_dashboard.py` and `LS_TITLES`
+  dict in `update_cert_dashboard.py` — 12 item IDs → display names. Changed fallback:
+  `title = iid` → `title = ITEM_TITLES.get(iid, iid)` / `raw_item.get('title') or LS_TITLES.get(iid, iid)`.
+- **Pattern:** Any time a new course is added to `ITEM_ORDER`/`LS_ORDER`, also add its display
+  name to the titles dict. This prevents raw IDs from ever appearing in the UI.
+
+### LS — 07.31 file replaced with 08.01 file from Resmie
+- Removed `Layered-Security-Curricula-Report-07.31.2026.xlsx`
+- Added `Layered-Security-Curricula-Report-08.01.2026.xlsx` — 517 learners, 30 complete
+- Scope still pending confirmation from Resmie (see Open Question above)
+
+---
+
+## Recent Changes (2026-08-01) — session 1
 
 ### HC Cert — Two more hardcoded denominators fixed after adding LSC_IAPO
 - **LS pill on roster cards:** left-column pill was showing "Layered Sec X/11" → fixed to "/12"
