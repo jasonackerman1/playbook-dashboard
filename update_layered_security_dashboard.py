@@ -505,10 +505,6 @@ def generate_html(people, date_label):
     <div class="stat-value red" id="s-notstarted">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Past Due <span class="info-btn" onclick="showInfo(event,'past-due')">?</span></div>
-    <div class="stat-value amber" id="s-overdue">&#8212;</div>
-  </div>
-  <div class="stat">
     <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
     <div class="stat-value teal" id="s-rate">&#8212;</div>
     <div class="stat-sub" id="s-rate-sub"></div>
