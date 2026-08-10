@@ -563,13 +563,11 @@ function renderStats(){
   var cert    = filtered.filter(function(p){ return p.Complete === "Yes"; }).length;
   var inprog  = filtered.filter(function(p){ return p.overallPct > 0 && p.Complete !== "Yes"; }).length;
   var nostart = filtered.filter(function(p){ return p.overallPct === 0 && p.Complete !== "Yes"; }).length;
-  var overdue = filtered.filter(isPastDue).length;
   var rate    = total > 0 ? Math.round(cert / total * 100) : 0;
   sel("s-total").textContent      = total;
   sel("s-complete").textContent   = cert;
   sel("s-inprog").textContent     = inprog;
   sel("s-notstarted").textContent = nostart;
-  sel("s-overdue").textContent    = overdue;
   sel("s-rate").textContent       = rate + "%";
   sel("s-rate-sub").textContent   = total > 0 ? (cert + " of " + total + " enrolled") : "";
   if(hasSalesCertData()){
