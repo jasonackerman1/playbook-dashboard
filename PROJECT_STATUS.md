@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-08-01
+Last updated: 2026-08-10
 
 ---
 
@@ -34,6 +34,14 @@ Scope is entirely set by whoever pulls the LMS report.
 ---
 
 ## Recent Changes (2026-08-10) — session 2
+
+### Layered Security — Days Remaining removed from roster detail cards
+- Removed "Days Remaining" field from individual roster detail panels.
+- `DaysRemaining` value still baked into the data (used by `isPastDue()` for the roster badge logic) — only the displayed field was removed.
+
+### Layered Security — JS crash fixed (Past Due removal follow-up)
+- `sel("s-overdue").textContent` was still called after the Past Due stat card was removed, crashing all stat rendering and leaving every card showing "—".
+- Removed the dead assignment and the now-unused `overdue` variable.
 
 ### Layered Security — Past Due stat card removed
 - Removed the "Past Due" stat card from the top of `cert-layered-security.html`.
