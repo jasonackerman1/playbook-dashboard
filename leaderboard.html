@@ -130,7 +130,7 @@
     <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
   </div>
   <div class="header-right">
-    <button class="btn-theme" id="btn-beta-filter" onclick="toggleBetaFilter()">Hide Beta Cohort</button>
+    <button class="btn-theme" id="btn-beta-filter" onclick="toggleBetaFilter()">Hide Test Group</button>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
   </div>
 </div>
@@ -302,7 +302,7 @@ let hideBeta = false;
 function toggleBetaFilter(){
   hideBeta = !hideBeta;
   const btn = document.getElementById('btn-beta-filter');
-  btn.textContent = hideBeta ? 'Show Beta Cohort' : 'Hide Beta Cohort';
+  btn.textContent = hideBeta ? 'Show Test Group' : 'Hide Test Group';
   btn.classList.toggle('active', hideBeta);
   renderAll();
 }
