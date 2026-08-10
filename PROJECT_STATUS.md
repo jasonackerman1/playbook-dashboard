@@ -33,6 +33,14 @@ Scope is entirely set by whoever pulls the LMS report.
 
 ---
 
+## Recent Changes (2026-08-10) — session 2
+
+### Layered Security — Past Due stat card removed
+- Removed the "Past Due" stat card from the top of `cert-layered-security.html`.
+- Remaining cards: Total Enrolled, Curriculum Complete, Certified, In Progress, Not Started, Completion Rate.
+
+---
+
 ## Recent Changes (2026-08-10)
 
 ### Leaderboard — "Hide Beta Cohort" renamed to "Hide Test Group"
