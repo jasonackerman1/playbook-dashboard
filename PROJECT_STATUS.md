@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
 
 ---
 
@@ -30,6 +30,17 @@ the new file in `cert-data/` and push — script is ready, no code changes neede
 **Background:** "Direct Sales only" was never a column in the file. The original exclusion rules
 (remove Solutions Consultants + Commercial Print) produced 33 people from the July 29 file.
 Scope is entirely set by whoever pulls the LMS report.
+
+---
+
+## Recent Changes (2026-08-01) — session 3
+
+### All workflows confirmed working
+- New playbook traffic data file dropped; both `update-dashboard.yml` (playbook.html) and
+  `update-onboarding.yml` (onboarding.html) triggered and ran successfully.
+- Onboarding workflow already had `data/playbook-monthly-*.xlsx` as a trigger — no manual
+  re-trigger needed when new playbook data is dropped.
+- Workflows had some failures during the session but resolved; all dashboards are current.
 
 ---
 
