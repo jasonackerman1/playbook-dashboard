@@ -1052,7 +1052,6 @@ function showDetail(email){{
   detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + "</div></div>";
   detailHtml += '<div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:' + escHtml(p.Email) + '" style="color:var(--accent);text-decoration:none">' + escHtml(p.Email || "-") + "</a></div></div>";
   detailHtml += '<div><div class="detail-label">Assigned</div><div class="detail-value">' + fmtDate(p.AssignDate) + "</div></div>";
-  detailHtml += '<div><div class="detail-label">Days Remaining</div><div class="detail-value">' + (typeof p.DaysRemaining === "number" ? p.DaysRemaining : "-") + "</div></div>";
   if(p.Manager){{
     detailHtml += '<div><div class="detail-label">Manager</div><div class="detail-value">' + escHtml(p.Manager) + "</div></div>";
     detailHtml += '<div><div class="detail-label">Manager Email</div><div class="detail-value"><a href="mailto:' + escHtml(p.MgrEmail) + '" style="color:var(--accent);text-decoration:none">' + escHtml(p.MgrEmail || "-") + "</a></div></div>";
