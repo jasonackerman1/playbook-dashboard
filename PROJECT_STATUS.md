@@ -33,6 +33,28 @@ Scope is entirely set by whoever pulls the LMS report.
 
 ---
 
+## Recent Changes (2026-08-10)
+
+### Leaderboard — "Hide Beta Cohort" renamed to "Hide Test Group"
+- Button label updated to match terminology used on the Accelerate Onboarding dashboard.
+- Same 27 people, same filter logic — label only. `BETA_NAMES` / `hideBeta` variable names unchanged internally.
+
+### Leaderboard — Part B added to 45-day window rule
+- **New rule:** Reps roll off the Closed-Won Leaderboard once their 45-day program window expires
+  (today's date > assignDate + 45 days), even if their deal closed within the window.
+- **Filter change:** `leaderboardRows` now also requires `hireMap[d.name].eligible` (in-window today).
+- **Effect today:** 6 expired-window reps removed from the leaderboard display:
+  Morgan Bruno (day 48), Daniel Zepeda (day 67), Kelli Sorrentino (day 63),
+  Michael Shields (day 67), Paolo Castellon (day 67), Randahl Bradley (day 67).
+  The other 41 cohort members with active windows are unaffected.
+- **Investigation note:** Morgan Bruno's deal (NORTHLIGHT THEATRE, $5,900, day 24) technically
+  passed all prior rules — Morgan personally progressed through SQ and Engage — but the deal was
+  Created By Adit Thakur (not Morgan). Jason flagged it; window-expiry rule removes it cleanly
+  without adding a "self-created" requirement.
+- Eligibility note and section description updated to mention roll-off.
+
+---
+
 ## Recent Changes (2026-08-01) — session 3
 
 ### All workflows confirmed working
