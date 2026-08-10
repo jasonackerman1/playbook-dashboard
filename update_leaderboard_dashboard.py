@@ -335,8 +335,25 @@ def _build_data(cw_rows, stage_idx, hires, cohort_start):
 # ---------------------------------------------------------------------------
 # Generate HTML
 # ---------------------------------------------------------------------------
+def _write_json_export(hires_pub, deals, source_as_of):
+    """Small public data export so other sites (e.g. the Accelerate Sales
+    Playbook homepage) can pull the same raw hires/deals and recompute the
+    Closed-Won Leaderboard eligibility filter themselves, staying in sync
+    with the visitor's real 'today' rather than a generation-time snapshot."""
+    export = {
+        'hires':      hires_pub,
+        'deals':      deals,
+        'windowDays': WINDOW_DAYS,
+        'sourceAsOf': source_as_of.date().isoformat(),
+    }
+    with open('leaderboard-data.json', 'w', encoding='utf-8') as f:
+        json.dump(export, f, ensure_ascii=False)
+    print('Written → leaderboard-data.json')
+
+
 def _generate_html(hires, deals, verification, source_as_of, cohort_start):
     hires_pub = [{k: v for k, v in h.items() if k != 'email'} for h in hires]
+    _write_json_export(hires_pub, deals, source_as_of)
 
     hires_json = json.dumps(hires_pub,    ensure_ascii=False)
     deals_json = json.dumps(deals,        ensure_ascii=False)
