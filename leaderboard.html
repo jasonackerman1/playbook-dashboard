@@ -139,7 +139,7 @@
 
   <div class="data-note">
     <span style="font-size:15px;flex-shrink:0;">&#9432;</span>
-    <span>To appear on this board, a rep must close a deal within their first 45 days of the Accelerate program, complete the curriculum, and personally move that deal through both Sales Qualified and Engage. Deals handed off to a manager or teammate do not count.</span>
+    <span>To appear on this board, a rep must close a deal within their first 45 days of the Accelerate program, complete the curriculum, and personally move that deal through both Sales Qualified and Engage. Deals handed off to a manager or teammate do not count. Once a rep&#8217;s 45-day window closes, they roll off the board.</span>
   </div>
 
   <div class="data-note" id="dataNote"></div>
@@ -162,7 +162,7 @@
     <div class="section-head">
       <div>
         <h2>Closed-Won Leaderboard <span class="count" id="leaderboardCount">0</span></h2>
-        <p>Reps who closed a deal within their first 45 days of the Accelerate program, completed the curriculum, and personally moved the deal through Sales Qualified and Engage. Each qualifying win is its own row.</p>
+        <p>Reps currently inside their 45-day window who closed a deal within that window, completed the curriculum, and personally moved the deal through Sales Qualified and Engage. Reps roll off when their window closes. Each qualifying win is its own row.</p>
       </div>
       <input class="search-box" id="leaderboardSearch" placeholder="Filter by rep or account&hellip;" oninput="renderLeaderboard()">
     </div>
@@ -345,7 +345,8 @@ function renderAll(){
     d.assignToCloseDays <= WINDOW_DAYS &&
     d.curriculumComplete === 'Yes' &&
     d.salesQualifiedBy === d.name &&
-    d.engageBy === d.name
+    d.engageBy === d.name &&
+    hireMap[d.name] && hireMap[d.name].eligible
   );
 
   // ---- Stat strip ----
