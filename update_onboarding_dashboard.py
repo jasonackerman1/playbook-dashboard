@@ -198,14 +198,16 @@ def load_lms():
                 items = []
                 for ir in item_rows:
                     title = str(ir[COL_ITEM_TTL] or '')
-                    if 'coming soon' in title.lower():
-                        continue
+                    is_coming_soon = 'coming soon' in title.lower()
                     items.append({
                         'title': title,
                         'type':  str(ir[COL_ITEM_TYPE] or 'ONLINE'),
                         'done':  bool(ir[COL_ITEM_STS]),
                         'date':  _date(ir[COL_ITEM_DATE]),
-                        'req':   _date(ir[COL_ITEM_REQ]),
+                        # Coming Soon courses aren't launched yet, so they never have a real
+                        # due date — force req=None so they can't trigger Overdue once the
+                        # LMS starts populating Item Required Date for other courses.
+                        'req':   None if is_coming_soon else _date(ir[COL_ITEM_REQ]),
                     })
 
                 total = len(items)
@@ -331,6 +333,8 @@ def _load_salesforce(records):
             return {}
         raw_rows = _parse_html_xls(cw_path)
 
+    from datetime import datetime as _dt
+
     sales = {}
     for row in raw_rows:
         if str(row.get('Stage', '') or '').strip() != 'Closed Won':
@@ -338,13 +342,6 @@ def _load_salesforce(records):
         email = str(row.get('Opportunity Owner Email', '') or '').strip().lower()
         if email not in records:
             continue
-        # Age = Close Date - Created Date, already computed by Salesforce (integer days)
-        try:
-            days_to_close = int(row.get('Age') or 0)
-            if days_to_close < 0:
-                days_to_close = None
-        except (ValueError, TypeError):
-            days_to_close = None
         try:
             amount = float(str(row.get('Amount', '0') or '0').replace(',', '').strip())
         except (ValueError, TypeError):
@@ -359,6 +356,18 @@ def _load_salesforce(records):
         account = str(row.get('Account Name', '') or '').strip().title()
         # Keep earliest closed deal per rep (true "first sale")
         if email not in sales or close_date < sales[email]['closeDate']:
+            # Days to Close = hire date -> earliest Closed Won deal's close date
+            # (not Salesforce's own Age field, which measures opp creation -> close)
+            hire_date = records[email].get('hireDate')
+            days_to_close = None
+            if hire_date and close_date:
+                try:
+                    delta = (_dt.strptime(close_date[:10], '%Y-%m-%d') -
+                             _dt.strptime(hire_date, '%Y-%m-%d')).days
+                    if delta >= 0:
+                        days_to_close = delta
+                except ValueError:
+                    days_to_close = None
             sales[email] = {'amount': amount, 'accountName': account, 'closeDate': close_date, 'daysToClose': days_to_close}
     return sales
 
@@ -1165,7 +1174,7 @@ const INFO = {{
   "overdue": "People who have missed the LMS deadline for at least one required course. Deadlines are set per course relative to each person's program start date — for example, Getting Started items may be due within the first week. Click any row to see exactly which courses are overdue.",
   "ontrack": "People who have not missed any course deadlines yet. They may or may not be keeping pace — check the Gap column to see who is falling behind even if they are technically still on time. Click any row to see which courses still need attention.",
   "completed": "People who have finished every required course across all six curricula in the Accelerate program.",
-  "first-sale": "Average number of days from opportunity creation to each rep's first Closed Won deal. Only the learner's earliest qualifying deal is counted. Open pipeline is not included. Data pulled from Salesforce.",
+  "first-sale": "Average number of days from hire date to each rep's first Closed Won deal. Only the learner's earliest qualifying deal is counted. Open pipeline is not included. Data pulled from Salesforce.",
   "filters-info": "Market: narrow the table to one market. Status: show only people who are Completed, On Track, or Overdue. Sort: change the default row order. All filters work together — for example, filter to a market and sort by Most Urgent to quickly find who needs attention there. Use Reset to clear everything.",
   "view-toggle": "Individual view shows one row per learner. By Manager groups learners under their manager so you can see how each team is tracking. The search box updates automatically — in Individual view it searches by learner name, in By Manager view it searches by manager name.",
   "market-chart": "Average overall completion percentage by market. Hover over a bar to see how many reps in that market are done, on track, or overdue. A short bar is a signal that market may need extra support.",
@@ -1177,7 +1186,7 @@ const INFO = {{
   "col-expected": "How far along this person should be today based on each curriculum's own due-date window (e.g. Getting Started/Sales Workflow/Core Portfolio are due by day 7, Prospecting by day 14, Sales Skills weeks 8-21, Pipeline Mgmt weeks 22-35), weighted by how many items each curriculum contains. Compare to Actual % — if Actual is lower, they are behind pace.",
   "col-gap": "Expected % minus Actual %. A positive number means behind schedule by that amount. A negative (or zero) number means on pace or ahead. The color scales with severity: green when at/ahead, amber when a little behind, red when the gap is significant enough to warrant a check-in.",
   "col-curricula": "Six colored squares, one per curriculum in program order: Getting Started, Sales Workflow, Core Portfolio, Prospecting, Sales Skills, Pipeline Management. Green = complete. Blue = in progress. Red = past its deadline and not done. Gray = not started yet. Click the row to see individual lesson detail.",
-  "col-days-to-close": "How many days it took this rep to close their first Salesforce deal (from opportunity creation to close). Calculated from their earliest Closed Won deal. A dash means no deal has been recorded yet.",
+  "col-days-to-close": "How many days it took this rep to close their first Salesforce deal, measured from their hire date to their earliest Closed Won deal. A dash means no deal has been recorded yet (or no hire date is on file).",
   "export": "Downloads a report based on whoever is currently visible — apply filters first, then export. Full Report: all visible learners with status and progress. Overdue Only: people past a course deadline with their manager's contact info for easy follow-up. Manager Summary: one row per manager with their team's headcount and progress. Example: filter to a market, then export Overdue Only to get a targeted outreach list.",
 }};
 function showInfo(e, key) {{
