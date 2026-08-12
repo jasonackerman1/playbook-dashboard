@@ -747,7 +747,7 @@ document.addEventListener("click", function(e){{
 
 // ── Info tooltip ──
 var INFO_MSGS = {{
-  "total-enrolled":  "The total number of people currently assigned to the Layered Security curriculum (Direct Sales). Use the Status and Market filters above to narrow this to a specific group.",
+  "total-enrolled":  "The total number of people currently assigned to the Layered Security curriculum (Direct Sales). This stays fixed regardless of the filters above — use the ‘shown’ count next to Reset to see how many match your current filters.",
   "complete":        "People who have completed all 12 required modules in the Layered Security curriculum. This reflects curriculum completion only — actual certification also requires $5,000 in qualifying sales, tracked in an external system not shown here.",
   "in-progress":     "People who have started the curriculum and completed at least one module, but haven't finished everything yet.",
   "not-started":     "People who are assigned to the curriculum but haven't completed any modules yet.",
@@ -861,7 +861,7 @@ function renderStats(){{
   var inprog  = filtered.filter(function(p){{ return personStatus(p) === "In Progress"; }}).length;
   var nostart = filtered.filter(function(p){{ return personStatus(p) === "Not Started"; }}).length;
   var rate    = total > 0 ? Math.round(cert / total * 100) : 0;
-  sel("s-total").textContent      = total;
+  sel("s-total").textContent      = PEOPLE.length;
   sel("s-complete").textContent   = cert;
   sel("s-inprog").textContent     = inprog;
   sel("s-notstarted").textContent = nostart;
