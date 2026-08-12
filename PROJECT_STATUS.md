@@ -18,6 +18,17 @@ Last updated: 2026-08-12
 
 ---
 
+## Recent Changes (2026-08-12) — Layered Security "Total Enrolled" fix (follow-up, commit `a4645ce`)
+
+Jason caught that Total Enrolled changed when a Status filter was applied on the Layered Security
+dashboard — it was reading `filtered.length` instead of the true population size. Fixed to always
+read `PEOPLE.length` regardless of any filter; the "N shown" counter next to Reset already covers
+the filtered count, so nothing else needed to change. Tooltip text updated to match. Verified via a
+fresh regeneration + `node --check` on the extracted JS, pushed, confirmed `Update Cert Dashboards`
+completed `success`.
+
+---
+
 ## Recent Changes (2026-08-12) — Layered Security dashboard merge
 
 Resmie hand-built a prototype (`Layered_Security_Certification_Dashboard.html` +
