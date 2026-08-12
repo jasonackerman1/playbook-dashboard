@@ -60,8 +60,34 @@ reason, and removing it wasn't requested.
 
 Verified locally: script runs clean (`503 learners, 41 complete`), homepage card matches exactly
 (`41 of 503 complete`), generated JS passes `node --check`, git status shows the expected file
-adds/deletes. Nothing pushed yet — awaiting Jason's go-ahead. Full detail in project memory:
-`layered_security_dashboard.md`.
+adds/deletes. **Pushed live** (commit `65a53d4`) — merged cleanly with unrelated leaderboard-data
+commits already on `origin/main` via `git pull --no-rebase -X ours`, no conflicts.
+
+**Still open: waiting on Resmie's updated OPS FY26 file with a real Amount column.** Jason confirmed
+a new export is coming (unclear why the original one omitted Amount — likely just a Salesforce
+report-column selection, not a data/permissions issue) but it hadn't landed in `cert-data/` yet as
+of this checkpoint. No code changes needed when it arrives — `load_sales_deals()` finds the Amount
+column by name, not position.
+
+**Push-time build hiccup, resolved same session — not a real regression.** The push triggered both
+`Update Cert Dashboards` and `Update Onboarding Dashboard` simultaneously (both matched the merge
+commit's changed paths); Onboarding's auto-commit landed first, so Cert Dashboards' own auto-commit
+got rejected on push (`! [rejected] main -> main (fetch first)`) — same class of race as the documented
+Git conflict pattern below. Investigated the failed run's logs directly via the GitHub API: the lost
+commit only touched `index.html`, and diffing it against a fresh local regeneration showed it was
+just the homepage's Leaderboard section flipping between real numbers and placeholder dashes —
+traced to `generate_homepage.py`'s legacy `.xls` HTMLParser fallback behaving differently under local
+Python 3.9.6 vs GitHub Actions' Python 3.11.15 (`subclasses of ParserBase must override error()`).
+Confirmed via `git status` that `cert-healthcare.html`/`cert-publicsector.html`/
+`cert-layered-security.html` had zero diff on fresh regeneration — nothing from the Layered Security
+work was actually lost. Manually re-triggered the workflow via `workflow_dispatch`; it completed
+`success` with nothing new to commit, confirming Actions' own environment already had the correct
+state. **Pre-existing, out-of-scope issue surfaced but not fixed:** the leaderboard-stats reader in
+`generate_homepage.py` is environment-sensitive due to the legacy `.xls` parser — worth a real fix
+next time the homepage is touched, but not addressed here since it's unrelated to Layered Security
+and didn't actually cause data loss.
+
+Full detail in project memory: `layered_security_dashboard.md`.
 
 ---
 
