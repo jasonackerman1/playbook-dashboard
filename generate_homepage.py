@@ -180,8 +180,10 @@ def ls_cert_stats():
         finally:
             os.chdir(orig)
         total     = len(people)
-        complete  = sum(1 for p in people if p['Complete'] == 'Yes')
-        in_prog   = sum(1 for p in people if p['overallPct'] > 0 and p['Complete'] != 'Yes')
+        # Derive status from actual module progress, not the LMS's own Complete
+        # flag (which can go stale) — matches the dashboard's own personStatus() logic.
+        complete  = sum(1 for p in people if p['ls']['total'] and p['ls']['done'] >= p['ls']['total'])
+        in_prog   = sum(1 for p in people if 0 < p['ls']['done'] < p['ls']['total'])
         not_start = total - complete - in_prog
         rate      = round(complete / total * 100) if total else 0
         return {'total': total, 'complete': complete, 'in_progress': in_prog,
@@ -541,7 +543,7 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None):
         <span class="card-icon">&#128274;</span>
         <div>
           <div class="card-title">Layered Security Curriculum</div>
-          <div class="card-desc">Direct Sales &mdash; 11-module curriculum</div>
+          <div class="card-desc">Direct Sales &mdash; 12-module curriculum</div>
         </div>
       </div>
       <div>

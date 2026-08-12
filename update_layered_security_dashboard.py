@@ -98,6 +98,96 @@ def person_key(email, first, last):
     return f"{(first or '').strip().lower()} {(last or '').strip().lower()}"
 
 
+CERT_FILE_GLOB  = 'cert-data/Layered-Security-Certification-Report-*.xlsx'
+DEALS_FILE_GLOB = 'cert-data/Layered-Security-Certification-OPS-FY26-*.xlsx'
+DEAL_MIN_AMOUNT = 5000
+
+
+def _find_col(header, *substrings, exclude=None):
+    """Find a column index by case-insensitive substring match on the header row."""
+    for i, h in enumerate(header):
+        hl = str(h or '').strip().lower()
+        if exclude and exclude in hl:
+            continue
+        if any(s in hl for s in substrings):
+            return i
+    return None
+
+
+def load_sales_cert():
+    """Layered Security sales-certification report — one row per already-certified person
+    (the report is scoped to certified people only, so presence in it = certified).
+    Returns email(lower) -> {'certified': True, 'date': 'YYYY-MM-DD'}."""
+    files = sorted(glob.glob(CERT_FILE_GLOB))
+    if not files:
+        return {}
+    fpath = files[-1]
+    wb = openpyxl.load_workbook(fpath, data_only=True)
+    ws = wb.active
+    header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    email_col = _find_col(header, 'email', exclude='manager')
+    if email_col is None:
+        print(f"WARNING: no Email column found in {os.path.basename(fpath)} — skipping sales certification data")
+        return {}
+    date_col = _find_col(header, 'completion date')
+    result = {}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        email = str(row[email_col] or '').strip().lower()
+        if not email:
+            continue
+        d = _date(row[date_col]) if date_col is not None else None
+        result[email] = {'certified': True, 'date': d or ''}
+    return result
+
+
+def load_sales_deals():
+    """Layered Security OPS FY26 opportunity export — Closed Won deals of $5,000+ count toward
+    the sales-proof piece of certification. Returns email(lower) -> {'closedWon': int,
+    'amount': float, 'accountName': str, 'closeDate': str}."""
+    files = sorted(glob.glob(DEALS_FILE_GLOB))
+    if not files:
+        return {}
+    fpath = files[-1]
+    wb = openpyxl.load_workbook(fpath, data_only=True)
+    ws = wb.active
+    header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    email_col = _find_col(header, 'email')
+    stage_col = _find_col(header, 'stage')
+    if email_col is None or stage_col is None:
+        print(f"WARNING: missing Email or Stage column in {os.path.basename(fpath)} — skipping Closed Won deal data")
+        return {}
+    amount_col = _find_col(header, 'amount')
+    acct_col   = _find_col(header, 'account name')
+    close_col  = _find_col(header, 'close date')
+    if amount_col is None:
+        print(f"WARNING: no Amount column found in {os.path.basename(fpath)} — Closed Won $ will stay empty until one appears")
+    result = {}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        email = str(row[email_col] or '').strip().lower()
+        stage = str(row[stage_col] or '').strip().lower()
+        if not email:
+            continue
+        if email not in result:
+            result[email] = {'closedWon': 0, 'amount': 0, 'accountName': '', 'closeDate': ''}
+        if stage != 'closed won':
+            continue
+        amt = 0
+        if amount_col is not None and row[amount_col] is not None:
+            try:
+                amt = float(re.sub(r'[^0-9.\-]', '', str(row[amount_col])))
+            except ValueError:
+                amt = 0
+        if amt < DEAL_MIN_AMOUNT:
+            continue
+        result[email]['closedWon'] += 1
+        result[email]['amount']    += amt
+        if acct_col is not None and row[acct_col]:
+            result[email]['accountName'] = str(row[acct_col])
+        if close_col is not None and row[close_col]:
+            result[email]['closeDate'] = _date(row[close_col]) or str(row[close_col])
+    return result
+
+
 def load_ls_data():
     files = sorted(glob.glob('cert-data/Layered-Security-Curricula-Report-*.xlsx'))
     if not files:
@@ -155,15 +245,12 @@ def load_ls_data():
         mgr_title = str(meta[COL_MGR_TITLE] or '').strip()
         hire_date  = _date(meta[COL_HIRE_DATE])
         assign_dt  = _date(meta[COL_ASSIGN_DT])
-        complete   = str(meta[COL_CURRIC_CMP] or '').strip()
         days_rem   = meta[COL_DAYS_REM]
         if days_rem is not None:
             try:
                 days_rem = int(days_rem)
             except (ValueError, TypeError):
                 days_rem = None
-        if complete == 'Yes':
-            days_rem = None
 
         # Build items dict keyed by item ID
         item_map = {}
@@ -191,6 +278,15 @@ def load_ls_data():
         done_count = sum(1 for it in items if it['done'])
         total      = len(items)
         pct        = round(done_count / total * 100) if total else 0
+
+        # Complete is derived from actual module progress, not the LMS's own
+        # "Curriculum Complete" flag — that flag goes stale when a module is added
+        # to the curriculum after someone was already marked complete under the
+        # old requirement (e.g. stuck at 11/12 but still flagged "Yes" from when
+        # the curriculum only had 11 modules).
+        complete = 'Yes' if total and done_count >= total else 'No'
+        if complete == 'Yes':
+            days_rem = None
 
         # CompleteDate: max done item date when Complete=Yes
         complete_date = ''
@@ -232,17 +328,17 @@ def load_ls_data():
     return people, date_label
 
 
-def generate_html(people, date_label):
-    people_json = json.dumps(people, separators=(',', ':'))
-    n = len(people)
-    complete_n = sum(1 for p in people if p['Complete'] == 'Yes')
+def generate_html(people, date_label, sales_cert, sales_deals):
+    people_json      = json.dumps(people, separators=(',', ':'))
+    sales_cert_json  = json.dumps(sales_cert, separators=(',', ':'))
+    sales_deals_json = json.dumps(sales_deals, separators=(',', ':'))
 
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Layered Security Curriculum Dashboard</title>
+<title>Layered Security Certification - Direct Sales</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -339,42 +435,38 @@ def generate_html(people, date_label):
   .section-hint{{font-size:11px;color:var(--muted);margin-top:3px;}}
   .roster-search{{width:200px;}}
   .roster-wrap{{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;}}
-  .roster-left{{width:300px;flex-shrink:0;overflow-y:auto;max-height:820px;border-right:1px solid var(--border);}}
+  .roster-left{{flex:1.6;min-width:0;overflow:auto;max-height:820px;border-right:1px solid var(--border);}}
   .roster-right{{flex:1;overflow-y:auto;max-height:820px;padding:16px 20px;}}
   .roster-right-header{{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}}
   .no-data{{text-align:center;color:var(--muted);padding:40px;font-size:13px;}}
-  @media(max-width:680px){{.roster-wrap{{flex-direction:column;}}.roster-left{{width:100%;max-height:220px;border-right:none;border-bottom:1px solid var(--border);}}}}
+  @media(max-width:900px){{.roster-wrap{{flex-direction:column;}}.roster-left{{border-right:none;border-bottom:1px solid var(--border);max-height:420px;}}}}
 
-  /* Person cards */
-  .roster-person{{display:flex;flex-direction:column;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;border-left:3px solid transparent;}}
-  .roster-person:last-child{{border-bottom:none;}}
-  .roster-person:hover{{background:var(--surface2);}}
-  .roster-person.active{{background:#4f8ef711;}}
-  .roster-person.stripe-green{{border-left-color:var(--green);}}
-  .roster-person.stripe-yellow{{border-left-color:#f59e0b;}}
-  .roster-person.stripe-red{{border-left-color:var(--red);}}
-  .roster-top{{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}}
-  .roster-name-block{{flex:1;min-width:0;}}
-  .roster-name{{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-  .roster-title{{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-  .roster-bottom{{display:flex;justify-content:space-between;align-items:center;margin-top:7px;}}
-  .roster-pills{{display:flex;gap:5px;flex-wrap:wrap;}}
   .pill{{font-size:8px;font-weight:700;border-radius:10px;padding:2px 7px;white-space:nowrap;letter-spacing:.03em;}}
   .pill.green{{color:var(--green);background:var(--green-subtle);border:1px solid var(--green)44;}}
   .pill.yellow{{color:#b45309;background:#fef3c7;border:1px solid #f59e0b44;}}
   .pill.red{{color:var(--red);background:var(--red-subtle);border:1px solid var(--red)44;}}
   .pill.gold{{color:#b45309;background:#fef3c722;border:1px solid var(--accent3)66;}}
-  .roster-pct{{font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;margin-left:8px;}}
+
+  /* Progress Report table */
+  .progress-table{{width:100%;border-collapse:collapse;font-size:13px;}}
+  .progress-table thead th{{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--muted);font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border);
+    background:var(--surface2);white-space:nowrap;
+  }}
+  .progress-table tbody td{{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}}
+  .progress-table tbody tr.progress-row{{cursor:pointer;transition:background .1s;}}
+  .progress-table tbody tr.progress-row:hover{{background:var(--surface2);}}
+  .progress-table tbody tr.progress-row.active{{background:var(--accent)11;}}
+  .progress-table .p-name{{font-weight:600;}}
+  .progress-table .p-sub{{display:block;font-size:11px;color:var(--muted);margin-top:1px;font-weight:400;}}
+  .mgr-group-row td{{background:var(--surface2);font-size:11.5px;font-weight:600;color:var(--text);padding:8px 12px;border-bottom:1px solid var(--border);}}
+  .mgr-group-row .mgr-sub{{font-weight:400;color:var(--muted);margin-left:8px;font-size:11px;}}
+  .deals-cell{{font-family:inherit;color:var(--accent2);font-weight:600;}}
+  .deals-cell.empty{{color:var(--muted);font-weight:400;}}
+  .roster-pct{{font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;}}
   .roster-pct.pct-progress{{color:#f59e0b;}}
   .roster-pct.pct-done{{color:var(--green);}}
-
-  /* Manager group view */
-  .mgr-group-hdr{{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--surface2);border-bottom:1px solid var(--border);user-select:none;}}
-  .mgr-group-hdr:hover{{background:var(--border);}}
-  .mgr-group-hdr.open .mgr-chevron{{transform:rotate(180deg);}}
-  .mgr-chevron{{transition:transform .15s;font-size:10px;color:var(--muted);flex-shrink:0;}}
-  .mgr-team{{display:none;}}
-  .mgr-team.open{{display:block;}}
 
   /* Roster key */
   .roster-key{{display:flex;gap:16px;align-items:center;padding:6px 12px;background:var(--surface2);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--muted);}}
@@ -442,7 +534,7 @@ def generate_html(people, date_label):
 <!-- ── Header ── -->
 <div class="header">
   <div>
-    <h1 id="dash-title" title="Triple-click to return to the Analytics Hub">Layered Security <span>Curriculum Dashboard &mdash; Direct Sales</span></h1>
+    <h1 id="dash-title" title="Triple-click to return to the Analytics Hub">Layered Security <span>Certification &mdash; Direct Sales</span></h1>
     <div class="header-date">Data through {date_label}</div>
   </div>
   <div class="header-center">
@@ -450,9 +542,6 @@ def generate_html(people, date_label):
     <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light print-hide" alt="KM Academy">
   </div>
   <div class="header-right print-hide">
-    <input type="file" id="cert-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleCertFileImport(event)">
-    <button class="btn-theme" id="btn-import-cert" onclick="sel('cert-file-input').click()">&#128196; Import Sales Certification</button>
-    <span class="info-btn" onclick="showInfo(event,'import-cert')">?</span>
     <div class="export-drop" id="export-drop">
       <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
       <div class="export-menu" id="export-menu">
@@ -464,7 +553,7 @@ def generate_html(people, date_label):
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
   </div>
 </div>
-<div class="curriculum-note print-hide">This dashboard tracks <b>curriculum completion</b> only. Full certification also requires $5,000 in qualifying sales, tracked in an external system not reflected here. Use <b>Import Sales Certification</b> above to load that file once it&rsquo;s available &mdash; until then, the Certified stat shows &ldquo;&mdash;&rdquo;.</div>
+<div class="curriculum-note print-hide">Earning the Certified Layered Security Specialist designation requires all four criteria: completing the full training curriculum shown below, engaging your SSE on a co-development opportunity tagged <b>"OPS FY26 Layered Security Certification"</b> in Salesforce, closing a real deal of <b>$5,000 or more</b>, and participating in a case study. This dashboard tracks curriculum completion and Closed Won sales progress toward those requirements &mdash; certification itself is confirmed separately once all four are met.</div>
 
 <!-- ── Filters ── -->
 <div class="filters">
@@ -491,11 +580,6 @@ def generate_html(people, date_label):
     <div class="stat-label">Curriculum Complete <span class="info-btn" onclick="showInfo(event,'complete')">?</span></div>
     <div class="stat-value green" id="s-complete">&#8212;</div>
   </div>
-  <div class="stat" id="stat-sales-cert">
-    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'sales-certified')">?</span></div>
-    <div class="stat-value" style="color:var(--accent2)" id="s-salescert">&#8212;</div>
-    <div class="stat-sub" id="s-salescert-sub">No sales file imported yet</div>
-  </div>
   <div class="stat">
     <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
     <div class="stat-value blue" id="s-inprog">&#8212;</div>
@@ -508,6 +592,11 @@ def generate_html(people, date_label):
     <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
     <div class="stat-value teal" id="s-rate">&#8212;</div>
     <div class="stat-sub" id="s-rate-sub"></div>
+  </div>
+  <div class="stat" id="stat-sales-cert">
+    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'sales-certified')">?</span></div>
+    <div class="stat-value" style="color:var(--accent2)" id="s-salescert">&#8212;</div>
+    <div class="stat-sub" id="s-salescert-sub"></div>
   </div>
 </div>
 
@@ -527,8 +616,8 @@ def generate_html(people, date_label):
 <div class="section">
   <div class="section-header">
     <div>
-      <div class="section-title">Curriculum Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
-      <div class="section-hint">Click a person to see their course-level progress</div>
+      <div class="section-title">Progress Report <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
+      <div class="section-hint">Click any row to see full detail &mdash; course checklist &amp; closed won activity</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
       <span style="font-size:11px;color:var(--muted);margin-right:2px;">View:</span>
@@ -575,7 +664,9 @@ def generate_html(people, date_label):
 </div>
 
 <script>
-const PEOPLE = {people_json};
+const PEOPLE      = {people_json};
+const SALES_CERT  = {sales_cert_json};
+const SALES_DEALS = {sales_deals_json};
 </script>
 <script>
 let filtered = [];
@@ -585,14 +676,7 @@ let selectedEmail = null;
 let rosterView = "individual";
 let pipelineChart, marketChart;
 
-// ── Sales Certification (external file, imported client-side) ──
-let SALES_CERT = {{}};
-(function loadSalesCert(){{
-  try {{
-    var raw = localStorage.getItem("ls-sales-cert");
-    if(raw) SALES_CERT = JSON.parse(raw) || {{}};
-  }} catch(e){{ SALES_CERT = {{}}; }}
-}})();
+// ── Sales Certification (baked in from the Certification Report at build time) ──
 function isSalesCertified(email){{
   var rec = SALES_CERT[(email || "").toLowerCase()];
   return !!(rec && rec.certified);
@@ -601,8 +685,26 @@ function salesCertDate(email){{
   var rec = SALES_CERT[(email || "").toLowerCase()];
   return rec && rec.date ? rec.date : "";
 }}
-function hasSalesCertData(){{
-  return Object.keys(SALES_CERT).length > 0;
+
+// ── Closed Won deals (baked in from the OPS FY26 opportunity export at build time) ──
+function closedWonCount(email){{
+  var rec = SALES_DEALS[(email || "").toLowerCase()];
+  return rec && typeof rec.closedWon === "number" ? rec.closedWon : 0;
+}}
+function closedWonAmount(email){{
+  var rec = SALES_DEALS[(email || "").toLowerCase()];
+  return rec && typeof rec.amount === "number" ? rec.amount : 0;
+}}
+function closedWonAccount(email){{
+  var rec = SALES_DEALS[(email || "").toLowerCase()];
+  return rec && rec.accountName ? rec.accountName : "";
+}}
+function closedWonCloseDate(email){{
+  var rec = SALES_DEALS[(email || "").toLowerCase()];
+  return rec && rec.closeDate ? rec.closeDate : "";
+}}
+function fmtMoney(n){{
+  return "$" + (n || 0).toLocaleString(undefined, {{maximumFractionDigits: 0}});
 }}
 
 function sel(id) {{ return document.getElementById(id); }}
@@ -643,49 +745,6 @@ document.addEventListener("click", function(e){{
   if(d && !d.contains(e.target)) sel("export-menu").classList.remove("open");
 }});
 
-// ── Import Sales Certification file ──
-function handleCertFileImport(event){{
-  var file = event.target.files && event.target.files[0];
-  if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){{
-    try {{
-      var data = new Uint8Array(e.target.result);
-      var wb = XLSX.read(data, {{ type: "array" }});
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      var rows = XLSX.utils.sheet_to_json(ws, {{ defval: "" }});
-      var newMap = {{}};
-      var count = 0;
-      rows.forEach(function(row){{
-        var keys = Object.keys(row);
-        var emailKey = keys.find(function(k){{ return k.toLowerCase().indexOf("email") !== -1; }});
-        if(!emailKey) return;
-        var email = String(row[emailKey] || "").trim().toLowerCase();
-        if(!email) return;
-        var certKey = keys.find(function(k){{ return k.toLowerCase().indexOf("certif") !== -1; }});
-        var dateKey = keys.find(function(k){{ return k.toLowerCase().indexOf("date") !== -1; }});
-        var certified = true;
-        if(certKey){{
-          var v = String(row[certKey]).trim().toLowerCase();
-          certified = (v === "yes" || v === "true" || v === "1" || v === "y");
-        }}
-        var dateVal = dateKey ? String(row[dateKey] || "") : "";
-        newMap[email] = {{ certified: certified, date: dateVal }};
-        if(certified) count++;
-      }});
-      SALES_CERT = newMap;
-      localStorage.setItem("ls-sales-cert", JSON.stringify(SALES_CERT));
-      alert("Imported " + Object.keys(newMap).length + " records — " + count + " marked certified.");
-      applyFilters();
-      if(selectedEmail) showDetail(selectedEmail);
-    }} catch(err){{
-      alert("Couldn't read that file. Make sure it's a .csv or .xlsx with an Email column.");
-    }}
-    event.target.value = "";
-  }};
-  reader.readAsArrayBuffer(file);
-}}
-
 // ── Info tooltip ──
 var INFO_MSGS = {{
   "total-enrolled":  "The total number of people currently assigned to the Layered Security curriculum (Direct Sales). Use the Status and Market filters above to narrow this to a specific group.",
@@ -693,12 +752,11 @@ var INFO_MSGS = {{
   "in-progress":     "People who have started the curriculum and completed at least one module, but haven't finished everything yet.",
   "not-started":     "People who are assigned to the curriculum but haven't completed any modules yet.",
   "past-due":        "People who have not finished the curriculum and have passed their required completion date (negative days remaining in the LMS export).",
-  "sales-certified": "People confirmed as fully certified by the external sales system — curriculum completion plus $5,000 in qualifying sales. This stays empty until a sales certification file is imported with the button above.",
-  "import-cert":     "Upload a .csv or .xlsx file with an Email column (and optionally a Certified column and a date column) to mark people as certified. Anyone not in the file is treated as not yet certified. The import is saved in this browser so it persists on reload — re-import any time the sales data updates.",
+  "sales-certified": "People confirmed as certified in the Sales Certification report — curriculum completion plus the $5,000 sale, SSE engagement, and case study confirmed externally. Anyone not listed there is treated as not yet certified.",
   "completion-rate": "The percentage of assigned people who have finished all 12 curriculum modules so far. Updates when you apply filters.",
-  "pipeline-chart":  "A quick snapshot of where everyone stands: how many haven't started yet, how many are actively working through the modules, and how many have finished all 11.",
+  "pipeline-chart":  "A quick snapshot of where everyone stands: how many haven't started yet, how many are actively working through the modules, and how many have finished all 12.",
   "market-chart":    "Curriculum progress broken down by sales market. Each bar shows how many people in that market are Complete, In Progress, or Not Started. Hover for exact counts. Updates when you apply filters.",
-  "roster":          "The full list of people in the curriculum. Each card shows name, job title, module progress, overall completion %, and current status. Click any card to see a full course-by-course breakdown in the panel on the right.",
+  "roster":          "The full list of people in the curriculum. Each row shows their manager, Layered Security status, overall completion %, and Closed Won total. Click any row to see a full course-by-course breakdown, plus certification and deal detail, in the panel on the right.",
   "export":          "Download a report based on whoever is currently shown. Apply filters first to scope the report. Full Report includes everyone with all module progress columns. Not Complete is a contact list for follow-up, sorted by manager. Manager Summary shows each manager's team size and completion counts."
 }};
 function showInfo(e, key){{
@@ -714,24 +772,28 @@ function showInfo(e, key){{
 // ── JS helpers ──
 function escHtml(s){{ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }}
 function personStatus(p){{
-  if(p.Complete === "Yes") return "Complete";
-  if(p.overallPct > 0)      return "In Progress";
+  // Derive completion from actual module progress rather than the LMS's
+  // Complete flag: that flag can go stale when a module is added to the
+  // curriculum after someone was already marked complete under the old
+  // requirement, leaving them flagged "Yes" despite not finishing all
+  // current modules (e.g. 11/12 instead of 12/12).
+  if(p.ls && typeof p.ls.done === "number" && typeof p.ls.total === "number" && p.ls.total > 0){{
+    if(p.ls.done >= p.ls.total) return "Complete";
+    if(p.ls.done > 0) return "In Progress";
+    return "Not Started";
+  }}
+  if(p.overallPct >= 100) return "Complete";
+  if(p.overallPct > 0)     return "In Progress";
   return "Not Started";
 }}
 function isPastDue(p){{
-  return p.Complete !== "Yes" && typeof p.DaysRemaining === "number" && p.DaysRemaining < 0;
+  return personStatus(p) !== "Complete" && typeof p.DaysRemaining === "number" && p.DaysRemaining < 0;
 }}
 function fmtDate(d){{
   if(!d) return "-";
   var pts = d.split("-"), months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return months[parseInt(pts[1]) - 1] + " " + parseInt(pts[2]) + ", " + pts[0];
 }}
-function pillClass(pct, total){{
-  if(pct === 100 || (total > 0 && pct >= 100)) return "green";
-  if(pct > 0) return "yellow";
-  return "red";
-}}
-
 // ── Populate market dropdown ──
 (function(){{
   var markets = [...new Set(PEOPLE.map(function(p){{ return p.Market; }}).filter(Boolean))].sort();
@@ -756,10 +818,6 @@ function setRosterView(v){{
   selectedEmail = null;
   sel("roster-right").innerHTML = '<div class="no-data">Select a person to view details</div>';
   renderRoster();
-}}
-function toggleMgrGroup(el){{
-  el.classList.toggle("open");
-  el.nextElementSibling.classList.toggle("open");
 }}
 
 // ── Sort ──
@@ -799,9 +857,9 @@ function applyFilters(){{
 // ── renderStats ──
 function renderStats(){{
   var total   = filtered.length;
-  var cert    = filtered.filter(function(p){{ return p.Complete === "Yes"; }}).length;
-  var inprog  = filtered.filter(function(p){{ return p.overallPct > 0 && p.Complete !== "Yes"; }}).length;
-  var nostart = filtered.filter(function(p){{ return p.overallPct === 0 && p.Complete !== "Yes"; }}).length;
+  var cert    = filtered.filter(function(p){{ return personStatus(p) === "Complete"; }}).length;
+  var inprog  = filtered.filter(function(p){{ return personStatus(p) === "In Progress"; }}).length;
+  var nostart = filtered.filter(function(p){{ return personStatus(p) === "Not Started"; }}).length;
   var rate    = total > 0 ? Math.round(cert / total * 100) : 0;
   sel("s-total").textContent      = total;
   sel("s-complete").textContent   = cert;
@@ -809,14 +867,9 @@ function renderStats(){{
   sel("s-notstarted").textContent = nostart;
   sel("s-rate").textContent       = rate + "%";
   sel("s-rate-sub").textContent   = total > 0 ? (cert + " of " + total + " enrolled") : "";
-  if(hasSalesCertData()){{
-    var salesCert = filtered.filter(function(p){{ return isSalesCertified(p.Email); }}).length;
-    sel("s-salescert").textContent     = salesCert;
-    sel("s-salescert-sub").textContent = total > 0 ? (salesCert + " of " + total + " confirmed") : "";
-  }} else {{
-    sel("s-salescert").textContent     = "—";
-    sel("s-salescert-sub").textContent = "No sales file imported yet";
-  }}
+  var salesCert = filtered.filter(function(p){{ return isSalesCertified(p.Email); }}).length;
+  sel("s-salescert").textContent     = salesCert;
+  sel("s-salescert-sub").textContent = total > 0 ? (salesCert + " of " + total + " confirmed") : "";
 }}
 
 // ── renderCharts ──
@@ -902,39 +955,35 @@ function renderCharts(){{
   }});
 }}
 
-// ── buildPersonCard ──
-function buildPersonCard(p){{
-  var fullName       = p.FirstName + " " + p.LastName;
-  var status         = personStatus(p);
-  var stripe         = status === "Complete" ? " stripe-green" : status === "In Progress" ? " stripe-yellow" : " stripe-red";
-  var lsClass        = pillClass(p.ls.pct,  p.ls.total);
-  var pctClass       = status === "Complete" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
-  var badgeStatusCls = status === "Complete" ? "complete" : status === "In Progress" ? "in-progress" : "not-complete";
-  var badgeStatusTxt = status === "Complete" ? "&#10003; Complete" : status === "In Progress" ? "In Progress" : "Not Started";
-  var overdueTag     = isPastDue(p) ? '<span class="pill red">PAST DUE</span>' : "";
-  var certTag        = isSalesCertified(p.Email) ? '<span class="pill gold">Certified Layered Security Specialist</span>' : "";
-  var h = '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
-  h += '<div class="roster-top">';
-  h += '<div class="roster-name-block">';
-  h += '<div class="roster-name">' + escHtml(fullName) + "</div>";
-  h += '<div class="roster-title">' + escHtml(p.JobTitle || "") + "</div>";
-  h += "</div>";
-  h += '<span class="badge-status ' + badgeStatusCls + '">' + badgeStatusTxt + "</span>";
-  h += "</div>";
-  h += '<div class="roster-bottom">';
-  h += '<div class="roster-pills">';
-  h += '<span class="pill ' + lsClass + '">Layered Sec ' + p.ls.done + "/" + p.ls.total + "</span>";
-  h += overdueTag;
-  h += certTag;
-  h += "</div>";
-  h += '<span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span>";
-  h += "</div></div>";
+// ── buildPersonRow ──
+function buildPersonRow(p){{
+  var fullName  = p.FirstName + " " + p.LastName;
+  var status    = personStatus(p);
+  var pctClass  = status === "Complete" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
+  var badgeCls  = status === "Complete" ? "complete" : status === "In Progress" ? "in-progress" : "not-complete";
+  var badgeTxt  = status === "Complete" ? "&#10003; Complete" : status === "In Progress" ? "In Progress" : "Not Started";
+  var overdueTag = isPastDue(p) ? '<span class="pill red" style="margin-left:6px;">PAST DUE</span>' : "";
+  var certTag   = isSalesCertified(p.Email) ? '<span class="pill gold" style="margin-top:4px;display:inline-block;">Certified Layered Security Specialist</span>' : "";
+  var amt       = closedWonAmount(p.Email);
+  var dealsHtml = amt > 0
+    ? '<span class="deals-cell">' + fmtMoney(amt) + "</span>" + (closedWonCount(p.Email) > 1 ? ' <span style="font-size:10px;color:var(--muted)">(' + closedWonCount(p.Email) + ")</span>" : "")
+    : '<span class="deals-cell empty">&mdash;</span>';
+  var h = '<tr class="progress-row" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
+  h += '<td><span class="p-name">' + escHtml(fullName) + overdueTag + '</span><span class="p-sub">' + escHtml(p.JobTitle || "") + "</span>" + certTag + "</td>";
+  h += "<td>" + escHtml(p.Manager || "-") + "</td>";
+  h += '<td><span class="badge-status ' + badgeCls + '">' + badgeTxt + "</span></td>";
+  h += '<td><span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span></td>";
+  h += "<td>" + dealsHtml + "</td>";
+  h += "</tr>";
   return h;
 }}
 
 // ── renderRoster ──
 function renderRoster(){{
-  var html = "";
+  var html = '<table class="progress-table"><thead><tr>' +
+    "<th>Learner</th><th>Manager</th><th>Layered Security</th><th>Overall %</th><th>Closed Won</th>" +
+    "</tr></thead><tbody>";
+
   if(rosterView === "manager"){{
     var groups = {{}};
     filtered.forEach(function(p){{
@@ -945,20 +994,12 @@ function renderRoster(){{
     var mgrsSorted = Object.keys(groups).sort();
     mgrsSorted.forEach(function(mgr){{
       var team = groups[mgr];
-      var certCount = team.filter(function(p){{ return p.Complete === "Yes"; }}).length;
-      var teamCards = team.slice()
+      var certCount = team.filter(function(p){{ return personStatus(p) === "Complete"; }}).length;
+      html += '<tr class="mgr-group-row"><td colspan="5">' + escHtml(mgr) +
+        '<span class="mgr-sub">' + team.length + " rep" + (team.length !== 1 ? "s" : "") + " &middot; " + certCount + " complete</span></td></tr>";
+      team.slice()
         .sort(function(a, b){{ return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName); }})
-        .map(buildPersonCard).join("");
-      html += "<div>";
-      html += '<div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">';
-      html += "<div>";
-      html += '<div style="font-size:12px;font-weight:600;color:var(--text)">' + escHtml(mgr) + "</div>";
-      html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + team.length + " rep" + (team.length !== 1 ? "s" : "") + " &middot; " + certCount + " complete</div>";
-      html += "</div>";
-      html += '<span class="mgr-chevron">&#9660;</span>';
-      html += "</div>";
-      html += '<div class="mgr-team open">' + teamCards + "</div>";
-      html += "</div>";
+        .forEach(function(p){{ html += buildPersonRow(p); }});
     }});
   }} else {{
     var d = sortDir === "desc" ? -1 : 1;
@@ -976,9 +1017,11 @@ function renderRoster(){{
         return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
       }}
     }});
-    sorted.forEach(function(p){{ html += buildPersonCard(p); }});
+    sorted.forEach(function(p){{ html += buildPersonRow(p); }});
   }}
-  if(!html) html = '<div class="no-data">No people match the selected filters.</div>';
+
+  html += "</tbody></table>";
+  if(filtered.length === 0) html = '<div class="no-data">No people match the selected filters.</div>';
   sel("roster-left").innerHTML = html;
   if(selectedEmail){{
     var el = sel("roster-left").querySelector('[data-email="' + selectedEmail + '"]');
@@ -992,7 +1035,7 @@ function showDetail(email){{
   selectedEmail = email;
   var p = PEOPLE.find(function(r){{ return r.Email === email; }});
   if(!p) return;
-  document.querySelectorAll(".roster-person").forEach(function(el){{
+  document.querySelectorAll(".progress-row").forEach(function(el){{
     el.classList.toggle("active", el.dataset.email === email);
   }});
   var status     = personStatus(p);
@@ -1040,10 +1083,8 @@ function showDetail(email){{
   if(isPastDue(p)) detailHtml += ' <span class="badge-status not-complete" style="margin-left:6px">Past Due</span>';
   if(isSalesCertified(p.Email)){{
     detailHtml += ' <span class="badge-status" style="margin-left:6px;background:#fef3c722;color:#b45309;border:1px solid var(--accent3)66">&#9733; Certified' + (salesCertDate(p.Email) ? " &middot; " + salesCertDate(p.Email) : "") + '</span>';
-  }} else if(hasSalesCertData()){{
-    detailHtml += ' <span class="badge-status not-complete" style="margin-left:6px">Not Yet Certified</span>';
   }} else {{
-    detailHtml += ' <span class="badge-status" style="margin-left:6px;background:var(--surface2);color:var(--muted)">Certification: Pending Import</span>';
+    detailHtml += ' <span class="badge-status not-complete" style="margin-left:6px">Not Certified</span>';
   }}
   detailHtml += "</div>";
   detailHtml += '<div class="detail-grid">';
@@ -1052,6 +1093,13 @@ function showDetail(email){{
   detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + "</div></div>";
   detailHtml += '<div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:' + escHtml(p.Email) + '" style="color:var(--accent);text-decoration:none">' + escHtml(p.Email || "-") + "</a></div></div>";
   detailHtml += '<div><div class="detail-label">Assigned</div><div class="detail-value">' + fmtDate(p.AssignDate) + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Closed Won</div><div class="detail-value" style="color:var(--accent2)">' +
+    (closedWonAmount(p.Email) > 0
+      ? fmtMoney(closedWonAmount(p.Email)) + (closedWonCount(p.Email) > 1 ? " across " + closedWonCount(p.Email) + " deals" : (closedWonAccount(p.Email) ? " &middot; " + escHtml(closedWonAccount(p.Email)) : ""))
+      : "&mdash;") + "</div></div>";
+  if(closedWonCloseDate(p.Email)){{
+    detailHtml += '<div><div class="detail-label">Close Date</div><div class="detail-value">' + escHtml(closedWonCloseDate(p.Email)) + "</div></div>";
+  }}
   if(p.Manager){{
     detailHtml += '<div><div class="detail-label">Manager</div><div class="detail-value">' + escHtml(p.Manager) + "</div></div>";
     detailHtml += '<div><div class="detail-label">Manager Email</div><div class="detail-value"><a href="mailto:' + escHtml(p.MgrEmail) + '" style="color:var(--accent);text-decoration:none">' + escHtml(p.MgrEmail || "-") + "</a></div></div>";
@@ -1094,20 +1142,20 @@ function runExport(type){{
   if(type === "full"){{
     setupPrintHeader("Layered Security Curriculum Completion Report — Direct Sales", "Generated: " + now + "  |  " + filtered.length + " People");
     var total  = filtered.length;
-    var cert   = filtered.filter(function(p){{ return p.Complete === "Yes"; }}).length;
-    var inprog = filtered.filter(function(p){{ return p.overallPct > 0 && p.Complete !== "Yes"; }}).length;
+    var cert   = filtered.filter(function(p){{ return personStatus(p) === "Complete"; }}).length;
+    var inprog = filtered.filter(function(p){{ return personStatus(p) === "In Progress"; }}).length;
     var rate   = total > 0 ? Math.round(cert / total * 100) : 0;
     sel("print-stats").innerHTML = pBox(total,"Total Enrolled") + pBox(cert,"Complete") + pBox(inprog,"In Progress") + pBox(rate+"%","Completion Rate");
-    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Status","Layered Security %","Completion Date","Manager"]);
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Status","Layered Security %","Completion Date","Closed Won","Manager"]);
     sel("print-roster-body").innerHTML = filtered.map(function(p,i){{
       return tds([i+1,"<b>"+escHtml(p.FirstName+" "+p.LastName)+"</b>",escHtml(p.Market||"-"),escHtml(p.JobTitle||"-"),
-        personStatus(p), p.ls.pct+"%", p.CompleteDate?fmtDate(p.CompleteDate):"-", escHtml(p.Manager||"-")]);
+        personStatus(p), p.ls.pct+"%", p.CompleteDate?fmtDate(p.CompleteDate):"-", closedWonAmount(p.Email) > 0 ? fmtMoney(closedWonAmount(p.Email)) : "-", escHtml(p.Manager||"-")]);
     }}).join("");
     sel("ph-desc").style.display = "none";
     document.body.classList.remove("print-no-summary");
     window.print();
   }} else if(type === "not-complete"){{
-    var notCert = filtered.filter(function(p){{ return p.Complete !== "Yes"; }});
+    var notCert = filtered.filter(function(p){{ return personStatus(p) !== "Complete"; }});
     setupPrintHeader("Not Complete: Layered Security", "Generated: " + now + "  |  " + notCert.length + " Employees");
     sel("print-stats").innerHTML = "";
     sel("print-roster-head").innerHTML = thRow(["#","Name","Email","Market","Layered Security %","Manager","Manager Email"]);
@@ -1126,7 +1174,7 @@ function runExport(type){{
       var k = p.Manager || "(No Manager)";
       if(!mgrMap[k]) mgrMap[k] = {{ name:k, email:p.MgrEmail||"-", total:0, cert:0, sumPct:0 }};
       mgrMap[k].total++;
-      if(p.Complete === "Yes") mgrMap[k].cert++;
+      if(personStatus(p) === "Complete") mgrMap[k].cert++;
       mgrMap[k].sumPct += p.overallPct;
     }});
     var mgrs = Object.values(mgrMap).map(function(m){{ m.avgPct = m.total > 0 ? Math.round(m.sumPct / m.total) : 0; return m; }})
@@ -1156,10 +1204,10 @@ function runExportXLSX(type){{
   var wb=XLSX.utils.book_new();
   if(type==="full"){{
     var total=filtered.length;
-    var cert=filtered.filter(function(p){{ return p.Complete==="Yes"; }}).length;
+    var cert=filtered.filter(function(p){{ return personStatus(p)==="Complete"; }}).length;
     var rate=total>0?Math.round(cert/total*100):0;
-    var inprogXL  = filtered.filter(function(p){{ return p.overallPct > 0 && p.Complete !== "Yes"; }}).length;
-    var nostartXL = filtered.filter(function(p){{ return p.overallPct === 0 && p.Complete !== "Yes"; }}).length;
+    var inprogXL  = filtered.filter(function(p){{ return personStatus(p) === "In Progress"; }}).length;
+    var nostartXL = filtered.filter(function(p){{ return personStatus(p) === "Not Started"; }}).length;
     var sumRows=[
       ["Layered Security Curriculum Completion Report — Direct Sales"],
       ["Generated:",now],
@@ -1172,14 +1220,14 @@ function runExportXLSX(type){{
       ["Completion Rate",rate+"%"],
     ];
     XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),"Summary");
-    var rRows=[["Name","Market","Job Title","Status","Layered Security %","Overall %","Cert Date","Manager"]];
+    var rRows=[["Name","Market","Job Title","Status","Layered Security %","Overall %","Cert Date","Closed Won $","Manager"]];
     filtered.forEach(function(p){{
-      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",personStatus(p),p.ls.pct+"%",p.overallPct+"%",p.CompleteDate||"-",p.Manager||"-"]);
+      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",personStatus(p),p.ls.pct+"%",p.overallPct+"%",p.CompleteDate||"-",closedWonAmount(p.Email),p.Manager||"-"]);
     }});
-    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,16,12,14,28]),"Roster");
+    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,16,12,14,12,28]),"Roster");
     dlXLSX("ls-full-report",wb);
   }} else if(type==="not-complete"){{
-    var notCert=filtered.filter(function(p){{ return p.Complete!=="Yes"; }}).slice().sort(function(a,b){{
+    var notCert=filtered.filter(function(p){{ return personStatus(p)!=="Complete"; }}).slice().sort(function(a,b){{
       return (a.Manager||"").localeCompare(b.Manager||"")||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     }});
     var rows=[["Name","Email","Market","Layered Security %","Manager","Manager Email"]];
@@ -1194,7 +1242,7 @@ function runExportXLSX(type){{
       var k=p.Manager||"(No Manager)";
       if(!mgrMap[k]) mgrMap[k]={{name:k,email:p.MgrEmail||"-",total:0,cert:0,sumPct:0}};
       mgrMap[k].total++;
-      if(p.Complete==="Yes") mgrMap[k].cert++;
+      if(personStatus(p)==="Complete") mgrMap[k].cert++;
       mgrMap[k].sumPct+=p.overallPct;
     }});
     var rows=[["Manager","Manager Email","Team Size","Complete","Avg Overall %"]];
@@ -1208,8 +1256,8 @@ function runExportXLSX(type){{
 
 // ── init ──
 applyFilters();
-var firstCard = sel("roster-left").querySelector(".roster-person");
-if(firstCard) showDetail(firstCard.dataset.email);
+var firstRow = sel("roster-left").querySelector(".progress-row");
+if(firstRow) showDetail(firstRow.dataset.email);
 </script>
 </body>
 </html>"""
@@ -1219,7 +1267,9 @@ def main():
     people, date_label = load_ls_data()
     if not people:
         return
-    html = generate_html(people, date_label)
+    sales_cert  = load_sales_cert()
+    sales_deals = load_sales_deals()
+    html = generate_html(people, date_label, sales_cert, sales_deals)
     with open('cert-layered-security.html', 'w', encoding='utf-8') as f:
         f.write(html)
     complete_n = sum(1 for p in people if p['Complete'] == 'Yes')

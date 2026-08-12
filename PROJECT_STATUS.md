@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 ---
 
@@ -12,9 +12,87 @@ Last updated: 2026-08-11
 | Playbook Traffic | `playbook.html` | June 29, 2026 | |
 | Healthcare Certification | `cert-healthcare.html` | August 10, 2026 | 65 people, 6 certified, 59 in progress |
 | Public Sector Certification | `cert-publicsector.html` | July 31, 2026 | 118 active people, 74 completed (63%) — "Curricula" report format |
-| Accelerate Onboarding | `onboarding.html` | July 30, 2026 | 37 learners; 18 reps with Closed Won deals |
+| Accelerate Onboarding | `onboarding.html` | August 11, 2026 | 47 learners; 20 reps with Closed Won deals; Coming Soon courses now counted toward % (see below); Days to Close now hire-date-based |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
-| Layered Security Curriculum | `cert-layered-security.html` | August 10, 2026 | 526 learners, 41 complete |
+| Layered Security Certification | `cert-layered-security.html` | August 12, 2026 | 503 learners, 41 complete; rebuilt to merge Resmie's prototype (see below) |
+
+---
+
+## Recent Changes (2026-08-12) — Layered Security dashboard merge
+
+Resmie hand-built a prototype (`Layered_Security_Certification_Dashboard.html` +
+`LS_Dashboard_Documentation.html`) with a real bug fix and new features. Ported into
+`update_layered_security_dashboard.py` rather than adopting her static file — she'd iterated
+forward from the exact same person-object schema the script already emits, and this repo's rule
+is edit-the-script-not-the-generated-HTML (same convention as Onboarding). Both her files deleted
+after porting.
+
+**3-file cadence, no more accumulation.** Old dated Layered Security Curricula files (07.29, 08.01,
+08.10) deleted; going forward it's "drop 3 new dated files, delete the old ones," not multi-file
+accumulation like Healthcare. Three files now: the Curricula Report (same 31-col schema, unchanged)
+plus two new ones — a Certification Report (Sales Certification course, scoped to already-certified
+people only — confirmed by Jason, so "any row present = certified" is the correct permanent rule,
+currently empty because nobody's certified yet) and an OPS FY26 Salesforce opportunity export
+(drives Closed Won deal tracking, $5,000+ threshold — **currently has no Amount/dollar column at
+all**, flagged to Resmie separately; the loader prints a non-fatal `WARNING` and Closed Won just
+stays empty until one appears).
+
+**Real bug fixed: stale `Curriculum Complete` LMS flag.** Someone flagged "Yes" back when the
+curriculum had 11 modules (before the 12th, `LSC_IAPO`, was added) stayed "Yes" while stuck at
+11/12. Both `load_ls_data()` (Python) and `personStatus()` (JS) now derive completion from actual
+module count instead of trusting the flag — fixed in every consumer (stat cards, roster, By-Manager
+grouping, all 6 export functions) and in `generate_homepage.py`'s homepage card too, so nothing can
+drift out of sync. Verified zero literal `p.Complete === "Yes"` comparisons remain in the generated
+output.
+
+**New Closed Won tracking, fully build-time-baked (not client-imported).** The old "Import Sales
+Certification" browser-upload button is gone. `SALES_CERT`/`SALES_DEALS` are now baked into the
+generated HTML the same way `PEOPLE` already is, via two new Python loaders
+(`load_sales_cert()`/`load_sales_deals()`) that detect columns by name-substring match (robust to
+Salesforce export column reordering).
+
+**Roster redesigned from a card list to a table** (Learner · Manager · Layered Security · Overall %
+· Closed Won), matching Resmie's shipped design. Stat cards reordered (Certified moved from 3rd to
+last position). New requirements banner spelling out all 4 certification criteria. Detail panel
+gained a Closed Won field and a simplified binary certification badge. The existing "Past Due"
+indicator was deliberately retained — Resmie's prototype had silently dropped it with no stated
+reason, and removing it wasn't requested.
+
+Verified locally: script runs clean (`503 learners, 41 complete`), homepage card matches exactly
+(`41 of 503 complete`), generated JS passes `node --check`, git status shows the expected file
+adds/deletes. Nothing pushed yet — awaiting Jason's go-ahead. Full detail in project memory:
+`layered_security_dashboard.md`.
+
+---
+
+## Recent Changes (2026-08-11) — Onboarding: Coming Soon courses + Days to Close redefinition
+
+**Coming Soon courses now count toward completion %.** Previously any item with "coming soon"
+in its title was skipped entirely — excluded from every curriculum's total/done counts. Jason
+asked to bring them back into the % math (so a curriculum containing an unlaunched course won't
+show artificially inflated to 100% for people who obviously can't complete it), while making
+sure they can never be flagged Overdue since they have no real due date. Fix: items are no
+longer skipped, but each Coming Soon item's `req` (LMS "Item Required Date") is always forced to
+`None` in `update_onboarding_dashboard.py`, regardless of what the LMS column contains — this
+keeps them permanently excluded from the deadline engine (`curricDaysLeft`/`overdueItemsCount`)
+even after the LMS eventually starts populating real due dates for other courses. Verified: all
+188 Coming Soon item entries across the current roster show `done=false, req=null`. Affects 5
+courses as of the 08.10/08.11 data: How to Prepare for Effective Account Reviews, FINTRAC,
+Introducing AllCovered/IT Weapons, Commission Confidence, KM Premier Finance Leasing
+Fundamentals.
+
+**Days to Close redefined: hire date → first Closed Won deal.** Was previously Salesforce's own
+`Age` field (Close Date − opportunity Created Date — i.e. how long the *deal* took, not the
+*rep*). Jason wanted it measured from the rep's actual hire date to their earliest Closed Won
+deal instead — a truer "how fast did this person land their first sale after joining" metric.
+Uses `hireDate` (LMS column), not `assignDate` (Accelerate program start) — those two diverge
+significantly for this cohort since several reps were hired months before the program launched.
+Shows a dash when there's no hire date on file, the deal predates the hire date (bad-data guard),
+or no Closed Won deal exists yet. Both info-tooltip strings updated to match. Verified against
+sample reps, e.g. Paolo Castellon: hired 2025-11-03, first Closed Won 2026-02-17 → 106 days.
+
+Committed as `3ad4861`, pushed, confirmed the `Update Onboarding Dashboard` Actions run completed
+`success`. Full detail in project memory: `onboarding_dashboard.md`.
 
 ---
 
