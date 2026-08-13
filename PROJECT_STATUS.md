@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-08-12
+Last updated: 2026-08-13
 
 ---
 
@@ -9,12 +9,44 @@ Last updated: 2026-08-12
 | Dashboard | File | Data Through | Notes |
 |---|---|---|---|
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
-| Playbook Traffic | `playbook.html` | June 29, 2026 | |
+| Playbook Traffic | `playbook.html` | August 7, 2026 | Cadence changed monthly → weekly (see below); date filters now anchor to newest data date |
 | Healthcare Certification | `cert-healthcare.html` | August 10, 2026 | 65 people, 6 certified, 59 in progress |
 | Public Sector Certification | `cert-publicsector.html` | July 31, 2026 | 118 active people, 74 completed (63%) — "Curricula" report format |
-| Accelerate Onboarding | `onboarding.html` | August 11, 2026 | 47 learners; 20 reps with Closed Won deals; Coming Soon courses now counted toward % (see below); Days to Close now hire-date-based |
+| Accelerate Onboarding | `onboarding.html` | August 7, 2026 | 47 learners; playbook-matched learners 34 → 41 after weekly playbook data; 20 reps with Closed Won deals |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | August 12, 2026 | 503 learners, 41 complete; rebuilt to merge Resmie's prototype (see below) |
+
+---
+
+## Recent Changes (2026-08-13) — Playbook Traffic: weekly cadence + data-anchored date filters
+
+Jason switched playbook traffic data collection from monthly to weekly (`data/playbook-weekly-
+YYYY-MM-DD_YYYY-MM-DD.xlsx`). This needed real code changes, not just a file drop:
+
+- **Filename pattern:** `update_dashboard.py` and `generate_homepage.py` now accept both the old
+  monthly pattern and the new weekly one. Both GitHub Actions workflows that read this data
+  (`update-dashboard.yml`, `update-onboarding.yml`) now trigger on the weekly pattern too.
+- **Month bucketing moved from filename to per-row `Date`** — previously the whole file was
+  stamped with one Month label parsed from its filename, which only worked because monthly files
+  never spanned two calendar months. Now each row's Month is derived from its own date, so a
+  weekly file straddling a month boundary splits correctly for the Monthly Trend chart with zero
+  other UI changes needed.
+- **Date filters reworked (two rounds):** the old "Prev Month" button (anchored to the real
+  calendar date) is gone, replaced by 30D/60D/90D/120D/All, all anchored to the newest date actually
+  in the data. The default view on page load and every preset now auto-advance every time a new
+  file is dropped — no code change needed each week. "All" now shows the data's true min/max date
+  range instead of leaving the fields blank.
+- **Bonus fix while in the file:** `update-dashboard.yml` was missing script-change triggers that
+  the other two workflows already had (`update_dashboard.py`/`generate_homepage.py`) — added, so a
+  future script-only edit won't get stranded without a rebuild.
+
+Verified locally (row counts, Month bucketing, `node --check`, actual computed date ranges against
+the real embedded data) before pushing. Onboarding's playbook-match count went 34 → 41 once the new
+weekly file's visits were picked up (via `update_onboarding_dashboard.py`'s existing
+pattern-agnostic file loader — no code change needed there). Pushed as commit `81daf90`; both
+`Update Playbook Dashboard` and `Update Onboarding Dashboard` confirmed `completed success`.
+
+Full detail in project memory: `playbook_weekly_cadence.md`.
 
 ---
 
