@@ -1,0 +1,952 @@
+#!/usr/bin/env python3
+"""
+Internal Dashboard Traffic Updater
+-----------------------------------
+Reads the same playbook-monthly-YYYY-MM.xlsx / playbook-weekly-YYYY-MM-DD_YYYY-MM-DD.xlsx
+files already used by update_dashboard.py, but keeps only the rows whose Url points at
+one of our own internal analytics dashboards (tracked under the
+/learning-development-dashboards/ URL prefix) instead of an actual sales playbook.
+Rebuilds dashboard-traffic.html with full history.
+
+Usage:
+    python update_dashboard_traffic.py
+
+Run this after dropping a new monthly or weekly playbook Excel file into /data — the
+same file drop that feeds the Playbook Traffic dashboard also feeds this one.
+"""
+
+import os
+import re
+import json
+import sys
+import datetime
+import pandas as pd
+from pathlib import Path
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+SCRIPT_DIR  = Path(__file__).parent
+DATA_DIR    = SCRIPT_DIR / "data"
+OUTPUT_FILE = SCRIPT_DIR / "dashboard-traffic.html"
+
+URL_PREFIX = "/learning-development-dashboards/"
+
+# ── Dashboard name normalisation ──────────────────────────────────────────────
+# Names match the homepage card titles in generate_homepage.py, for consistency.
+DASHBOARD_MAP = {
+    "playbook.html":              "Playbook Traffic",
+    "onboarding.html":            "Accelerate Onboarding",
+    "leaderboard.html":           "Accelerate Leaderboard",
+    "cert-healthcare.html":       "Healthcare Certification",
+    "cert-publicsector.html":     "Public Sector Curriculum",
+    "cert-layered-security.html": "Layered Security Curriculum",
+}
+
+def get_dashboard(url):
+    url = str(url).rstrip('/')
+    last = url.split('/')[-1]
+    # Bare directory root (no filename at all) and index.html both mean "Home".
+    if last in ('', 'index.html', 'learning-development-dashboards'):
+        return 'Analytics Hub'
+    return DASHBOARD_MAP.get(last, last.replace('.html', '').replace('_', ' ').replace('-', ' ').title())
+
+def load_excel(path: Path) -> pd.DataFrame:
+    df = pd.read_excel(path)
+    df = df.drop(columns=[c for c in ['Uid', 'Email', 'Employee Id', 'Market', 'Branch'] if c in df.columns])
+    df = df[df['Url'].astype(str).str.contains(URL_PREFIX, case=False, na=False)].copy()
+    if df.empty:
+        return df
+    df['Dashboard'] = df['Url'].apply(get_dashboard)
+    df['Date']      = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+    # Month is derived from each row's own Date, same reasoning as update_dashboard.py —
+    # decouples input file cadence (monthly/weekly) from chart granularity.
+    df['Month']     = pd.to_datetime(df['Date']).dt.strftime('%Y-%m')
+    df = df.rename(columns={
+        'First Name':      'FirstName',
+        'Last Name':       'LastName',
+        'Employee/Dealer': 'Type',
+    })
+    return df[['FirstName', 'LastName', 'Region', 'Type', 'Date', 'Month', 'Dashboard']]
+
+# ── Collect all monthly + weekly playbook files ───────────────────────────────
+monthly_pattern = re.compile(r'^playbook-monthly-(\d{4}-\d{2})\.xlsx$')
+weekly_pattern  = re.compile(r'^playbook-weekly-(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})\.xlsx$')
+
+files = []
+for p in DATA_DIR.glob('*.xlsx'):
+    m = monthly_pattern.match(p.name)
+    if m:
+        files.append((m.group(1), p))
+        continue
+    m = weekly_pattern.match(p.name)
+    if m:
+        files.append((f'{m.group(1)} to {m.group(2)}', p))
+files.sort()
+
+if not files:
+    print(f"No files matching playbook-monthly-YYYY-MM.xlsx or playbook-weekly-YYYY-MM-DD_YYYY-MM-DD.xlsx found in {DATA_DIR}")
+    sys.exit(1)
+
+print(f"Found {len(files)} playbook data file(s), scanning for internal dashboard traffic:")
+frames = []
+for label, path in files:
+    df = load_excel(path)
+    if not df.empty:
+        frames.append(df)
+        print(f"  {label}  →  {len(df):,} dashboard-traffic rows")
+
+if frames:
+    combined = pd.concat(frames, ignore_index=True)
+    combined['Region'] = combined['Region'].where(combined['Region'].notna(), None)
+    records = json.loads(combined.to_json(orient='records'))
+else:
+    print("  No internal dashboard traffic found in any file yet.")
+    records = []
+
+total_rows = len(records)
+months     = sorted(set(r['Month'] for r in records))
+print(f"\nTotal dashboard-traffic rows: {total_rows:,}")
+if months:
+    print(f"Months covered: {', '.join(months)}")
+
+_max_date = max((r.get('Date', '') for r in records if r.get('Date')), default='')
+_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+           'July', 'August', 'September', 'October', 'November', 'December']
+if _max_date:
+    _y, _m, _d = _max_date.split('-')
+    date_label = f'{_MONTHS[int(_m)-1]} {int(_d)}, {_y}'
+else:
+    date_label = 'No data yet'
+
+DASHBOARD_NAMES = ['Analytics Hub'] + list(DASHBOARD_MAP.values())
+TOTAL_DASHBOARDS = len(DASHBOARD_NAMES)
+
+# ── HTML template ─────────────────────────────────────────────────────────────
+html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Internal Dashboard Traffic</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {{
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+    --text:#e8ecf4; --muted:#7b82a0; --accent:#4f8ef7; --accent2:#7c5cfc; --accent3:#f7c94f;
+    --green:#3ecf8e; --red:#f76f6f; --teal:#2dd4bf; --teal-subtle:#2dd4bf22;
+    --pill-emp-bg:#1a2a4a; --pill-emp-color:#4f8ef7;
+    --pill-dlr-bg:#2a1a3a; --pill-dlr-color:#cf5cf7;
+    --font:'Segoe UI',system-ui,sans-serif;
+  }}
+  body.light-mode {{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#eef1f7; --border:#d0d7e8;
+    --text:#1a1d27; --muted:#475569; --accent:#2563eb; --accent2:#6d28d9; --accent3:#d97706;
+    --green:#059669; --red:#dc2626; --teal:#0f766e; --teal-subtle:#0f766e18;
+  }}
+  body.light-mode select,body.light-mode input[type=date]{{color-scheme:light;}}
+  *{{box-sizing:border-box;margin:0;padding:0;}}
+  body{{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}}
+
+  .header{{padding:20px 32px;border-bottom:1px solid var(--border);background:var(--surface);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}}
+  .header-left h1{{font-size:18px;font-weight:700;letter-spacing:.3px;cursor:pointer;user-select:none;}}
+  .header-date{{font-size:11px;color:var(--muted);margin-top:2px;}}
+  .header-center{{display:flex;justify-content:center;}}
+  .btn-theme{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
+  .btn-theme:hover{{border-color:var(--accent);color:var(--text);}}
+  .kma-logo{{height:34px;width:auto;display:block;}}
+  .kma-logo-light{{display:none;}}
+  body.light-mode .kma-logo-dark{{display:none;}}
+  body.light-mode .kma-logo-light{{display:block;}}
+
+  .btn-export{{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}}
+  .btn-export:hover{{opacity:.88;}}
+  .export-drop{{position:relative;}}
+  .export-menu{{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;}}
+  .export-menu.open{{display:block;}}
+  .export-item{{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}}
+  .export-item:hover{{background:var(--surface2);}}
+  .export-parent{{position:relative;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:13px;color:var(--text);cursor:default;transition:background .1s;}}
+  .export-parent:hover{{background:var(--surface2);}}
+  .export-chevron{{font-size:11px;color:var(--muted);margin-left:10px;}}
+  .export-submenu{{position:absolute;right:100%;top:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:90px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:201;margin-right:4px;}}
+  .export-parent:hover .export-submenu{{display:block;}}
+
+  .filters{{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}}
+  .filter-label{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}}
+  select,input[type=date],input[type=text]{{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;color-scheme:dark;}}
+  select:focus,input:focus{{border-color:var(--accent);}}
+  .btn-preset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;}}
+  .btn-preset:hover{{border-color:var(--accent);color:var(--text);}}
+  .btn-preset.active{{background:#4f8ef722;border-color:var(--accent);color:var(--accent);font-weight:600;}}
+  .btn-reset{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}}
+  .btn-reset:hover{{border-color:var(--accent);color:var(--text);}}
+  .btn-tlg{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;transition:all .15s;}}
+  .btn-tlg.active{{background:#f76f6f22;border-color:var(--red);color:var(--red);}}
+  .result-count{{margin-left:auto;font-size:12px;color:var(--muted);}}
+
+  .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}}
+  .stat{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}}
+  .stat-label{{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px;}}
+  .stat-value{{font-size:28px;font-weight:700;line-height:1;}}
+  .stat-value.blue{{color:var(--accent);}} .stat-value.purple{{color:var(--accent2);}}
+  .stat-value.green{{color:var(--green);}} .stat-value.yellow{{color:var(--accent3);}}
+  .stat-sub{{font-size:11px;color:var(--muted);margin-top:4px;}}
+
+  .charts-top{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
+  .charts-bottom{{padding:0 28px 16px;}}
+  @media(max-width:900px){{.charts-top{{grid-template-columns:1fr;}}}}
+  .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
+  .chart-title{{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
+  body.light-mode .chart-title{{color:var(--text);}}
+  .section-hint{{font-size:11px;color:var(--muted);margin-bottom:14px;margin-top:-2px;opacity:.7;}}
+  body.light-mode .section-hint{{opacity:1;}}
+  .chart-wrap{{position:relative;height:260px;}}
+  .chart-wrap-tall{{position:relative;height:300px;}}
+
+  .table-section{{padding:0 28px 32px;}}
+  .table-header{{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;background:var(--surface);border-radius:10px 10px 0 0;border:1px solid var(--border);border-bottom:none;}}
+  .table-title{{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}}
+  body.light-mode .table-title{{color:var(--text);}}
+  .sort-btn{{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}}
+  .sort-btn:hover{{border-color:var(--accent);color:var(--text);}}
+  .sort-btn.active{{border-color:var(--accent);color:var(--accent);background:#4f8ef711;}}
+  .recency-legend{{display:flex;gap:16px;align-items:center;padding:8px 20px;font-size:11px;color:var(--muted);flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-top:none;}}
+  .recency-legend-item{{display:flex;align-items:center;gap:5px;}}
+  .recency-dot{{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;}}
+  .drilldown-wrap{{display:flex;border:1px solid var(--border);border-radius:0 0 10px 10px;overflow:hidden;}}
+  .drilldown-left{{width:260px;flex-shrink:0;overflow-y:auto;max-height:640px;border-right:1px solid var(--border);}}
+  .drilldown-person{{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}}
+  .drilldown-person:last-child{{border-bottom:none;}}
+  .drilldown-person:hover{{background:var(--surface2);}}
+  .drilldown-person.active{{background:#4f8ef711;border-left:3px solid var(--accent);padding-left:11px;}}
+  .drilldown-name{{flex:1;font-size:13px;}}
+  .drilldown-count{{font-size:11px;font-weight:700;color:var(--teal);background:var(--teal-subtle);border-radius:10px;padding:2px 8px;}}
+  .drilldown-right{{flex:1;overflow-y:auto;max-height:640px;padding:16px 18px;}}
+  .drilldown-right-header{{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);font-size:13px;}}
+  .no-data{{text-align:center;color:var(--muted);padding:40px;font-size:13px;}}
+  @media(max-width:680px){{.drilldown-wrap{{flex-direction:column;}}.drilldown-left{{width:100%;max-height:200px;border-right:none;border-bottom:1px solid var(--border);}}}}
+  .pill{{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;}}
+  body.light-mode .pill-dash{{filter:brightness(.55);}}
+  table{{width:100%;border-collapse:collapse;font-size:13px;}}
+  thead th{{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}}
+  tbody tr{{border-top:1px solid var(--border);}}
+  tbody td{{padding:8px 12px;}}
+
+  .info-btn{{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}}
+  .info-btn:hover{{border-color:var(--accent);color:var(--accent);}}
+  .info-popover{{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,.5);display:none;}}
+  .info-popover.visible{{display:block;}}
+
+  @page{{size:landscape;margin:.65in;}}
+  @media print{{
+    body{{background:#fff!important;color:#111!important;}}
+    .header,.filters,.stats,.charts-top,.charts-bottom,.table-section,.print-hide{{display:none!important;}}
+    #print-header{{display:block!important;}}
+    #print-stats{{display:block!important;}}
+    #print-charts{{display:block!important;}}
+    #print-roster-wrap{{display:block!important;}}
+    #print-roster-table{{width:100%;border-collapse:collapse;font-size:11px;}}
+    #print-roster-table th{{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}}
+    #print-roster-table td{{padding:5px 8px;border:1px solid #ddd;vertical-align:middle;}}
+    #print-roster-table tr:nth-child(even) td{{background:#fafafa;}}
+  }}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <h1 id="dash-title" title="Triple-click to return to the Analytics Hub">Internal Dashboard Traffic</h1>
+      <div class="header-date">Data through {date_label}</div>
+    </div>
+  </div>
+  <div class="header-center">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+  </div>
+  <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="export-drop print-hide" id="export-drop">
+      <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
+      <div class="export-menu" id="export-menu">
+        <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
+        <div class="export-parent">Activity Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('activity-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('activity-summary')">Excel</button></div></div>
+        <div class="export-parent">By Person<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('by-person')">PDF</button><button class="export-item" onclick="runExportXLSX('by-person')">Excel</button></div></div>
+        <div class="export-parent">Last Login<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('last-login')">PDF</button><button class="export-item" onclick="runExportXLSX('last-login')">Excel</button></div></div>
+      </div>
+    </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
+    <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="filter-label">Filter</span>
+  <button class="btn-preset active" id="btn-30d"  onclick="setRange(30,this)">30D</button>
+  <button class="btn-preset" id="btn-60d"  onclick="setRange(60,this)">60D</button>
+  <button class="btn-preset" id="btn-90d"  onclick="setRange(90,this)">90D</button>
+  <button class="btn-preset" id="btn-120d" onclick="setRange(120,this)">120D</button>
+  <button class="btn-preset" id="btn-all"  onclick="setRange(0,this)">All</button>
+  <span class="filter-label" style="margin-right:2px">From</span>
+  <input type="date" id="f-date-from">
+  <span class="filter-label" style="margin:0 2px">To</span>
+  <input type="date" id="f-date-to">
+  <select id="f-dashboard"><option value="">All Dashboards</option></select>
+  <select id="f-region"><option value="">All Regions</option></select>
+  <select id="f-type"><option value="">Direct &amp; Dealer</option><option value="Employee">Direct</option><option value="Dealer">Dealer</option></select>
+  <button class="btn-reset" onclick="resetFilters()">Reset</button>
+  <button class="btn-tlg active" id="btn-tlg" onclick="toggleTLG()">Show TLG</button><span class="info-btn" onclick="showInfo(event,'hide-tlg')">?</span>
+  <span class="result-count" id="result-count"></span>
+</div>
+
+<div class="stats" id="stats-row"></div>
+
+<div class="charts-top">
+  <div class="chart-card">
+    <div class="chart-title">Views by Dashboard<span class="info-btn" onclick="showInfo(event,'chart-dashboard')">?</span></div>
+    <div class="section-hint">Hover over a bar to see the view count</div>
+    <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Views by Region<span class="info-btn" onclick="showInfo(event,'chart-region')">?</span></div>
+    <div class="section-hint">Hover over a segment to see the region breakdown</div>
+    <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+  </div>
+</div>
+
+<div class="charts-bottom">
+  <div class="chart-card">
+    <div class="chart-title">Trend &mdash; Views Over Time<span class="info-btn" onclick="showInfo(event,'chart-trend')">?</span></div>
+    <div class="section-hint">Hover to see monthly totals by dashboard &mdash; shows top 5 dashboards by volume</div>
+    <div class="chart-wrap-tall"><canvas id="trendChart"></canvas></div>
+  </div>
+</div>
+
+<div class="table-section" id="drilldown-section">
+  <div class="table-header">
+    <span class="table-title">Who's Active<span class="info-btn" onclick="showInfo(event,'whos-active')">?</span></span>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <button class="sort-btn active" data-sort="visits" data-label="Visits" onclick="setSort('visits')">Visits &#8595;</button>
+      <button class="sort-btn" data-sort="lastVisit" data-label="Last Visit" onclick="setSort('lastVisit')">Last Visit</button>
+      <input type="text" id="drilldown-search" oninput="filterPersonList()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
+    </div>
+  </div>
+  <div class="recency-legend">
+    <span style="font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Last visit:</span>
+    <span class="recency-legend-item"><span class="recency-dot" style="background:var(--green)"></span> Within 30 days</span>
+    <span class="recency-legend-item"><span class="recency-dot" style="background:var(--accent3)"></span> 31&ndash;60 days</span>
+    <span class="recency-legend-item"><span class="recency-dot" style="background:var(--red)"></span> 60+ days</span>
+  </div>
+  <div class="drilldown-wrap">
+    <div class="drilldown-left" id="drilldown-left"></div>
+    <div class="drilldown-right" id="drilldown-right"><div class="no-data">Select a person to see their activity</div></div>
+  </div>
+</div>
+
+<script>
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+const RAW = {json.dumps(records)};
+
+const DASHBOARD_COLORS = {{
+  "Analytics Hub":               "#4f8ef7",
+  "Playbook Traffic":            "#3ecf8e",
+  "Accelerate Onboarding":       "#f76f6f",
+  "Accelerate Leaderboard":      "#f7944f",
+  "Healthcare Certification":    "#7c5cfc",
+  "Public Sector Curriculum":    "#f7c94f",
+  "Layered Security Curriculum": "#5cf0f7",
+}};
+function dashColor(d){{ return DASHBOARD_COLORS[d] || "#7b82a0"; }}
+
+function sel(id) {{ return document.getElementById(id); }}
+function cv(v)   {{ return getComputedStyle(document.body).getPropertyValue(v).trim(); }}
+
+// "Analytics Hub" (bare homepage loads) and "Playbook Traffic" (already has its
+// own dedicated dashboard) are excluded from the filter dropdown only — their
+// traffic still counts in every stat, chart, and export on this page.
+const DASHBOARD_FILTER_HIDDEN = new Set(["Analytics Hub", "Playbook Traffic"]);
+const allDashboards = [...new Set([...Object.keys(DASHBOARD_COLORS), ...RAW.map(r=>r.Dashboard)])]
+  .filter(d => !DASHBOARD_FILTER_HIDDEN.has(d)).sort();
+const allRegions     = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
+allDashboards.forEach(d => sel('f-dashboard').innerHTML += `<option value="${{d}}">${{d}}</option>`);
+allRegions.forEach(r => sel('f-region').innerHTML += `<option value="${{r}}">${{r}}</option>`);
+
+// ── Theme ──
+(function(){{
+  if(localStorage.getItem('pb-theme') !== 'dark') document.body.classList.add('light-mode');
+  sel('btn-theme').textContent = document.body.classList.contains('light-mode') ? '\U0001F319 Dark' : '☀ Light';
+}})();
+function toggleTheme(){{
+  const light = document.body.classList.toggle('light-mode');
+  localStorage.setItem('pb-theme', light ? 'light' : 'dark');
+  sel('btn-theme').textContent = light ? '\U0001F319 Dark' : '☀ Light';
+  render();
+}}
+
+// shiftDate anchors to a given YYYY-MM-DD string rather than the real "today" —
+// every preset button and the default view are anchored to the newest date
+// actually in this data, so they track the latest data drop automatically.
+function shiftDate(dateStr, n){{
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + n);
+  return dt.toISOString().slice(0,10);
+}}
+const maxDate = RAW.reduce((mx,r)=>r.Date>mx?r.Date:mx,'');
+const minDate = RAW.reduce((mn,r)=>(!mn||r.Date<mn)?r.Date:mn,'');
+
+function setRange(days, btn){{
+  document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(days===0){{ sel('f-date-from').value=minDate; sel('f-date-to').value=maxDate; }}
+  else if(maxDate){{ sel('f-date-from').value=shiftDate(maxDate,-days); sel('f-date-to').value=maxDate; }}
+  applyFilters();
+}}
+if(maxDate){{
+  sel('f-date-from').value = shiftDate(maxDate, -30);
+  sel('f-date-to').value   = maxDate;
+}}
+
+function resetFilters(){{
+  document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
+  sel('btn-30d').classList.add('active');
+  if(maxDate){{
+    sel('f-date-from').value = shiftDate(maxDate, -30);
+    sel('f-date-to').value   = maxDate;
+  }}
+  ['f-dashboard','f-region','f-type'].forEach(id => sel(id).value = '');
+  hideTLG = true;
+  sel('btn-tlg').classList.add('active');
+  sel('btn-tlg').textContent = 'Show TLG';
+  applyFilters();
+}}
+
+const TLG = new Set(["Jason Ackerman","Bianca Davis","James Parker","Resmie Biba","Chris Curtis","Sara Thompson","Jeremy MacBean","Bradley Pierce","Laura Sefcik","Samantha Maresca","Staci Musco","CJ Homer","Rich Moore","Dale Kinsey","John Lechner","Resmie Nesimi","Samantha D'Angelo","Bianca DiPasquale","Doug Falk"]);
+let hideTLG = true;
+let lastVisitMap = {{}};
+let visitorMap   = {{}};
+let sortField = 'visits';
+let sortDir   = 'desc';
+let filtered  = [...RAW];
+
+function toggleTLG(){{
+  hideTLG = !hideTLG;
+  sel('btn-tlg').classList.toggle('active', hideTLG);
+  sel('btn-tlg').textContent = hideTLG ? 'Show TLG' : 'Hide TLG';
+  applyFilters();
+}}
+
+function typeLabel(t){{ return t === 'Employee' ? 'Direct' : (t || '—'); }}
+
+function getFilters(){{
+  return {{
+    fromDate: sel('f-date-from').value,
+    toDate:   sel('f-date-to').value,
+    dashboard: sel('f-dashboard').value,
+    region:   sel('f-region').value,
+    type:     sel('f-type').value,
+  }};
+}}
+
+function filterForRange(fromStr, toStr){{
+  const f=getFilters();
+  return RAW.filter(r=>{{
+    if(hideTLG && TLG.has(r.FirstName+' '+r.LastName)) return false;
+    if(fromStr && r.Date<fromStr) return false;
+    if(toStr   && r.Date>toStr)   return false;
+    if(f.dashboard && r.Dashboard!==f.dashboard) return false;
+    if(f.region    && r.Region!==f.region)       return false;
+    if(f.type      && r.Type!==f.type)           return false;
+    return true;
+  }});
+}}
+
+function applyFilters(){{
+  const f = getFilters();
+  filtered = RAW.filter(r => {{
+    if (hideTLG && TLG.has(`${{r.FirstName}} ${{r.LastName}}`)) return false;
+    if (f.fromDate && r.Date < f.fromDate) return false;
+    if (f.toDate   && r.Date > f.toDate)   return false;
+    if (f.dashboard && r.Dashboard !== f.dashboard) return false;
+    if (f.region    && r.Region    !== f.region)    return false;
+    if (f.type      && r.Type      !== f.type)      return false;
+    return true;
+  }});
+  render();
+}}
+['f-date-from','f-date-to'].forEach(id => sel(id).addEventListener('change', ()=>{{
+  document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
+  applyFilters();
+}}));
+['f-dashboard','f-region','f-type'].forEach(id => sel(id).addEventListener('change', applyFilters));
+
+function filterPersonList(){{
+  const q=(sel('drilldown-search')?.value||'').toLowerCase();
+  document.querySelectorAll('.drilldown-person').forEach(el=>{{
+    el.style.display=(!q||el.dataset.name.toLowerCase().includes(q))?'':'none';
+  }});
+}}
+
+function countBy(arr, key){{
+  return arr.reduce((acc,r) => {{ const v=r[key]||'(none)'; acc[v]=(acc[v]||0)+1; return acc; }}, {{}});
+}}
+
+let barChart, pieChart, trendChart;
+
+function render(){{
+  const isLight = document.body.classList.contains('light-mode');
+  const chartLabel = isLight ? cv('--text') : cv('--muted');
+  visitorMap   = {{}};
+  lastVisitMap = {{}};
+  filtered.forEach(r => {{
+    const key = `${{r.FirstName}} ${{r.LastName}}`;
+    visitorMap[key] = (visitorMap[key] || 0) + 1;
+    if (!lastVisitMap[key] || r.Date > lastVisitMap[key]) lastVisitMap[key] = r.Date;
+  }});
+
+  const totalViews  = filtered.length;
+  const uniqueUsers = new Set(filtered.map(r=>`${{r.FirstName}} ${{r.LastName}}`)).size;
+  const dashCounts  = countBy(filtered, 'Dashboard');
+  const topDash     = Object.entries(dashCounts).sort((a,b)=>b[1]-a[1])[0] || ['—',0];
+  const monthsShown = new Set(filtered.map(r=>r.Month)).size;
+  sel('result-count').textContent = `${{totalViews.toLocaleString()}} views`;
+  const avgVisits = uniqueUsers > 0 ? (totalViews / uniqueUsers).toFixed(1) : '0';
+
+  sel('stats-row').innerHTML = `
+    <div class="stat"><div class="stat-label">Total Page Views<span class="info-btn" onclick="showInfo(event,'total-views')">?</span></div><div class="stat-value blue">${{totalViews.toLocaleString()}}</div><div class="stat-sub">${{monthsShown}} month${{monthsShown!==1?'s':''}} shown</div></div>
+    <div class="stat"><div class="stat-label">Unique Users<span class="info-btn" onclick="showInfo(event,'unique-users')">?</span></div><div class="stat-value purple">${{uniqueUsers}}</div><div class="stat-sub">employees &amp; dealers</div></div>
+    <div class="stat"><div class="stat-label">Avg Visits / Person<span class="info-btn" onclick="showInfo(event,'avg-visits')">?</span></div><div class="stat-value" style="color:${{cv('--teal')}}">${{avgVisits}}</div><div class="stat-sub">views per unique visitor</div></div>
+    <div class="stat"><div class="stat-label">Top Dashboard<span class="info-btn" onclick="showInfo(event,'top-dashboard')">?</span></div><div class="stat-value yellow" style="font-size:16px;padding-top:4px">${{topDash[0]}}</div><div class="stat-sub">${{topDash[1].toLocaleString()}} views</div></div>
+    <div class="stat"><div class="stat-label">Dashboards Active<span class="info-btn" onclick="showInfo(event,'dashboards-active')">?</span></div><div class="stat-value green">${{Object.keys(dashCounts).length}}</div><div class="stat-sub">out of {TOTAL_DASHBOARDS} total</div></div>
+  `;
+
+  const dashAll = {{...dashCounts}};
+  Object.keys(DASHBOARD_COLORS).forEach(d => {{ if (!(d in dashAll)) dashAll[d] = 0; }});
+  const dashSorted = Object.entries(dashAll).sort((a,b)=>b[1]-a[1]);
+  if (barChart) barChart.destroy();
+  barChart = new Chart(sel('barChart'), {{
+    type: 'bar',
+    data: {{ labels: dashSorted.map(([k])=>k), datasets: [{{ data: dashSorted.map(([,v])=>v), backgroundColor: dashSorted.map(([k])=>dashColor(k)), borderRadius: 5, borderSkipped: false }}] }},
+    options: {{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{{
+        legend:{{display:false}},
+        tooltip:{{callbacks:{{label:c=>` ${{c.raw.toLocaleString()}} views`}}}},
+        datalabels: typeof ChartDataLabels !== 'undefined' ? {{
+          anchor:'center', align:'center',
+          color: isLight ? '#1e293b' : '#fff', font:{{size:11, weight:'700'}},
+          formatter: v => v > 0 ? v.toLocaleString() : '',
+        }} : {{display:false}}
+      }},
+      scales:{{
+        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}}}}}},
+        y:{{grid:{{display:false}},ticks:{{color:cv('--text'),font:{{size:11}}}}}}
+      }}
+    }}
+  }});
+
+  const regCounts = countBy(filtered, 'Region');
+  const pieLabels = Object.keys(regCounts).sort((a,b)=>regCounts[b]-regCounts[a]);
+  const pieColors = ['#4f8ef7','#3ecf8e','#f7c94f','#7c5cfc','#f76f6f','#f7944f','#5cf0f7','#cf5cf7','#7b82a0'];
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(sel('pieChart'), {{
+    type: 'doughnut',
+    data: {{ labels: pieLabels, datasets: [{{ data: pieLabels.map(k=>regCounts[k]), backgroundColor: pieColors.slice(0,pieLabels.length), borderWidth:0 }}] }},
+    options: {{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{{
+        legend:{{position:'bottom',labels:{{color:chartLabel,font:{{size:11}},boxWidth:10,padding:8}}}},
+        tooltip:{{callbacks:{{label:c=>` ${{c.label}}: ${{c.raw.toLocaleString()}} views`}}}},
+        datalabels:{{display:false}}
+      }}
+    }}
+  }});
+
+  const visibleMonths = [...new Set(filtered.map(r=>r.Month))].sort();
+  const topDashboards = Object.entries(dashCounts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k])=>k);
+  const trendDatasets = topDashboards.map(d => {{
+    const color = dashColor(d);
+    return {{
+      label: d,
+      data: visibleMonths.map(m => filtered.filter(r=>r.Month===m && r.Dashboard===d).length),
+      borderColor: color, backgroundColor: color + '22',
+      borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false,
+    }};
+  }});
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(sel('trendChart'), {{
+    type: 'line',
+    data: {{ labels: visibleMonths, datasets: trendDatasets }},
+    options: {{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{{
+        legend:{{position:'bottom',labels:{{color:chartLabel,font:{{size:11}},boxWidth:10,padding:8}}}},
+        tooltip:{{mode:'index',intersect:false}},
+        datalabels:{{display:false}}
+      }},
+      scales:{{
+        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}}}}}},
+        y:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}}}}}}
+      }}
+    }}
+  }});
+
+  renderPersonList();
+}}
+
+function renderPersonList() {{
+  const entries = Object.entries(visitorMap).sort((a, b) => {{
+    if (sortField === 'visits') {{
+      return sortDir === 'desc' ? b[1] - a[1] : a[1] - b[1];
+    }} else {{
+      const dA = lastVisitMap[a[0]] || '';
+      const dB = lastVisitMap[b[0]] || '';
+      return sortDir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
+    }}
+  }});
+  document.querySelectorAll('.sort-btn').forEach(b => {{
+    const active = b.dataset.sort === sortField;
+    b.classList.toggle('active', active);
+    const arrow = active ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
+    b.textContent = b.dataset.label + arrow;
+  }});
+  sel('drilldown-left').innerHTML = entries.map(([name, count]) => {{
+    const dot = `<span class="recency-dot" style="background:${{recencyColor(lastVisitMap[name])}}"></span>`;
+    return `<div class="drilldown-person" onclick="drillSelect(this,'${{name.replace(/'/g,"\\\\'")}}')" data-name="${{name}}">
+       ${{dot}}<span class="drilldown-name">${{name}}</span>
+       <span class="drilldown-count">${{count}}</span>
+     </div>`;
+  }}).join('') || `<div class="no-data">No data</div>`;
+  filterPersonList();
+  if (entries.length) {{
+    const first = sel('drilldown-left').querySelector('.drilldown-person:not([style*="none"])') || sel('drilldown-left').querySelector('.drilldown-person');
+    if (first) drillSelect(first, first.dataset.name);
+  }} else {{
+    sel('drilldown-right').innerHTML = `<div class="no-data">No records match your filters.</div>`;
+  }}
+}}
+
+function recencyColor(dateStr){{
+  if(!dateStr) return cv('--muted');
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if(days <= 30) return cv('--green');
+  if(days <= 60) return cv('--accent3');
+  return cv('--red');
+}}
+
+function setSort(field) {{
+  if (sortField === field) {{
+    sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  }} else {{
+    sortField = field;
+    sortDir   = 'desc';
+  }}
+  renderPersonList();
+}}
+
+function drillSelect(el, name) {{
+  document.querySelectorAll('.drilldown-person').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const visits = filtered.filter(r => `${{r.FirstName}} ${{r.LastName}}` === name);
+  const first = visits[0];
+  const region = first?.Region || '—';
+  const type = first?.Type || '—';
+  const typeColor = type==='Employee'?cv('--pill-emp-color'):cv('--pill-dlr-color');
+  const typeBg = type==='Employee'?cv('--pill-emp-bg'):cv('--pill-dlr-bg');
+
+  const grouped = {{}};
+  visits.forEach(v => {{
+    const key = `${{v.Date}}|${{v.Dashboard}}`;
+    if (!grouped[key]) grouped[key] = {{date:v.Date, dashboard:v.Dashboard, count:0}};
+    grouped[key].count++;
+  }});
+  const rows = Object.values(grouped).sort((a,b) => b.date.localeCompare(a.date));
+
+  const lastVisit = lastVisitMap[name] || '';
+  const lastVisitColor = recencyColor(lastVisit);
+  sel('drilldown-right').innerHTML = `
+    <div class="drilldown-right-header">
+      <strong style="font-size:14px">${{name}}</strong>
+      <span style="color:var(--muted)"> · ${{visits.length}} visit${{visits.length!==1?'s':''}} · ${{region}} · </span>
+      <span class="pill" style="background:${{typeBg}};color:${{typeColor}}">${{typeLabel(type)}}</span>
+      <span style="color:var(--muted)"> · Last visit: </span><span style="color:${{lastVisitColor}};font-weight:600">${{lastVisit||'—'}}</span>
+    </div>
+    <table>
+      <thead><tr><th>Date</th><th>Dashboard</th><th style="text-align:right">Visits</th></tr></thead>
+      <tbody>
+        ${{rows.map(v => {{
+          const c = dashColor(v.dashboard);
+          return `<tr>
+            <td style="color:var(--muted)">${{v.date}}</td>
+            <td><span class="pill pill-dash" style="background:${{c}}22;color:${{c}}">${{v.dashboard}}</span></td>
+            <td style="text-align:right;color:${{cv('--teal')}};font-weight:600">${{v.count}}</td>
+          </tr>`;
+        }}).join('')}}
+      </tbody>
+    </table>
+  `;
+}}
+
+const INFO = {{
+  'total-views':      'Each time someone loads a page on one of our internal analytics dashboards, that counts as one view.',
+  'unique-users':     'The number of distinct people who visited an internal dashboard in the selected period. Each person is counted once regardless of how many pages they viewed.',
+  'avg-visits':       'Total views divided by unique users. Higher scores mean people are returning to these dashboards repeatedly, not just visiting once.',
+  'top-dashboard':    'The internal dashboard with the highest total views in the selected period.',
+  'dashboards-active': `The number of internal dashboards that received at least one view in the selected period, out of {TOTAL_DASHBOARDS} total tracked.`,
+  'chart-dashboard':  'Total views per internal dashboard for the selected period. Hover a bar for the exact count.',
+  'chart-region':     'Breakdown of total views by sales region. Hover over a segment to see the exact count for that region.',
+  'chart-trend':      'View trends over time. Only the top 5 dashboards by total volume are shown.',
+  'hide-tlg':         'Removes the internal L&amp;D team (TLG) from all data — charts, stats, and Who\\'s Active. Use this to see genuine external usage of these dashboards.',
+  'whos-active':      'Lists every person who visited an internal dashboard in the selected period, sorted by total views. Click a name to see exactly which dashboards they visited and when.',
+  'export':           'Export a printable report of the data currently on screen. Filter first, then export. Full Report lists every individual page visit. Activity Summary rolls up total views and unique visitors per dashboard. By Person shows total visits and dashboards accessed for each employee.',
+}};
+function showInfo(e, key) {{
+  e.stopPropagation();
+  const pop = sel('info-popover');
+  if (pop.dataset.key === key && pop.classList.contains('visible')) {{ pop.classList.remove('visible'); return; }}
+  pop.dataset.key = key;
+  pop.textContent = INFO[key] || '';
+  pop.classList.add('visible');
+  const r = e.target.getBoundingClientRect();
+  pop.style.left = Math.min(r.left, window.innerWidth - 280) + 'px';
+  pop.style.top = (r.bottom + 8 + window.scrollY) + 'px';
+  pop.style.position = 'absolute';
+}}
+function toggleExportDrop(){{ sel('export-menu').classList.toggle('open'); }}
+document.addEventListener('click', function(e){{
+  const ed = sel('export-drop');
+  if(ed && !ed.contains(e.target)) sel('export-menu').classList.remove('open');
+  sel('info-popover')?.classList.remove('visible');
+}});
+(function(){{
+  var n=0,t;
+  sel('dash-title').addEventListener('click', function(){{
+    n++; clearTimeout(t);
+    t = setTimeout(function(){{ n = 0; }}, 500);
+    if(n >= 3){{ n = 0; window.location.href = 'index.html'; }}
+  }});
+}})();
+
+function runExport(type){{
+  sel('export-menu').classList.remove('open');
+  const dateStr = new Date().toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}});
+  const parts = [];
+  const dashVal = sel('f-dashboard').value, rgVal = sel('f-region').value, tyVal = sel('f-type').value;
+  const frVal = sel('f-date-from').value, toVal = sel('f-date-to').value;
+  if(dashVal) parts.push('Dashboard: '+dashVal);
+  if(rgVal) parts.push('Region: '+rgVal);
+  if(tyVal) parts.push('Type: '+tyVal);
+  if(frVal||toVal) parts.push('Dates: '+(frVal||'—')+' to '+(toVal||'—'));
+  if(hideTLG) parts.push('TLG Hidden');
+  sel('ph-title').textContent = 'Internal Dashboard Traffic Report';
+  sel('ph-date').textContent = 'Generated: '+dateStr+'  |  '+filtered.length+' records';
+  sel('ph-filters').textContent = parts.length ? parts.join('  |  ') : 'No filters active — showing all data';
+
+  const totalViews = filtered.length;
+  const uniqueSet = new Set(filtered.map(r=>(r.FirstName+' '+r.LastName).trim()));
+  const uniqueUsers = uniqueSet.size;
+  const avgVisits = uniqueUsers ? (totalViews/uniqueUsers).toFixed(1) : '0';
+  const dashCounts={{}},dashVis={{}},rgCounts={{}};
+  filtered.forEach(r=>{{
+    const d=r.Dashboard||'Unknown', rg=r.Region||'Unknown';
+    const name=(r.FirstName+' '+r.LastName).trim();
+    dashCounts[d]=(dashCounts[d]||0)+1;
+    if(!dashVis[d]) dashVis[d]=new Set(); dashVis[d].add(name);
+    rgCounts[rg]=(rgCounts[rg]||0)+1;
+  }});
+  const dashRows=Object.entries(dashCounts).sort((a,b)=>b[1]-a[1]);
+  const topDash=dashRows[0]?.[0]||'—';
+  const activeDash=dashRows.length;
+  const rgRows=Object.entries(rgCounts).sort((a,b)=>b[1]-a[1]);
+
+  const thead = sel('print-table-head');
+  const tbody = sel('print-roster-body');
+  const psEl  = sel('print-stats');
+  const pcEl  = sel('print-charts');
+
+  if(type === 'full'){{
+    sel('ph-report-type').textContent = 'Full Report — stat summary, chart breakdowns, and every page visit in the filtered view';
+    psEl.innerHTML = `<div style="display:flex;gap:24px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:2px solid #ddd;margin-bottom:14px;">
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Total Views</div><div style="font-size:26px;font-weight:700;color:#4f8ef7;">${{totalViews}}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Unique Users</div><div style="font-size:26px;font-weight:700;color:#7c5cfc;">${{uniqueUsers}}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Avg Visits / Person</div><div style="font-size:26px;font-weight:700;color:#e0a800;">${{avgVisits}}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Top Dashboard</div><div style="font-size:15px;font-weight:700;color:#3ecf8e;max-width:200px;line-height:1.2;padding-top:4px;">${{topDash}}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#777;margin-bottom:2px;">Active Dashboards</div><div style="font-size:26px;font-weight:700;color:#f7944f;">${{activeDash}}</div></div>
+    </div>`;
+    psEl.style.display = 'block';
+    const miniTh = 'style="text-align:left;padding:3px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#888;border-bottom:1px solid #ddd;"';
+    const miniTd = 'style="padding:3px 6px;font-size:11px;"';
+    const miniTdR = 'style="padding:3px 6px;font-size:11px;text-align:right;"';
+    const miniTdM = 'style="padding:3px 6px;font-size:10px;color:#888;text-align:right;"';
+    pcEl.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;border-bottom:1px solid #ddd;padding-bottom:16px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#555;margin-bottom:6px;">Views by Dashboard</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><th ${{miniTh}}>Dashboard</th><th ${{miniTh}} style="text-align:right;">Views</th><th ${{miniTh}} style="text-align:right;">%</th></tr>
+          ${{dashRows.map(([d,cnt])=>`<tr><td ${{miniTd}}>${{d}}</td><td ${{miniTdR}}>${{cnt}}</td><td ${{miniTdM}}>${{totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—'}}</td></tr>`).join('')}}
+        </table>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#555;margin-bottom:6px;">Views by Region</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><th ${{miniTh}}>Region</th><th ${{miniTh}} style="text-align:right;">Views</th><th ${{miniTh}} style="text-align:right;">%</th></tr>
+          ${{rgRows.map(([rg,cnt])=>`<tr><td ${{miniTd}}>${{rg}}</td><td ${{miniTdR}}>${{cnt}}</td><td ${{miniTdM}}>${{totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—'}}</td></tr>`).join('')}}
+        </table>
+      </div>
+    </div>`;
+    pcEl.style.display = 'block';
+    thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Region</th><th>Type</th><th>Dashboard</th><th>Date</th></tr>';
+    tbody.innerHTML = filtered.map((r,i)=>`<tr>
+      <td>${{i+1}}</td>
+      <td style="font-weight:600">${{r.FirstName}} ${{r.LastName}}</td>
+      <td>${{r.Region||'—'}}</td>
+      <td>${{typeLabel(r.Type)}}</td>
+      <td>${{r.Dashboard||'—'}}</td>
+      <td>${{r.Date||'—'}}</td>
+    </tr>`).join('');
+  }} else if(type === 'activity-summary'){{
+    sel('ph-report-type').textContent = 'Activity Summary — total views and unique visitors per dashboard';
+    psEl.style.display='none'; pcEl.style.display='none';
+    thead.innerHTML = '<tr><th>#</th><th>Dashboard</th><th>Total Views</th><th>Unique Visitors</th><th>% of Total</th></tr>';
+    tbody.innerHTML = dashRows.map(([d,cnt],i)=>`<tr>
+      <td>${{i+1}}</td><td style="font-weight:600">${{d}}</td><td>${{cnt}}</td><td>${{dashVis[d].size}}</td>
+      <td>${{totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—'}}</td>
+    </tr>`).join('');
+  }} else if(type === 'by-person'){{
+    sel('ph-report-type').textContent = 'By Person — one row per employee: total views and dashboards accessed';
+    psEl.style.display='none'; pcEl.style.display='none';
+    thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Region</th><th>Type</th><th>Total Views</th><th>Dashboards Accessed</th></tr>';
+    const people={{}};
+    filtered.forEach(r=>{{
+      const key=(r.FirstName+' '+r.LastName).trim();
+      if(!people[key]) people[key]={{name:key,region:r.Region||'—',type:typeLabel(r.Type),views:0,dashes:new Set()}};
+      people[key].views++;
+      if(r.Dashboard) people[key].dashes.add(r.Dashboard);
+    }});
+    tbody.innerHTML = Object.values(people).sort((a,b)=>b.views-a.views).map((p,i)=>`<tr>
+      <td>${{i+1}}</td><td style="font-weight:600">${{p.name}}</td><td>${{p.region}}</td><td>${{p.type}}</td>
+      <td>${{p.views}}</td><td style="font-size:11px">${{[...p.dashes].sort().join(', ')}}</td>
+    </tr>`).join('');
+  }} else if(type === 'last-login'){{
+    sel('ph-report-type').textContent = 'Last Login — most recent visit date per person per dashboard';
+    psEl.style.display='none'; pcEl.style.display='none';
+    thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Region</th><th>Type</th><th>Dashboard</th><th>Last Login</th></tr>';
+    const map={{}};
+    filtered.forEach(r=>{{
+      const name=(r.FirstName+' '+r.LastName).trim();
+      const key=name+'|||'+(r.Dashboard||'');
+      if(!map[key]||r.Date>map[key].date) map[key]={{name,region:r.Region||'—',type:typeLabel(r.Type),dashboard:r.Dashboard||'—',date:r.Date||'—'}};
+    }});
+    tbody.innerHTML = Object.values(map).sort((a,b)=>b.date.localeCompare(a.date)).map((r,i)=>`<tr>
+      <td>${{i+1}}</td><td style="font-weight:600">${{r.name}}</td><td>${{r.region}}</td><td>${{r.type}}</td>
+      <td>${{r.dashboard}}</td><td>${{r.date}}</td>
+    </tr>`).join('');
+  }}
+  window.print();
+}}
+
+function runExportXLSX(type){{
+  sel('export-menu').classList.remove('open');
+  const dashVal=sel('f-dashboard').value, frVal=sel('f-date-from').value, toVal=sel('f-date-to').value;
+  const parts=[]; if(dashVal) parts.push(dashVal); if(frVal||toVal) parts.push((frVal||'')+'_'+(toVal||''));
+  const slug = parts.length ? '_'+parts.join('_') : '';
+  function makeSheet(rows, colWidths){{
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = colWidths.map(w => ({{wch: w}}));
+    return ws;
+  }}
+  function dl(name, wb){{ XLSX.writeFile(wb, 'dashboard-traffic-'+name+slug+'.xlsx'); }}
+  const wb = XLSX.utils.book_new();
+
+  if(type==='full'){{
+    const totalViews=filtered.length;
+    const uniqueSet=new Set(filtered.map(r=>(r.FirstName+' '+r.LastName).trim()));
+    const uniqueUsers=uniqueSet.size;
+    const avgVisits=uniqueUsers?(totalViews/uniqueUsers).toFixed(1):'0';
+    const dashCounts={{}},dashVis={{}},rgCounts={{}};
+    filtered.forEach(r=>{{
+      const d=r.Dashboard||'Unknown',rg=r.Region||'Unknown',name=(r.FirstName+' '+r.LastName).trim();
+      dashCounts[d]=(dashCounts[d]||0)+1; if(!dashVis[d]) dashVis[d]=new Set(); dashVis[d].add(name);
+      rgCounts[rg]=(rgCounts[rg]||0)+1;
+    }});
+    const dashRows=Object.entries(dashCounts).sort((a,b)=>b[1]-a[1]);
+    const rgRows=Object.entries(rgCounts).sort((a,b)=>b[1]-a[1]);
+    const topDash=dashRows[0]?.[0]||'—';
+    const dateStr=new Date().toLocaleDateString('en-US',{{year:'numeric',month:'long',day:'numeric'}});
+    const filterParts=[];
+    if(dashVal) filterParts.push('Dashboard: '+dashVal);
+    if(sel('f-region').value) filterParts.push('Region: '+sel('f-region').value);
+    if(sel('f-type').value) filterParts.push('Type: '+typeLabel(sel('f-type').value));
+    if(frVal||toVal) filterParts.push('Dates: '+(frVal||'—')+' to '+(toVal||'—'));
+    if(hideTLG) filterParts.push('TLG Hidden');
+    const summaryRows=[
+      ['Internal Dashboard Traffic Report'],
+      ['Generated: '+dateStr,'Records: '+totalViews],
+      ['Filters: '+(filterParts.length?filterParts.join(' | '):'No filters active — showing all data')],
+      [],
+      ['SUMMARY'],
+      ['Total Views','Unique Users','Avg Visits / Person','Top Dashboard','Active Dashboards'],
+      [totalViews,uniqueUsers,avgVisits,topDash,dashRows.length],
+      [],
+      ['VIEWS BY DASHBOARD'],
+      ['Dashboard','Total Views','Unique Visitors','% of Total'],
+      ...dashRows.map(([d,cnt])=>[d,cnt,dashVis[d].size,totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—']),
+      [],
+      ['VIEWS BY REGION'],
+      ['Region','Total Views','% of Total'],
+      ...rgRows.map(([rg,cnt])=>[rg,cnt,totalViews?(cnt/totalViews*100).toFixed(1)+'%':'—']),
+    ];
+    XLSX.utils.book_append_sheet(wb, makeSheet(summaryRows,[40,18,18,40]), 'Summary');
+    const logRows=[
+      ['Name','Region','Type','Dashboard','Date'],
+      ...filtered.map(r=>[(r.FirstName+' '+r.LastName).trim(),r.Region||'',typeLabel(r.Type),r.Dashboard||'',r.Date||''])
+    ];
+    XLSX.utils.book_append_sheet(wb, makeSheet(logRows,[28,16,10,36,14]), 'Activity Log');
+    dl('full-report', wb);
+  }} else if(type==='activity-summary'){{
+    const totals={{}},visitors={{}};
+    filtered.forEach(r=>{{ const d=r.Dashboard||'Unknown'; totals[d]=(totals[d]||0)+1; if(!visitors[d]) visitors[d]=new Set(); visitors[d].add((r.FirstName+' '+r.LastName).trim()); }});
+    const total=filtered.length;
+    const rows=[['Dashboard','Total Views','Unique Visitors','% of Total'],
+      ...Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([d,cnt])=>[d,cnt,visitors[d].size,total?(cnt/total*100).toFixed(1)+'%':'—'])];
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows,[34,14,18,14]), 'Activity Summary');
+    dl('activity-summary', wb);
+  }} else if(type==='by-person'){{
+    const people={{}};
+    filtered.forEach(r=>{{ const key=(r.FirstName+' '+r.LastName).trim(); if(!people[key]) people[key]={{name:key,region:r.Region||'',type:typeLabel(r.Type),views:0,dashes:new Set()}}; people[key].views++; if(r.Dashboard) people[key].dashes.add(r.Dashboard); }});
+    const rows=[['Name','Region','Type','Total Views','Dashboards Accessed'],
+      ...Object.values(people).sort((a,b)=>b.views-a.views).map(p=>[p.name,p.region,p.type,p.views,[...p.dashes].sort().join(', ')])];
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows,[28,16,10,14,50]), 'By Person');
+    dl('by-person', wb);
+  }} else if(type==='last-login'){{
+    const map={{}};
+    filtered.forEach(r=>{{ const name=(r.FirstName+' '+r.LastName).trim(); const key=name+'|||'+(r.Dashboard||''); if(!map[key]||r.Date>map[key].date) map[key]={{name,region:r.Region||'',type:typeLabel(r.Type),dashboard:r.Dashboard||'',date:r.Date||''}}; }});
+    const rows=[['Name','Region','Type','Dashboard','Last Login'],
+      ...Object.values(map).sort((a,b)=>b.date.localeCompare(a.date)).map(r=>[r.name,r.region,r.type,r.dashboard,r.date])];
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows,[28,16,10,36,14]), 'Last Login');
+    dl('last-login', wb);
+  }}
+}}
+
+applyFilters();
+</script>
+<div id="info-popover" class="info-popover"></div>
+<div id="print-header" style="display:none;margin-bottom:16px;">
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title"></div>
+  <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
+  <div style="font-size:12px;color:#555;margin-bottom:4px;" id="ph-filters"></div>
+  <div style="font-size:11px;font-style:italic;color:#777;" id="ph-report-type"></div>
+</div>
+<div id="print-stats" style="display:none;"></div>
+<div id="print-charts" style="display:none;"></div>
+<div id="print-roster-wrap" style="display:none;">
+  <table id="print-roster-table">
+    <thead id="print-table-head"></thead>
+    <tbody id="print-roster-body"></tbody>
+  </table>
+</div>
+</body>
+</html>"""
+
+OUTPUT_FILE.write_text(html, encoding='utf-8')
+print(f"\nDashboard written to: {OUTPUT_FILE}")

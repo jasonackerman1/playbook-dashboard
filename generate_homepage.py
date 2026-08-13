@@ -386,7 +386,7 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None):
     <div class="aurora-orb aurora-3"></div>
   </div>
   <div class="header-left">
-    <h1>Analytical Data Hub</h1>
+    <h1 id="hub-title" title="Triple-click for internal dashboard traffic">Analytical Data Hub</h1>
     <div class="header-sub">Powered by TLG &middot; {today}</div>
   </div>
   <div class="header-center">
@@ -581,6 +581,17 @@ function toggleTheme(){{
   document.getElementById('btn-theme').innerHTML=light?'&#9790; Dark':'&#9728; Light';
   localStorage.setItem('pb-theme',light?'light':'dark');
 }}
+
+/* ── Triple-click title → hidden internal dashboard traffic view ── */
+(function(){{
+  var n=0,t;
+  var h=document.getElementById('hub-title');
+  if(h) h.addEventListener('click',function(){{
+    n++;clearTimeout(t);
+    if(n>=3){{n=0;window.location.href='dashboard-traffic.html';}}
+    else t=setTimeout(function(){{n=0;}},1500);
+  }});
+}})();
 
 /* ── Particle network ───────────────────────────────────────────── */
 (function(){{
