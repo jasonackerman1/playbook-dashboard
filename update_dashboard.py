@@ -2,13 +2,15 @@
 """
 Playbook Dashboard Updater
 --------------------------
-Reads all playbook-monthly-YYYY-MM.xlsx files from the /data folder,
-combines them, and rebuilds index.html with full history.
+Reads all playbook-monthly-YYYY-MM.xlsx and playbook-weekly-YYYY-MM-DD_YYYY-MM-DD.xlsx
+files from the /data folder, combines them, and rebuilds index.html with full history.
+Each row's Month bucket is derived from its own Date (not the filename), so monthly and
+weekly files mix freely and a week straddling a month boundary splits correctly.
 
 Usage:
     python update_dashboard.py
 
-Run this after dropping a new monthly Excel file into /data.
+Run this after dropping a new monthly or weekly Excel file into /data.
 """
 
 import os
@@ -54,13 +56,17 @@ def get_page(url):
         return 'Home'
     return last.replace('.html', '').replace('_', ' ').replace('-', ' ').title()
 
-def load_excel(path: Path, month_label: str) -> pd.DataFrame:
+def load_excel(path: Path) -> pd.DataFrame:
     df = pd.read_excel(path)
     df = df.drop(columns=[c for c in ['Uid','Email','Employee Id','Market','Branch'] if c in df.columns])
     df['Playbook'] = df['Url'].apply(get_playbook)
     df['Page']     = df['Url'].apply(get_page)
     df['Date']     = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
-    df['Month']    = month_label
+    # Month is derived from each row's own Date, not the source filename, so a
+    # weekly file's rows bucket into the correct calendar month even when the
+    # week straddles a month boundary — the Monthly Trend chart and month
+    # filters need no other changes regardless of how often data is dropped.
+    df['Month']    = pd.to_datetime(df['Date']).dt.strftime('%Y-%m')
     df = df.rename(columns={
         'First Name':      'FirstName',
         'Last Name':       'LastName',
@@ -68,25 +74,32 @@ def load_excel(path: Path, month_label: str) -> pd.DataFrame:
     })
     return df[['FirstName','LastName','Region','Type','Date','Month','Playbook','Page']]
 
-# ── Collect all monthly files ─────────────────────────────────────────────────
-pattern = re.compile(r'^playbook-monthly-(\d{4}-\d{2})\.xlsx$')
-files   = sorted([
-    (m.group(1), p)
-    for p in DATA_DIR.glob('*.xlsx')
-    if (m := pattern.match(p.name))
-])
+# ── Collect all monthly + weekly files ────────────────────────────────────────
+monthly_pattern = re.compile(r'^playbook-monthly-(\d{4}-\d{2})\.xlsx$')
+weekly_pattern  = re.compile(r'^playbook-weekly-(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})\.xlsx$')
+
+files = []
+for p in DATA_DIR.glob('*.xlsx'):
+    m = monthly_pattern.match(p.name)
+    if m:
+        files.append((m.group(1), p))
+        continue
+    m = weekly_pattern.match(p.name)
+    if m:
+        files.append((f'{m.group(1)} to {m.group(2)}', p))
+files.sort()
 
 if not files:
-    print(f"No files matching playbook-monthly-YYYY-MM.xlsx found in {DATA_DIR}")
+    print(f"No files matching playbook-monthly-YYYY-MM.xlsx or playbook-weekly-YYYY-MM-DD_YYYY-MM-DD.xlsx found in {DATA_DIR}")
     sys.exit(1)
 
-print(f"Found {len(files)} monthly file(s):")
+print(f"Found {len(files)} file(s):")
 for label, path in files:
     print(f"  {label}  →  {path.name}")
 
 frames = []
 for label, path in files:
-    df = load_excel(path, label)
+    df = load_excel(path)
     frames.append(df)
     print(f"  Loaded {len(df):,} rows from {label}")
 
@@ -680,7 +693,7 @@ html = f"""<!DOCTYPE html>
 
 <div class="filters">
   <span class="filter-label">Filter</span>
-  <button class="btn-preset active" id="btn-prev"  onclick="setPrevMonth(this)">Prev Month</button>
+  <button class="btn-preset active" id="btn-30d"  onclick="setRange(30,this)">30D</button>
   <button class="btn-preset" id="btn-60d"  onclick="setRange(60,this)">60D</button>
   <button class="btn-preset" id="btn-90d"  onclick="setRange(90,this)">90D</button>
   <button class="btn-preset" id="btn-120d" onclick="setRange(120,this)">120D</button>
@@ -808,37 +821,35 @@ function toggleTheme(){{
 allPlaybooks.forEach(p => sel('f-playbook').innerHTML += `<option value="${{p}}">${{p}}</option>`);
 allRegions.forEach(r => sel('f-region').innerHTML  += `<option value="${{r}}">${{r}}</option>`);
 
-function daysAgo(n){{ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }}
-function today(){{ return new Date().toISOString().slice(0,10); }}
-function prevMonthFrom(){{ const d=new Date(); return new Date(d.getFullYear(),d.getMonth()-1,1).toISOString().slice(0,10); }}
-function prevMonthTo(){{  const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),0).toISOString().slice(0,10); }}
-function setPrevMonth(btn){{
-  document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  sel('f-date-from').value = prevMonthFrom();
-  sel('f-date-to').value   = prevMonthTo();
-  applyFilters();
+// shiftDate anchors to a given YYYY-MM-DD string rather than the real "today" —
+// every preset button (30D/60D/90D/120D) and the default view are anchored to
+// the newest date actually in the data, so they all track the latest data file
+// automatically instead of the calendar date the dashboard happens to be opened on.
+function shiftDate(dateStr, n){{
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + n);
+  return dt.toISOString().slice(0,10);
 }}
-(function(){{
-  var months = RAW.map(function(r){{ return r.Month; }}).filter(Boolean).sort();
-  var latest = months[months.length - 1];
-  if(latest){{
-    var parts = latest.split('-');
-    var y = +parts[0], m = +parts[1];
-    sel('f-date-from').value = new Date(y, m-1, 1).toISOString().slice(0,10);
-    sel('f-date-to').value   = new Date(y, m, 0).toISOString().slice(0,10);
-  }} else {{
-    sel('f-date-from').value = prevMonthFrom();
-    sel('f-date-to').value   = prevMonthTo();
-  }}
-}})();
+
+const maxDate = RAW.reduce((mx,r)=>r.Date>mx?r.Date:mx,'');
+const minDate = RAW.reduce((mn,r)=>(!mn||r.Date<mn)?r.Date:mn,'');
 
 function setRange(days, btn){{
   document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  if(days===0){{ sel('f-date-from').value=''; sel('f-date-to').value=''; }}
-  else{{ sel('f-date-from').value=daysAgo(days); sel('f-date-to').value=today(); }}
+  // "All" shows the true span of the data instead of leaving the fields blank —
+  // functionally identical (nothing outside that span exists to filter anyway)
+  // but the date inputs now honestly reflect what's on screen.
+  if(days===0){{ sel('f-date-from').value=minDate; sel('f-date-to').value=maxDate; }}
+  else if(maxDate){{ sel('f-date-from').value=shiftDate(maxDate,-days); sel('f-date-to').value=maxDate; }}
   applyFilters();
+}}
+// Default view on load: last 30 days ending on the newest date in the data —
+// updates automatically every time a new data file is dropped, no code change needed.
+if(maxDate){{
+  sel('f-date-from').value = shiftDate(maxDate, -30);
+  sel('f-date-to').value   = maxDate;
 }}
 
 // Header badges
@@ -850,7 +861,6 @@ function fmtDate(d){{
   const [y,m,day]=d.split('-');
   return new Date(+y,+m-1,+day).toLocaleDateString('en-US',{{month:'long',day:'numeric',year:'numeric'}});
 }}
-const maxDate = RAW.reduce((mx,r)=>r.Date>mx?r.Date:mx,'');
 
 let filtered = [...RAW];
 function getFilters(){{
@@ -912,9 +922,11 @@ function applyFilters(){{
 
 function resetFilters(){{
   document.querySelectorAll('.btn-preset').forEach(b=>b.classList.remove('active'));
-  sel('btn-prev').classList.add('active');
-  sel('f-date-from').value = prevMonthFrom();
-  sel('f-date-to').value   = prevMonthTo();
+  sel('btn-30d').classList.add('active');
+  if(maxDate){{
+    sel('f-date-from').value = shiftDate(maxDate, -30);
+    sel('f-date-to').value   = maxDate;
+  }}
   ['f-playbook','f-region','f-type'].forEach(id => sel(id).value = '');
   hideTLG = true;
   sel('btn-tlg').classList.add('active');

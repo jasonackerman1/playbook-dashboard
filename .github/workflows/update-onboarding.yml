@@ -5,6 +5,7 @@ on:
     paths:
       - 'onboarding-data/*.xlsx'
       - 'data/playbook-monthly-*.xlsx'
+      - 'data/playbook-weekly-*.xlsx'
       - 'update_onboarding_dashboard.py'
       - 'generate_homepage.py'
   workflow_dispatch:

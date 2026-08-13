@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - 'data/playbook-monthly-*.xlsx'
+      - 'data/playbook-weekly-*.xlsx'
+      - 'update_dashboard.py'
+      - 'generate_homepage.py'
   workflow_dispatch:
 
 permissions:

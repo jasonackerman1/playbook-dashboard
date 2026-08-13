@@ -21,12 +21,6 @@ TLG = {
     "John Lechner","Resmie Nesimi","Samantha D'Angelo","Bianca DiPasquale","Doug Falk"
 }
 
-def fmt_month(yyyymm):
-    try:
-        return datetime.strptime(yyyymm, '%Y-%m').strftime('%B %Y')
-    except Exception:
-        return yyyymm
-
 # ── Playbook Traffic stats ────────────────────────────────────────────────────
 PLAYBOOK_MAP = {
     "dx_playbook": "DX Playbook",
@@ -50,23 +44,30 @@ def get_playbook(url):
 
 def playbook_stats():
     data_dir = SCRIPT_DIR / 'data'
-    pattern = re.compile(r'^playbook-monthly-(\d{4}-\d{2})\.xlsx$')
-    files = sorted(
-        [(m.group(1), p) for p in data_dir.glob('*.xlsx') if (m := pattern.match(p.name))],
-        key=lambda x: x[0]
-    )
+    monthly_pattern = re.compile(r'^playbook-monthly-(\d{4}-\d{2})\.xlsx$')
+    weekly_pattern  = re.compile(r'^playbook-weekly-(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})\.xlsx$')
+    files = []
+    for p in data_dir.glob('*.xlsx'):
+        if monthly_pattern.match(p.name) or weekly_pattern.match(p.name):
+            files.append(p)
     if not files:
         return {'total_views': '—', 'latest_month': '—', 'top_playbook': '—'}
 
     frames = []
-    for label, path in files:
+    for path in files:
         df = pd.read_excel(path)
         df['Playbook'] = df['Url'].apply(get_playbook)
         frames.append(df)
 
     combined = pd.concat(frames, ignore_index=True)
     total_views  = len(combined)
-    latest_month = fmt_month(files[-1][0])
+    # Derived from the actual max Date in the data (not a filename label) so
+    # weekly files — which don't map to a single "YYYY-MM" label — work too.
+    if 'Date' in combined.columns:
+        max_date = pd.to_datetime(combined['Date']).max()
+        latest_month = max_date.strftime('%B %Y') if pd.notna(max_date) else '—'
+    else:
+        latest_month = '—'
     top = combined['Playbook'].value_counts()
     top_playbook = top.index[0] if len(top) else '—'
     unique_reps  = combined['Uid'].nunique() if 'Uid' in combined.columns else '—'
