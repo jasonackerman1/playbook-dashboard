@@ -33,6 +33,7 @@ PLAYBOOK_MAP = {
     "iq501": "IQ501",
     "gc_ip_sales_playbook": "GC/IP Sales Playbook",
     "road_to_dx": "Road to DX",
+    "learning-development-dashboards": "Learning & Development Dashboards",
 }
 
 def get_playbook(url):

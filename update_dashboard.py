@@ -38,6 +38,7 @@ PLAYBOOK_MAP = {
     "iq501":                              "IQ501",
     "gc_ip_sales_playbook":               "GC/IP Sales Playbook",
     "road_to_dx":                         "Road to DX",
+    "learning-development-dashboards":    "Learning & Development Dashboards",
 }
 
 def get_playbook(url):
@@ -790,6 +791,7 @@ const PLAYBOOK_COLORS = {{
   "IQ501":                  "#5cf0f7",
   "GC/IP Sales Playbook":   "#cf5cf7",
   "Road to DX":             "#2dd4bf",
+  "Learning & Development Dashboards": "#84cc16",
 }};
 function pbColor(pb){{ return PLAYBOOK_COLORS[pb] || "#7b82a0"; }}
 function recencyColor(dateStr){{
