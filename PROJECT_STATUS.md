@@ -15,6 +15,45 @@ Last updated: 2026-08-13
 | Accelerate Onboarding | `onboarding.html` | August 7, 2026 | 47 learners; playbook-matched learners 34 → 41 after weekly playbook data; 20 reps with Closed Won deals |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | August 12, 2026 | 503 learners, 41 complete; rebuilt to merge Resmie's prototype (see below) |
+| Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 7, 2026 | 527 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-08-13) — Internal Dashboard Traffic (new, hidden dashboard)
+
+Jason asked how hard it'd be to track traffic *on our own dashboards*. Turned out the data already
+existed — the same weekly/monthly playbook Excel exports already capture every visit to our
+dashboards under one URL prefix (`/learning-development-dashboards/...`), 527 rows of it already
+sitting in the data files. Built `dashboard-traffic.html` / `update_dashboard_traffic.py` by
+mirroring `update_dashboard.py`'s architecture — full feature parity (stat cards, Views by
+Dashboard + Views by Region charts, monthly trend, Who's Active drilldown, 4 export types), minus
+the Playbook Intelligence content-analysis section and Vertical Markets toggle (neither applies to
+internal tool pages).
+
+**No homepage card** — Jason asked for this one hidden. Reached only by triple-clicking
+"Analytical Data Hub" on `index.html` (mirroring, in reverse, the same triple-click-to-home pattern
+every other dashboard already uses). "Analytics Hub" and "Playbook Traffic" are excluded from the
+Dashboard filter *dropdown* only — Playbook Traffic already has its own dedicated dashboard — but
+their traffic still counts in every stat/chart/export.
+
+**Real bug fixed before shipping:** the bare directory URL (no filename) wasn't matching the
+Home/index detection, so it showed up as a fake separate "Learning Development Dashboards" bucket
+(102 of 134 total home visits) instead of merging into "Analytics Hub." Fixed in `get_dashboard()`.
+
+**Real bug found in the *original* `playbook.html`, flagged but not fixed (out of scope):** while
+adapting the Who's Active click-handler's apostrophe-escaping, found the original's `.replace()`
+is a no-op due to how JS's `\'` escape sequence works — any name with an apostrophe (e.g.
+"D'Angelo," who's in the TLG list) silently breaks that person's row when clicked on the live
+Playbook Traffic dashboard. Confirmed via direct Node simulation. My new dashboard's version is
+correct.
+
+Wired into the same `update-dashboard.yml` workflow that already builds `playbook.html`/
+`index.html` — no new workflow file. Verified locally (all `node --check` clean, data/chart
+correctness confirmed via direct JSON inspection, known leaderboard Python-version artifact
+reverted before each commit) and pushed as commit `bfcc46d`; both `Update Playbook Dashboard` and
+`Update Onboarding Dashboard` confirmed `success`.
+
+Full detail in project memory: `internal_dashboard_traffic.md`.
 
 ---
 
