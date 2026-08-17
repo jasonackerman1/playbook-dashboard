@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-08-13
+Last updated: 2026-08-17
 
 ---
 
@@ -9,13 +9,37 @@ Last updated: 2026-08-13
 | Dashboard | File | Data Through | Notes |
 |---|---|---|---|
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
-| Playbook Traffic | `playbook.html` | August 7, 2026 | Cadence changed monthly → weekly (see below); date filters now anchor to newest data date |
+| Playbook Traffic | `playbook.html` | August 14, 2026 | 7,502 rows; cadence is monthly → weekly (see below); date filters anchor to newest data date |
 | Healthcare Certification | `cert-healthcare.html` | August 10, 2026 | 65 people, 6 certified, 59 in progress |
 | Public Sector Certification | `cert-publicsector.html` | July 31, 2026 | 118 active people, 74 completed (63%) — "Curricula" report format |
-| Accelerate Onboarding | `onboarding.html` | August 7, 2026 | 47 learners; playbook-matched learners 34 → 41 after weekly playbook data; 20 reps with Closed Won deals |
+| Accelerate Onboarding | `onboarding.html` | August 14, 2026 | 47 learners; 31 overdue as of latest data; 20 reps with Closed Won deals |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | August 12, 2026 | 503 learners, 41 complete; rebuilt to merge Resmie's prototype (see below) |
-| Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 7, 2026 | 527 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+| Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-08-17) — recovered a real push-race data loss
+
+Jason dropped the second weekly playbook file (`playbook-weekly-2026-08-08_2026-08-14.xlsx`) and
+pushed. Both `Update Playbook Dashboard` and `Update Onboarding Dashboard` fired from the same
+push; Onboarding's auto-commit landed first both times, so the Playbook workflow's own commit got
+rejected twice with the generic `fetch first` error (visible to Jason only as "process completed
+with exit code 1"). Unlike an earlier similar-looking incident, this one **did** lose real work:
+`playbook.html` was missing the new week's 757 rows and `dashboard-traffic.html` was missing 208
+rows — confirmed by diffing a fresh local regeneration against `origin/main`. `index.html` needed
+no fix since Onboarding's own successful run had already regenerated it correctly from the same
+data.
+
+**Fix:** regenerated both files locally and pushed directly (commit `63e5203`).
+
+**Important, newly-learned wrinkle:** this repo deploys to GitHub Pages via the workflow's own
+`deploy` job (`actions/deploy-pages@v4`), not classic branch-based Pages. Pushing the corrected
+files directly updates `main` but does **not** redeploy the live site by itself, since no trigger
+path was touched. Had to manually fire a `workflow_dispatch` afterward to get a real `build` +
+`deploy` run — confirmed both steps `success` before considering this actually resolved.
+
+Full detail in project memory: `playbook_weekly_cadence.md`.
 
 ---
 
