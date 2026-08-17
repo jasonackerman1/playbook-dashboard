@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-08-17
+Last updated: 2026-08-18
 
 ---
 
@@ -10,12 +10,59 @@ Last updated: 2026-08-17
 |---|---|---|---|
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
 | Playbook Traffic | `playbook.html` | August 14, 2026 | 7,502 rows; cadence is monthly → weekly (see below); date filters anchor to newest data date |
-| Healthcare Certification | `cert-healthcare.html` | August 10, 2026 | 65 people, 6 certified, 59 in progress |
-| Public Sector Certification | `cert-publicsector.html` | July 31, 2026 | 118 active people, 74 completed (63%) — "Curricula" report format |
-| Accelerate Onboarding | `onboarding.html` | August 14, 2026 | 47 learners; 31 overdue as of latest data; 20 reps with Closed Won deals |
+| Healthcare Certification | `cert-healthcare.html` | August 17, 2026 | 68 people, 8 certified, 59 in progress |
+| Public Sector Certification | `cert-publicsector.html` | August 17, 2026 | 115 active people, 85 completed (74%) — "Curricula" report format |
+| Accelerate Onboarding | `onboarding.html` | August 17, 2026 | 51 learners; tooltip accuracy audit done 2026-08-18 (3 fixed, see below) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
-| Layered Security Certification | `cert-layered-security.html` | August 12, 2026 | 503 learners, 41 complete; rebuilt to merge Resmie's prototype (see below) |
+| Layered Security Certification | `cert-layered-security.html` | August 17, 2026 | 502 learners, 52 complete; OPS FY26 Amount column now populated (see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-08-18) — Accelerate Onboarding tooltip accuracy audit
+
+Jason asked for a full pass over every `?` info tooltip on the Onboarding dashboard. Checked all 18
+against actual current code rather than trusting the existing text. **3 were stale, fixed:**
+- **"Overdue"** — described deadlines as computed relative to hire date (old pacing-schedule
+  language); the real mechanism is now driven by each course's own LMS-assigned due date (Item
+  Required Date), confirmed active with 409 of 1695 items now carrying a real date. Reworded.
+- **"Learner" column** — described a colored playbook-engagement dot that was removed from this
+  table back on 2026-07-29. Reworded to describe what's actually shown (name + Canada flag).
+- **Filters info** — never mentioned the Group ("Hide Test Group") or Location (US/Canada) filters,
+  both real current controls. Added both.
+
+**Real finding surfaced, not acted on:** 128 of 409 items with a real LMS due date fall *before* the
+learner's own program assign date — driving 33 of 51 people (65%) into Overdue status for a
+deadline that may predate them joining. Might be intentional (a shared cohort-wide deadline) or a
+data artifact — flagged to Jason to confirm with Resmie, not changed without being asked.
+
+Pushed as commit `c4b7e6a`; confirmed `build` and `deploy` both `success`.
+
+---
+
+## Recent Changes (2026-08-17) — GitHub outage, Layered Security data refresh, file cleanup
+
+**GitHub had a real, confirmed infrastructure outage** (`githubstatus.com`: Actions component
+`major_outage`, Pages `degraded_performance`) that caused two separate dashboard deploys (Public
+Sector, then Layered Security) to fail at the `deploy` job with `503: No server is currently
+available` from GitHub's own Pages deployment API — not anything in our code or data. In both
+cases the `build` job (processing the actual data) had already succeeded and committed correctly;
+only the final "go live" step was blocked. Recovered by manually re-triggering `workflow_dispatch`
+until a deploy attempt got through cleanly (confirmed both `build` and `deploy` `success`, and
+confirmed via direct `curl` of the live URLs that the correct data-through dates were actually
+being served — don't just trust a green checkmark, verify the live page).
+
+**Layered Security data updated twice same day:**
+1. New Certification-Report + OPS-FY26 files (both 08.17) replaced the 08.12 versions — critically,
+   **the OPS-FY26 export now includes a real Amount column for the first time**, resolving a gap
+   flagged back on 2026-08-12. No code changes needed (`load_sales_deals()` already detects the
+   Amount column by name). Still no Closed Won deals yet, but the pipeline is fully ready.
+2. Jason forgot this dashboard's "delete old, use only new" cadence and left the old 08.12
+   Certification-Report/OPS-FY26 files sitting alongside the new ones — harmless (loaders always
+   pick the newest file per type), but cleaned up anyway (commit `799988b`) to avoid clutter. A new
+   Curricula Report (502 learners, 52 complete, up from 41) arrived separately the same session.
+
+Full detail in project memory: `layered_security_dashboard.md`, `onboarding_dashboard.md`.
 
 ---
 
