@@ -36,6 +36,9 @@ COL_ITEM_STS   = 29  # Item Completion Status Description
 COL_ITEM_REQ   = 30  # Item Required Date
 COL_PARENT_CURRIC = 16  # Parent Curriculum ID (ACCELERATE or ACCELERATE_BCA)
 
+# ── Registration status report (VILT/workshop sign-ups) ─────────────────────
+REGISTRATION_FILE_GLOB = 'onboarding-data/RegistrationStatusWithOrgCSV*.xlsx'
+
 # ── Playbook traffic columns ──────────────────────────────────────────────────
 PB_FIRST = 1
 PB_LAST  = 2
@@ -141,6 +144,64 @@ def page_label(url):
         return 'Home'
     slug = m.group(1).lower()
     return PAGE_LABELS.get(slug, slug.replace('-', ' ').title())
+
+
+def _find_col(header, *substrings, exclude=None):
+    """Find a column index by case-insensitive substring match on the header row."""
+    for i, h in enumerate(header):
+        hl = str(h or '').strip().lower()
+        if exclude and exclude in hl:
+            continue
+        if any(s in hl for s in substrings):
+            return i
+    return None
+
+
+def attach_registration_status(records):
+    """Flags incomplete VILT (workshop) curriculum items as Registered when the learner has
+    an Active Enrollment row for that exact course title in the registration status report.
+    Non-fatal if the report isn't present yet — items just stay unflagged (renders as
+    'Not Registered' in the UI) until Resmie drops one in."""
+    import glob
+    files = sorted(glob.glob(REGISTRATION_FILE_GLOB))
+    if not files:
+        print("No registration status report found — Registered/Not Registered tags will show as Not Registered until one is added")
+        return records
+    fpath = files[-1]
+    wb = openpyxl.load_workbook(fpath, data_only=True)
+    ws = wb.active
+    header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    email_col  = _find_col(header, 'email', exclude='supervisor')
+    title_col  = _find_col(header, 'title', exclude='user')
+    status_col = _find_col(header, 'status')
+    if email_col is None or title_col is None or status_col is None:
+        print(f"WARNING: registration report {os.path.basename(fpath)} missing an expected column (Email/Title/Status) — skipping")
+        return records
+
+    active = set()
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        status = str(row[status_col] or '').strip().lower()
+        if status != 'active enrollment':
+            continue
+        email = str(row[email_col] or '').strip().lower()
+        title = str(row[title_col] or '').strip()
+        if email and title:
+            active.add((email, title))
+
+    matched_people = 0
+    matched_items = 0
+    for p in records.values():
+        person_matched = False
+        for curric in p['curricula'].values():
+            for item in curric['items']:
+                if item['type'] == 'VILT' and not item['done'] and (p['email'], item['title']) in active:
+                    item['registered'] = True
+                    matched_items += 1
+                    person_matched = True
+        if person_matched:
+            matched_people += 1
+    print(f"Registration status ({os.path.basename(fpath)}): {matched_people} people, {matched_items} curriculum items flagged Registered")
+    return records
 
 
 def load_lms():
@@ -704,6 +765,12 @@ def generate_html(records, sales_map=None):
 
 <!-- Filters -->
 <div class="filters">
+  <span class="filter-label">Location</span>
+  <div class="btn-group" id="location-btns">
+    <button class="active" onclick="setLocation('all',this)">All</button>
+    <button onclick="setLocation('us',this)">&#127482;&#127480; US</button>
+    <button onclick="setLocation('ca',this)">&#127464;&#127462; Canada</button>
+  </div>
   <span class="filter-label">Market</span>
   <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
   <span class="filter-label">Status</span>
@@ -713,24 +780,8 @@ def generate_html(records, sales_map=None):
     <option value="On Track">On Track</option>
     <option value="Overdue">Overdue</option>
   </select>
-  <span class="filter-label">Sort</span>
-  <select id="f-sort" onchange="applyFilters()">
-    <option value="name">Name A→Z</option>
-    <option value="pct-desc">Completion High→Low</option>
-    <option value="pct-asc">Completion Low→High</option>
-    <option value="days-asc">Most Urgent First</option>
-  </select>
   <span class="filter-label">Group</span>
-  <div class="btn-group" id="test-group-btns">
-    <button class="active" onclick="setTestGroup('all',this)">All</button>
-    <button onclick="setTestGroup('hide',this)">Hide Test Group</button>
-  </div>
-  <span class="filter-label">Location</span>
-  <div class="btn-group" id="location-btns">
-    <button class="active" onclick="setLocation('all',this)">All</button>
-    <button onclick="setLocation('us',this)">&#127482;&#127480; US</button>
-    <button onclick="setLocation('ca',this)">&#127464;&#127462; Canada</button>
-  </div>
+  <button class="btn-reset" id="test-group-toggle" onclick="toggleTestGroup(this)">Show Early Access Cohort</button>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <span class="info-btn" onclick="showInfo(event,'filters-info')" style="margin-left:4px;">?</span>
   <span class="result-count" id="result-count"></span>
@@ -750,10 +801,12 @@ def generate_html(records, sales_map=None):
   <div class="stat">
     <div class="stat-label">On Track <span class="info-btn" onclick="showInfo(event,'ontrack')">?</span></div>
     <div class="stat-value" id="s-ontrack">&#8212;</div>
+    <div class="stat-sub" id="s-ontrack-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Completed <span class="info-btn" onclick="showInfo(event,'completed')">?</span></div>
     <div class="stat-value green" id="s-completed">&#8212;</div>
+    <div class="stat-sub" id="s-completed-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Days to First Sale <span class="info-btn" onclick="showInfo(event,'first-sale')">?</span></div>
@@ -787,6 +840,13 @@ def generate_html(records, sales_map=None):
         <button class="sort-btn" id="view-manager" onclick="setTableView('manager')">By Manager</button>
         <span class="info-btn" onclick="showInfo(event,'view-toggle')" style="margin-left:2px;">?</span>
       </div>
+      <span class="filter-label">Sort</span>
+      <select id="f-sort" onchange="applyFilters()">
+        <option value="name">Name A→Z</option>
+        <option value="pct-desc">Completion High→Low</option>
+        <option value="pct-asc">Completion Low→High</option>
+        <option value="days-asc">Most Urgent First</option>
+      </select>
       <input type="text" id="table-search" oninput="filterTableRows()" placeholder="Search name..." style="font-size:12px;padding:4px 10px;width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
     </div>
   </div>
@@ -877,7 +937,7 @@ const TLG_SET = new Set([
 ]);
 
 let hideTLG = true;
-let testGroupFilter = 'all'; // 'all' | 'hide'
+let testGroupFilter = 'hide'; // 'all' | 'hide' | 'only' — hidden by default
 let locationFilter = 'all';  // 'all' | 'us' | 'ca'
 // Fixed roster of the original June 4 cohort — stable even when the LMS
 // reassigns assignDate in future pulls (which happened July 2026).
@@ -891,10 +951,9 @@ const TEST_GROUP_NAMES = new Set([
   'Ty Foster', 'Valencia Gilford', 'William Birkett'
 ]);
 
-function setTestGroup(val, btn) {{
-  testGroupFilter = val;
-  document.querySelectorAll('#test-group-btns button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+function toggleTestGroup(btn) {{
+  testGroupFilter = (testGroupFilter === 'hide') ? 'only' : 'hide';
+  btn.textContent = (testGroupFilter === 'only') ? 'Hide Early Access Cohort' : 'Show Early Access Cohort';
   applyFilters();
 }}
 function setLocation(val, btn) {{
@@ -903,6 +962,33 @@ function setLocation(val, btn) {{
   btn.classList.add('active');
   applyFilters();
 }}
+
+function populateMarketDropdown() {{
+  const sel = document.getElementById('f-market');
+  const current = sel.value;
+
+  // Markets available given the current cohort + location filters (ignore market filter itself)
+  const visible = PEOPLE.filter(p => {{
+    if (hideTLG && TLG_SET.has(p.name.toLowerCase())) return false;
+    if (testGroupFilter === 'hide' && TEST_GROUP_NAMES.has(p.name)) return false;
+    if (testGroupFilter === 'only' && !TEST_GROUP_NAMES.has(p.name)) return false;
+    if (locationFilter === 'us' && p.isCanada) return false;
+    if (locationFilter === 'ca' && !p.isCanada) return false;
+    return true;
+  }});
+  const markets = [...new Set(visible.map(p => p.market))].sort();
+
+  sel.innerHTML = '<option value="">All Markets</option>';
+  markets.forEach(m => {{
+    const o = document.createElement('option');
+    o.value = m; o.textContent = m;
+    sel.appendChild(o);
+  }});
+
+  // Preserve selection if still valid, otherwise reset to All
+  sel.value = markets.includes(current) ? current : '';
+}}
+
 let filtered = [];
 let marketChartObj = null;
 let curricChartObj = null;
@@ -1175,10 +1261,10 @@ const INFO = {{
   "ontrack": "People who have not missed any course deadlines yet. They may or may not be keeping pace — check the Gap column to see who is falling behind even if they are technically still on time. Click any row to see which courses still need attention.",
   "completed": "People who have finished every required course across all six curricula in the Accelerate program.",
   "first-sale": "Average number of days from hire date to each rep's first Closed Won deal. Only the learner's earliest qualifying deal is counted. Open pipeline is not included. Data pulled from Salesforce.",
-  "filters-info": "Market: narrow the table to one market. Status: show only people who are Completed, On Track, or Overdue. Sort: change the default row order. Group: 'Hide Test Group' removes the original June 4 launch cohort from every stat, chart, and row. Location: show only US or only Canadian learners (Canadian learners are marked with a flag). All filters work together — for example, filter to a market and sort by Most Urgent to quickly find who needs attention there. Use Reset to clear everything.",
+  "filters-info": "Market: narrow the table to one market. Status: show only people who are Completed, On Track, or Overdue. Sort: change the default row order. Group: 'Show Early Access Cohort' brings the original June 4 launch cohort back into every stat, chart, and row (hidden by default). Location: show only US or only Canadian learners (Canadian learners are marked with a flag). All filters work together — for example, filter to a market and sort by Most Urgent to quickly find who needs attention there. Use Reset to clear everything.",
   "view-toggle": "Individual view shows one row per learner. By Manager groups learners under their manager so you can see how each team is tracking. The search box updates automatically — in Individual view it searches by learner name, in By Manager view it searches by manager name.",
-  "market-chart": "Average overall completion percentage by market. Hover over a bar to see how many reps in that market are done, on track, or overdue. A short bar is a signal that market may need extra support.",
-  "curric-chart": "Average completion percentage per curriculum across the whole cohort. Hover over a bar to see how many reps have finished, are in progress, have not started, or are past the deadline for that curriculum. A short bar is where reps are getting stuck.",
+  "market-chart": "Share of reps in each market broken down by status: green = completed, blue = on track, red = overdue. Each bar totals 100%. Hover a segment to see the percentage and underlying count. A long red segment is a signal that market may need extra support.",
+  "curric-chart": "Share of reps in each curriculum broken down by status: green = completed, blue = on track, red = overdue. Each bar totals 100%. Hover a segment to see the percentage and underlying count. A long red segment is where reps are getting stuck.",
   "heatmap": "One row per learner. Click any row to open their full detail — every individual lesson, completion dates, curriculum breakdown, and playbook activity timeline.",
   "col-learner": "The learner's name. A small flag marks Canadian learners so they're easy to spot in a mixed roster. Click any row to open their full detail — every individual lesson, completion dates, curriculum breakdown, and playbook activity history.",
   "col-status": "Each person's current standing in the program. Completed = finished all required courses. Overdue = past the LMS deadline for at least one course. On Track = within all deadlines so far. Click a row to see full detail including which curricula are overdue or behind pace.",
@@ -1266,8 +1352,8 @@ function resetFilters() {{
   document.getElementById('f-status').value = '';
   document.getElementById('f-sort').value = 'name';
   document.getElementById('table-search').value = '';
-  testGroupFilter = 'all';
-  document.querySelectorAll('#test-group-btns button').forEach((b,i) => b.classList.toggle('active', i===0));
+  testGroupFilter = 'hide';
+  document.getElementById('test-group-toggle').textContent = 'Show Early Access Cohort';
   locationFilter = 'all';
   document.querySelectorAll('#location-btns button').forEach((b,i) => b.classList.toggle('active', i===0));
   filterTableRows();
@@ -1275,6 +1361,7 @@ function resetFilters() {{
 }}
 
 function applyFilters() {{
+  populateMarketDropdown();
   const mkt    = document.getElementById('f-market').value;
   const status = document.getElementById('f-status').value;
   const sort   = document.getElementById('f-sort').value;
@@ -1282,6 +1369,7 @@ function applyFilters() {{
   filtered = PEOPLE.filter(p => {{
     if (hideTLG && TLG_SET.has(p.name.toLowerCase())) return false;
     if (testGroupFilter === 'hide' && TEST_GROUP_NAMES.has(p.name)) return false;
+    if (testGroupFilter === 'only' && !TEST_GROUP_NAMES.has(p.name)) return false;
     if (locationFilter === 'us' && p.isCanada) return false;
     if (locationFilter === 'ca' && !p.isCanada) return false;
     if (mkt && p.market !== mkt) return false;
@@ -1292,7 +1380,16 @@ function applyFilters() {{
 
   if (sort === 'pct-desc') {{ filtered.sort((a,b) => b.overallPct - a.overallPct); tableSort = {{col:'overall', dir:'desc'}}; }}
   else if (sort === 'pct-asc') {{ filtered.sort((a,b) => a.overallPct - b.overallPct); tableSort = {{col:'overall', dir:'asc'}}; }}
-  else if (sort === 'days-asc') {{ filtered.sort((a,b) => {{ const da = daysLeft(a) ?? 999, db = daysLeft(b) ?? 999; return da - db; }}); tableSort = {{col:'days', dir:'asc'}}; }}
+  else if (sort === 'days-asc') {{
+    const statusRank = {{ 'Overdue': 0, 'On Track': 1, 'Completed': 2, 'Unknown': 3 }};
+    filtered.sort((a, b) => {{
+      const ra = statusRank[computeStatus(a)] ?? 3, rb = statusRank[computeStatus(b)] ?? 3;
+      if (ra !== rb) return ra - rb;
+      const da = daysLeft(a) ?? 999, db = daysLeft(b) ?? 999;
+      return da - db;
+    }});
+    tableSort = {{col:'days', dir:'asc'}};
+  }}
   else {{ filtered.sort((a,b) => a.name.localeCompare(b.name)); tableSort = {{col:'name', dir:'asc'}}; }}
 
   renderStats();
@@ -1308,11 +1405,20 @@ function renderStats() {{
   const ontrack = filtered.filter(p => computeStatus(p) === 'On Track').length;
   const completed = filtered.filter(p => computeStatus(p) === 'Completed').length;
 
+  const pct = (n) => total ? Math.round((n / total) * 100) + '%' : '—';
+
   document.getElementById('s-total').textContent = total;
-  document.getElementById('s-overdue').textContent = overdue;
-  document.getElementById('s-overdue-sub').textContent = overdue ? overdue + ' past a curriculum deadline' : '';
-  document.getElementById('s-ontrack').textContent = ontrack;
-  document.getElementById('s-completed').textContent = completed;
+
+  document.getElementById('s-overdue').textContent = pct(overdue);
+  document.getElementById('s-overdue-sub').textContent = overdue
+    ? overdue + ' of ' + total + ' \\u2014 past a curriculum deadline'
+    : '0 of ' + total;
+
+  document.getElementById('s-ontrack').textContent = pct(ontrack);
+  document.getElementById('s-ontrack-sub').textContent = ontrack + ' of ' + total;
+
+  document.getElementById('s-completed').textContent = pct(completed);
+  document.getElementById('s-completed-sub').textContent = completed + ' of ' + total;
   const salesVals = filtered.map(p => SALES_MAP[p.email]).filter(v => v && v.daysToClose != null);
   const avgDays = salesVals.length ? Math.round(salesVals.reduce((s,v) => s + v.daysToClose, 0) / salesVals.length) : null;
   document.getElementById('s-sales').textContent = avgDays !== null ? avgDays + 'd' : '—';
@@ -1467,65 +1573,85 @@ function renderCharts() {{
 
 function renderMarketChart() {{
   const markets = [...new Set(filtered.map(p => p.market))].sort();
-  const avgs = markets.map(m => {{
-    const mp = filtered.filter(p => p.market === m);
-    return Math.round(mp.reduce((s,p) => s+p.overallPct,0)/mp.length);
-  }});
   const marketStats = markets.map(m => {{
     const mp = filtered.filter(p => p.market === m);
     const total    = mp.length;
     const complete = mp.filter(p => p.overallDone).length;
     const overdue  = mp.filter(p => computeStatus(p) === 'Overdue').length;
     const onTrack  = total - complete - overdue;
-    return {{total, complete, onTrack, overdue}};
+    const pct = n => total ? Math.round((n/total)*100) : 0;
+    return {{total, complete, onTrack, overdue, completePct: pct(complete), onTrackPct: pct(onTrack), overduePct: pct(overdue)}};
   }});
+  // Grow the chart's height with the number of markets so every label gets room to render
+  const wrap = document.getElementById('marketChart').closest('.chart-wrap');
+  wrap.style.height = Math.max(220, markets.length * 32) + 'px';
   const ctx = document.getElementById('marketChart').getContext('2d');
   if (marketChartObj) marketChartObj.destroy();
+  const statusColors = {{ complete: cv('green'), onTrack: cv('accent'), overdue: cv('red') }};
   marketChartObj = new Chart(ctx, {{
     type: 'bar',
     data: {{
       labels: markets,
-      datasets: [{{
-        label: 'Avg Completion %',
-        data: avgs,
-        backgroundColor: '#3b82f6aa',
-        borderColor: '#3b82f6',
-        borderWidth: 1,
-        borderRadius: 4,
-      }}]
+      datasets: [
+        {{
+          label: 'Completed',
+          data: marketStats.map(s => s.completePct),
+          backgroundColor: statusColors.complete + 'cc',
+          borderColor: statusColors.complete,
+          borderWidth: 1,
+        }},
+        {{
+          label: 'On Track',
+          data: marketStats.map(s => s.onTrackPct),
+          backgroundColor: statusColors.onTrack + 'cc',
+          borderColor: statusColors.onTrack,
+          borderWidth: 1,
+        }},
+        {{
+          label: 'Overdue',
+          data: marketStats.map(s => s.overduePct),
+          backgroundColor: statusColors.overdue + 'cc',
+          borderColor: statusColors.overdue,
+          borderWidth: 1,
+        }},
+      ]
     }},
     options: {{
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
       plugins: {{
-        legend: {{display:false}},
+        legend: {{
+          display: true,
+          position: 'bottom',
+          labels: {{color: cv('muted'), font:{{size:11}}, boxWidth:12, padding:12}}
+        }},
         tooltip: {{
           callbacks: {{
-            label: c => '  Avg progress: ' + c.parsed.x + '%',
-            afterLabel: c => {{
+            label: c => {{
               const s = marketStats[c.dataIndex];
-              const lines = [
-                '  ' + s.total + ' learners in this market',
-                '  ✓ ' + s.complete + ' fully complete',
-                '  → ' + s.onTrack + ' on track',
-              ];
-              if (s.overdue > 0) lines.push('  ⚠ ' + s.overdue + ' past their deadline');
-              return lines;
+              const raw = c.dataset.label === 'Completed' ? s.complete : c.dataset.label === 'On Track' ? s.onTrack : s.overdue;
+              return '  ' + c.dataset.label + ': ' + c.parsed.x + '% (' + raw + ')';
+            }},
+            afterBody: items => {{
+              const s = marketStats[items[0].dataIndex];
+              return ['  Total in this market: ' + s.total];
             }}
           }}
         }}
       }},
       scales: {{
         x: {{
+          stacked: true,
           min:0, max:100,
           grid: {{color: 'rgba(255,255,255,0.06)'}},
           ticks: {{color: cv('muted'), font:{{size:11}}, callback: v => v+'%'}},
           border: {{color:'transparent'}},
         }},
         y: {{
+          stacked: true,
           grid: {{display:false}},
-          ticks: {{color: cv('muted'), font:{{size:11}}}},
+          ticks: {{color: cv('muted'), font:{{size:11}}, autoSkip:false}},
           border: {{color:'transparent'}},
         }}
       }}
@@ -1535,64 +1661,85 @@ function renderMarketChart() {{
 
 function renderCurricChart() {{
   const labels = CURRIC_IDS.map(cid => CURRIC_NAMES[cid]);
-  const avgs = CURRIC_IDS.map(cid => {{
-    const vals = filtered.map(p => p.curricula[cid] ? p.curricula[cid].pct : 0);
-    return vals.length ? Math.round(vals.reduce((s,v) => s+v,0)/vals.length) : 0;
-  }});
   const curricStats = CURRIC_IDS.map(cid => {{
     const people = filtered.map(p => p.curricula[cid]).filter(Boolean);
-    const total      = filtered.length;
-    const complete   = people.filter(c => c.complete).length;
-    const inProgress = people.filter(c => !c.complete && c.pct > 0).length;
-    const notStarted = people.filter(c => !c.complete && c.pct === 0).length;
-    const pastDue    = filtered.filter(p => {{ const c = p.curricula[cid]; return c && !c.complete && curricDaysLeft(c) !== null && curricDaysLeft(c) <= 0; }}).length;
-    return {{total, complete, inProgress, notStarted, pastDue}};
+    let complete = 0, onTrack = 0, overdue = 0;
+    people.forEach(c => {{
+      const st = curricTrackStatus(c);
+      if (st === 'Completed') complete++;
+      else if (st === 'Overdue') overdue++;
+      else onTrack++;
+    }});
+    return {{total: people.length, complete, onTrack, overdue}};
+  }});
+  const curricStatsPct = curricStats.map(s => {{
+    const pct = n => s.total ? Math.round((n/s.total)*100) : 0;
+    return {{...s, completePct: pct(s.complete), onTrackPct: pct(s.onTrack), overduePct: pct(s.overdue)}};
   }});
   const ctx = document.getElementById('curricChart').getContext('2d');
   if (curricChartObj) curricChartObj.destroy();
-  const colors = ['#3b82f6','#22c55e','#f59e0b','#a855f7','#ef4444','#14b8a6'];
+  const statusColors = {{ complete: cv('green'), onTrack: cv('accent'), overdue: cv('red') }};
   curricChartObj = new Chart(ctx, {{
     type: 'bar',
     data: {{
       labels,
-      datasets: [{{
-        label: 'Avg %',
-        data: avgs,
-        backgroundColor: colors.map(c => c+'99'),
-        borderColor: colors,
-        borderWidth: 1,
-        borderRadius: 4,
-      }}]
+      datasets: [
+        {{
+          label: 'Completed',
+          data: curricStatsPct.map(s => s.completePct),
+          backgroundColor: statusColors.complete + 'cc',
+          borderColor: statusColors.complete,
+          borderWidth: 1,
+        }},
+        {{
+          label: 'On Track',
+          data: curricStatsPct.map(s => s.onTrackPct),
+          backgroundColor: statusColors.onTrack + 'cc',
+          borderColor: statusColors.onTrack,
+          borderWidth: 1,
+        }},
+        {{
+          label: 'Overdue',
+          data: curricStatsPct.map(s => s.overduePct),
+          backgroundColor: statusColors.overdue + 'cc',
+          borderColor: statusColors.overdue,
+          borderWidth: 1,
+        }},
+      ]
     }},
     options: {{
       responsive: true,
       maintainAspectRatio: false,
       plugins: {{
-        legend: {{display:false}},
+        legend: {{
+          display: true,
+          position: 'bottom',
+          labels: {{color: cv('muted'), font:{{size:11}}, boxWidth:12, padding:12}}
+        }},
         tooltip: {{
           callbacks: {{
-            label: c => '  Avg progress: ' + c.parsed.y + '%',
-            afterLabel: c => {{
-              const s = curricStats[c.dataIndex];
-              const lines = [
-                '  ✓ ' + s.complete   + ' of ' + s.total + ' fully complete',
-                '  ◑ ' + s.inProgress + ' in progress',
-                '  ○ ' + s.notStarted + ' not started',
-              ];
-              if (s.pastDue > 0) lines.push('  ⚠ ' + s.pastDue + ' past their deadline');
-              return lines;
+            label: c => {{
+              const s = curricStatsPct[c.dataIndex];
+              const raw = c.dataset.label === 'Completed' ? s.complete : c.dataset.label === 'On Track' ? s.onTrack : s.overdue;
+              return '  ' + c.dataset.label + ': ' + c.parsed.y + '% (' + raw + ')';
+            }},
+            afterBody: items => {{
+              const s = curricStatsPct[items[0].dataIndex];
+              return ['  Total enrolled: ' + s.total];
             }}
           }}
         }}
       }},
       scales: {{
         y: {{
+          stacked: true,
           min:0, max:100,
           grid: {{color: 'rgba(255,255,255,0.06)'}},
           ticks: {{color: cv('muted'), font:{{size:11}}, callback: v => v+'%'}},
           border: {{color:'transparent'}},
         }},
         x: {{
+          stacked: true,
           grid: {{display:false}},
           ticks: {{color: cv('muted'), font:{{size:10}}, maxRotation:30}},
           border: {{color:'transparent'}},
@@ -1731,12 +1878,17 @@ function openModal(email) {{
       const typeLabel  = it.type === 'VILT' ?
         '<span class="item-type" style="background:#a855f711;color:#a855f7;">Workshop</span>' :
         '<span class="item-type">Online</span>';
+      const registeredLabel = (!it.done && it.type === 'VILT') ?
+        (it.registered
+          ? '<span class="item-type" style="background:var(--green-subtle);color:var(--green);">Registered</span>'
+          : '<span class="item-type" style="background:var(--red-subtle);color:var(--red);">Not Registered</span>')
+        : '';
       const dateStr = it.done && it.date ?
         '<span class="item-date">' + fmtDate(it.date) + '</span>' : '';
       return '<div class="item-row">' +
         '<div class="item-check ' + checkClass + '">' + checkMark + '</div>' +
         '<div class="item-title">' + escHtml(it.title) + '</div>' +
-        typeLabel + dateStr + '</div>';
+        typeLabel + registeredLabel + dateStr + '</div>';
     }}).join('');
 
     curricHtml += '<div class="curric-section">' +
@@ -1970,14 +2122,8 @@ function runExport(type) {{
 
 /* ── Init ── */
 function init() {{
-  // Populate market dropdown
-  const markets = [...new Set(PEOPLE.map(p => p.market))].sort();
-  const sel = document.getElementById('f-market');
-  markets.forEach(m => {{
-    const o = document.createElement('option');
-    o.value = m; o.textContent = m;
-    sel.appendChild(o);
-  }});
+  // Populate market dropdown (based on currently visible group, not full roster)
+  populateMarketDropdown();
 
   // Close dropdowns on outside click
   document.addEventListener('click', e => {{
@@ -2056,6 +2202,7 @@ def main():
     records = attach_playbook(records)
     pb_matches = sum(1 for p in records.values() if p['playbook'])
     print(f"Playbook activity matched for {pb_matches} learners")
+    records = attach_registration_status(records)
     sales_map = _load_salesforce(records)
     print(f"Salesforce: {len(sales_map)} cohort members with a Closed Won deal")
     html = generate_html(records, sales_map)
