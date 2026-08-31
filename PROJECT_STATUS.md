@@ -12,10 +12,46 @@ Last updated: 2026-08-31
 | Playbook Traffic | `playbook.html` | August 14, 2026 | 7,502 rows; cadence is monthly → weekly (see below); date filters anchor to newest data date |
 | Healthcare Certification | `cert-healthcare.html` | August 21, 2026 | 67 people, 8 certified, 59 in progress; new "Healthcare Team Progress Update" chart + % stat cards added 2026-08-31 (see below) |
 | Public Sector Certification | `cert-publicsector.html` | August 21, 2026 | 122 unique people, 92 completed (75%) — "Curricula" report format |
-| Accelerate Onboarding | `onboarding.html` | August 17, 2026 | 51 learners; tooltip accuracy audit done 2026-08-18 (3 fixed, see below) |
+| Accelerate Onboarding | `onboarding.html` | August 31, 2026 | 56 learners; major Resmie port + new Registration Status tags 2026-08-31 (see below) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | August 21, 2026 | 502 learners, 60 complete; first real Closed Won deal appeared ($5,788.25, see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-08-31, later) — Onboarding dashboard: major Resmie port + Registration Status tags
+
+Resmie hand-built a prototype (`onboarding_RB_83126.html` + a `.docx` change summary, both deleted
+after porting — same convention as Layered Security/Healthcare) covering 11 feature areas. All
+ported into `update_onboarding_dashboard.py`, verified byte-for-byte identical to her file before
+deleting it, then pushed live together with 4 new 08.31 data files. Full detail in project memory
+[[onboarding_dashboard]].
+
+**Key changes:**
+- Overdue / On Track / Completed stat cards now show a percentage as the primary value with the raw
+  count as sub-text (matches the style Healthcare cert adopted the same week).
+- "Test Group" filter replaced entirely with a single "Early Access Cohort" toggle button, **now
+  hidden by default** (was previously shown by default) — a real behavior change, not just a rename.
+- Market dropdown now rebuilds live based on the currently-visible cohort/location filters, instead
+  of listing markets that only had hidden cohort members (which used to select down to zero results).
+- Completion by Market and Curriculum Progress charts both rebuilt from single-color average bars
+  into stacked, status-colored (green/blue/red) percentage charts.
+- "Most Urgent First" sort now guarantees every Overdue person ranks above every On Track person
+  (previously sorted by raw days-left only, which usually but not always got this right).
+- **New feature:** curriculum item rows for incomplete VILT/Workshop items now show a green
+  "Registered" or red "Not Registered" tag, backed by a brand-new `attach_registration_status()`
+  Python loader reading a Registration Status Report Resmie now provides monthly.
+
+**Real bug found and fixed during this work:** the new registration loader initially matched **zero**
+rows against the first real data file — traced to `_find_col(header, 'title')` grabbing the wrong
+column (`User Title`, a job title) instead of the actual course-title column (`Title`), since both
+contain the substring "title" and the helper returns the first match. Fixed with an `exclude='user'`
+guard. After the fix: 19 people, 41 curriculum items correctly flagged Registered.
+
+**Data refresh, same push:** new `Accelerate-Curriculum-Report-08.31.2026.xlsx` (56 learners, up from
+51), `New-Opportunities-Report-08.31.2026.xlsx`, `New-Opportunity-History-Report-08.31.2026.xlsx`,
+and the first-ever `RegistrationStatusWithOrgCSV_FUTURE_08.31.2026.xlsx`. Pushed as commit `43e5d45`
+— confirm `build` and `deploy` both show `success` before considering this fully live.
 
 ---
 
