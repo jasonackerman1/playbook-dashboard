@@ -2400,14 +2400,17 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
   <div class="stat">
     <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
     <div class="stat-value green" id="s-certified">&#8212;</div>
+    <div class="stat-sub" id="s-certified-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
     <div class="stat-value blue" id="s-inprog">&#8212;</div>
+    <div class="stat-sub" id="s-inprog-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Not Started <span class="info-btn" onclick="showInfo(event,'not-started')">?</span></div>
     <div class="stat-value red" id="s-notstarted">&#8212;</div>
+    <div class="stat-sub" id="s-notstarted-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
@@ -2417,10 +2420,14 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
 </div>
 
 <!-- ── Charts ──────────────────────────────────────────────────────────── -->
-<div class="charts">
+<div class="charts" style="grid-template-columns:1fr 1fr 1fr 1fr;">
   <div class="chart-card">
     <div class="chart-title">Certification Pipeline <span class="info-btn" onclick="showInfo(event,'pipeline-chart')">?</span></div>
     <div class="chart-wrap"><canvas id="pipelineChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Healthcare Team Progress Update <span class="info-btn" onclick="showInfo(event,'manual-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="manualChart"></canvas></div>
   </div>
   <div class="chart-card">
     <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
@@ -2487,13 +2494,19 @@ def generate_html_healthcare_v2(slug, name, rows, date_label=''):
 const PEOPLE = {raw_json};
 const TLG_SET = new Set({tlg_json});
 
+// ── Healthcare Team Progress Update data ─────────────────────────────────
+// Derived live from the certification roster (PEOPLE) rather than reported
+// by hand. Managers are excluded since manager certification is already
+// shown in the Certification Pipeline chart above. Reps who are already
+// fully Certified are also excluded from these buckets since they've
+// completed the process (video included).
 let filtered = [];
 
 let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
 let rosterView = "individual";
-let pipelineChart, trendChart, marketChart;
+let pipelineChart, trendChart, marketChart, manualChart;
 
 function sel(id) {{ return document.getElementById(id); }}
 function cv(v)  {{ return getComputedStyle(document.body).getPropertyValue(v).trim(); }}
@@ -2533,6 +2546,7 @@ var INFO_MSGS = {{
   "pipeline-chart":  "A quick snapshot of where everyone stands: how many haven't started yet, how many are actively working through the courses, and how many have finished and are fully certified.",
   "trend-chart":     "Shows how many people earned their Healthcare certification in each quarter. KM's fiscal year runs April through March. Q1 is April to June, Q2 is July to September, Q3 is October to December, and Q4 is January to March.",
   "market-chart":    "Certification progress broken down by sales market. Each bar shows how many people in that market are Certified, In Progress, or Not Started. Hover over any bar to see the exact counts and total enrolled for that market. Updates when you apply filters.",
+  "manual-chart":    "Shows where sales reps on the healthcare team currently stand: how many have finished coursework and just need to record their certification video, how many are 50% or more through the coursework, and how many are still below 50%.",
   "roster":          "The full list of people in the program. Each card shows their name and job title, their progress on Layered Security and HC Foundations (bottom left), their overall completion percentage (bottom right), and their current status (top right). Click any card to see a full course-by-course breakdown in the panel on the right.",
   "export":          "Download a report based on whoever is currently shown on screen. Apply filters first to scope the report to a specific group. Full Report includes everyone with all course progress columns. Not Certified is a contact list of people still working through the program, sorted by manager, useful for follow-up. Manager Summary shows each manager's team size and how many on their team have certified."
 }};
@@ -2642,6 +2656,7 @@ function applyFilters(){{
   sel("result-count").textContent = filtered.length + " shown";
   renderStats();
   renderCharts();
+  renderManualChart();
   renderRoster();
 }}
 
@@ -2652,10 +2667,16 @@ function renderStats(){{
   var inprog  = filtered.filter(function(p){{ return p.overallPct > 0 && p.Certified !== "Yes"; }}).length;
   var nostart = filtered.filter(function(p){{ return p.overallPct === 0 && p.Certified !== "Yes"; }}).length;
   var rate    = total > 0 ? Math.round(cert / total * 100) : 0;
+  var certPct    = total > 0 ? Math.round(cert / total * 100) : 0;
+  var inprogPct  = total > 0 ? Math.round(inprog / total * 100) : 0;
+  var nostartPct = total > 0 ? Math.round(nostart / total * 100) : 0;
   sel("s-total").textContent     = total;
-  sel("s-certified").textContent = cert;
-  sel("s-inprog").textContent    = inprog;
-  sel("s-notstarted").textContent= nostart;
+  sel("s-certified").textContent = certPct + "%";
+  sel("s-certified-sub").textContent = total > 0 ? (cert + " of " + total + " enrolled") : "";
+  sel("s-inprog").textContent    = inprogPct + "%";
+  sel("s-inprog-sub").textContent = total > 0 ? (inprog + " of " + total + " enrolled") : "";
+  sel("s-notstarted").textContent= nostartPct + "%";
+  sel("s-notstarted-sub").textContent = total > 0 ? (nostart + " of " + total + " enrolled") : "";
   sel("s-rate").textContent      = rate + "%";
   sel("s-rate-sub").textContent  = total > 0 ? (cert + " of " + total + " enrolled") : "";
 }}
@@ -2789,6 +2810,48 @@ function renderCharts(){{
       scales: {{
         x: {{ stacked: true, grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 11 }}, stepSize: 1 }} }},
         y: {{ stacked: true, grid: {{ display: false }}, ticks: {{ color: labelColor, font: {{ size: 11 }} }} }}
+      }}
+    }}
+  }});
+}}
+
+// ── renderManualChart (manually reported data, not tied to filters) ─────────
+function renderManualChart(){{
+  var isLight    = document.body.classList.contains("light-mode");
+  var labelColor = isLight ? cv("--text") : cv("--muted");
+
+  // Reps only (managers excluded, already covered by the Pipeline chart),
+  // and only those not yet fully Certified.
+  var reps = filtered.filter(function(p){{ return !isManager(p) && p.Certified !== "Yes"; }});
+  var awaitingVideo = reps.filter(function(p){{ return p.overallPct === 100; }}).length;
+  var over50        = reps.filter(function(p){{ return p.overallPct >= 50 && p.overallPct < 100; }}).length;
+  var under50        = reps.filter(function(p){{ return p.overallPct < 50; }}).length;
+
+  var labels = [
+    "Reps Awaiting Video",
+    "Reps \\u226550% Complete",
+    "Reps <50% Complete"
+  ];
+  var data = [awaitingVideo, over50, under50];
+  var colors = [cv("--teal"), "#f59e0b", cv("--red")];
+
+  if(manualChart) manualChart.destroy();
+  manualChart = new Chart(sel("manualChart"), {{
+    type: "pie",
+    data: {{
+      labels: labels,
+      datasets: [{{
+        data: data,
+        backgroundColor: colors,
+        borderColor: cv("--surface"),
+        borderWidth: 2
+      }}]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      plugins: {{
+        legend: {{ display: true, position: "bottom", labels: {{ color: labelColor, font: {{ size: 11 }}, padding: 14, boxWidth: 12 }} }},
+        tooltip: {{ callbacks: {{ label: function(ctx){{ return " " + ctx.label + ": " + ctx.raw + " people"; }} }} }}
       }}
     }}
   }});
