@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-08-18
+Last updated: 2026-08-31
 
 ---
 
@@ -10,12 +10,40 @@ Last updated: 2026-08-18
 |---|---|---|---|
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
 | Playbook Traffic | `playbook.html` | August 14, 2026 | 7,502 rows; cadence is monthly → weekly (see below); date filters anchor to newest data date |
-| Healthcare Certification | `cert-healthcare.html` | August 17, 2026 | 68 people, 8 certified, 59 in progress |
-| Public Sector Certification | `cert-publicsector.html` | August 17, 2026 | 115 active people, 85 completed (74%) — "Curricula" report format |
+| Healthcare Certification | `cert-healthcare.html` | August 21, 2026 | 67 people, 8 certified, 59 in progress; new "Healthcare Team Progress Update" chart + % stat cards added 2026-08-31 (see below) |
+| Public Sector Certification | `cert-publicsector.html` | August 21, 2026 | 122 unique people, 92 completed (75%) — "Curricula" report format |
 | Accelerate Onboarding | `onboarding.html` | August 17, 2026 | 51 learners; tooltip accuracy audit done 2026-08-18 (3 fixed, see below) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
-| Layered Security Certification | `cert-layered-security.html` | August 17, 2026 | 502 learners, 52 complete; OPS FY26 Amount column now populated (see below) |
+| Layered Security Certification | `cert-layered-security.html` | August 21, 2026 | 502 learners, 60 complete; first real Closed Won deal appeared ($5,788.25, see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-08-31) — Healthcare Team Progress Update chart; Layered Security Salesforce Q&A
+
+**Healthcare cert dashboard — new chart, ported from Resmie's prototype.** Resmie hand-built
+`cert-healthcare_RB_83126.html` + a `.docx` change summary (both deleted after porting, same
+diff-then-delete convention as Onboarding/Layered Security), adding a 4th chart: "Healthcare Team
+Progress Update" — a pie chart between Certification Pipeline and Learners by Market, replacing a
+manual hand-tallied breakdown a VP used to compile by hand. Fully live-calculated from the roster
+(sales reps only, already-certified reps excluded) across three buckets: Reps Awaiting Video (100%
+coursework, not yet certified), ≥50% Complete, <50% Complete — updates with the dashboard's filters
+like every other chart. Also: Certified / In Progress / Not Started stat cards now show a
+percentage as the primary number with the raw count as sub-text (e.g. "18 of 60 enrolled"),
+matching Completion Rate's existing style. Ported into `update_cert_dashboard.py`
+(`generate_html_healthcare_v2`); verified the regenerated HTML byte-for-byte identical to Resmie's
+file before committing. Pushed as commit `1cc87f5`.
+
+**Layered Security — Resmie asked (via Jason) how the Salesforce Closed Won data actually gets
+pulled in.** Answered in plain, non-technical terms: newest OPS-FY26 file only, columns matched by
+name not position, a deal counts only if Stage = "Closed Won" and Amount ≥ $5,000, joined to the
+roster by email (Opportunity Owner Email). Confirmed live against real data — the 08.21 file (which
+had just landed that same conversation) contains the **first real Closed Won deal**: $5,788.25,
+Trucordia Insurance Services, owner Timothy Ferons, correctly matched by email to his Curricula
+Report row. Also confirmed directly for Jason: a Closed Won deal does **not** mark someone
+Certified — `Certified` comes only from a separate file (Certification Report), still 0 rows as of
+08.21 (nobody certified through that pipeline yet). See [[layered_security_dashboard]] for the full
+writeup — worth reusing this same plain-language framing if Resmie asks similar questions again.
 
 ---
 
