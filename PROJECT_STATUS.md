@@ -11,11 +11,41 @@ Last updated: 2026-09-01
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
 | Playbook Traffic | `playbook.html` | August 14, 2026 | 7,502 rows; cadence is monthly → weekly (see below); date filters anchor to newest data date |
 | Healthcare Certification | `cert-healthcare.html` | August 31, 2026 | 66 people, 18 certified, 48 in progress; New Hire tracking + deadline/Timeline system added 2026-09-01 (see below) |
-| Public Sector Certification | `cert-publicsector.html` | August 21, 2026 | 122 unique people, 92 completed (75%) — "Curricula" report format |
+| Public Sector Certification | `cert-publicsector.html` | August 21, 2026 | 122 unique people, 92 completed (75%); roster/chart redesign added 2026-09-01 (see below) |
 | Accelerate Onboarding | `onboarding.html` | August 31, 2026 | 56 learners; major Resmie port + new Registration Status tags 2026-08-31 (see below) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | August 21, 2026 | 502 learners, 60 complete; first real Closed Won deal appeared ($5,788.25, see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-09-01, later) — Public Sector dashboard: roster/chart redesign, cert language removed
+
+Third Resmie prototype port this week (`cert-publicsector-RB-090126.html` + a `.docx` changelog,
+both deleted after porting). Ported into `update_cert_dashboard.py`'s `generate_html_publicsector`.
+**Verified byte-for-byte identical to Resmie's file** — a raw `diff` returned zero differences, the
+cleanest of the three ports (no data artifacts this time since the underlying PS data file didn't
+change — still 08.21 data, 122 people, 92 completed). Pushed as commit `37a04b5`; confirmed `build`
+and `deploy` both `success`, live page confirmed directly.
+
+**Certification language fully removed:** "Total Assigned" → "Total Enrolled," "Completion Roster"
+→ "Curriculum Roster," "assigned" → "enrolled" throughout tooltips and exports — this dashboard
+tracks curriculum completion, not a formal certification (unlike Healthcare/Layered Security).
+
+**Same three-tier status model Healthcare/Layered Security already use, now applied here too:** new
+`personStatus(p)` derives Completed/In Progress/Not Started from actual per-item completion, not
+just the top-level flag. New `statusPill()` colored-pill component replaces the old small circular
+checkmark indicator.
+
+**Completion Pipeline chart:** 2-stage raw-count bar → 3-stage percentage bar (Not Started/In
+Progress/Completed). **Old fiscal-quarter trend chart replaced** with a stacked "Learners by Market"
+chart (3 status-colored segments per market, sorted largest-first).
+
+**Roster redesigned into cards** (name + status pill, job title, course-progress tag + %), panel
+widened 300px→340px. **Detail panel rebuilt**: inline status pill in the header, reorganized 2-column
+info grid, and a new curriculum-progress section with a color-coded bar and per-item checklist.
+
+Full detail in project memory [[ps_dashboard_future]].
 
 ---
 
