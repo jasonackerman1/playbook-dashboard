@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-08-31
+Last updated: 2026-09-01
 
 ---
 
@@ -10,12 +10,48 @@ Last updated: 2026-08-31
 |---|---|---|---|
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
 | Playbook Traffic | `playbook.html` | August 14, 2026 | 7,502 rows; cadence is monthly → weekly (see below); date filters anchor to newest data date |
-| Healthcare Certification | `cert-healthcare.html` | August 21, 2026 | 67 people, 8 certified, 59 in progress; new "Healthcare Team Progress Update" chart + % stat cards added 2026-08-31 (see below) |
+| Healthcare Certification | `cert-healthcare.html` | August 31, 2026 | 66 people, 18 certified, 48 in progress; New Hire tracking + deadline/Timeline system added 2026-09-01 (see below) |
 | Public Sector Certification | `cert-publicsector.html` | August 21, 2026 | 122 unique people, 92 completed (75%) — "Curricula" report format |
 | Accelerate Onboarding | `onboarding.html` | August 31, 2026 | 56 learners; major Resmie port + new Registration Status tags 2026-08-31 (see below) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | August 21, 2026 | 502 learners, 60 complete; first real Closed Won deal appeared ($5,788.25, see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-09-01) — Healthcare dashboard: New Hire tracking + deadline/Timeline system
+
+Second Resmie prototype port in as many days (`cert-healthcare-dashboard-RB-090126.html` + a `.docx`
+changelog, both deleted after porting — same convention as every other Resmie hand-edit this repo has
+seen). Ported into `update_cert_dashboard.py`, verified byte-for-byte identical to her file (aside
+from 3 stray non-breaking-space characters in one manager's name in her copy of the data — a source
+artifact, not a code difference). Pushed as commit `c582f7f`; confirmed `build` and `deploy` both
+`success` and the live page reflects it. Full detail in project memory [[cert_dashboard_plan]].
+
+**Data refresh:** new 08.31 Healthcare Certification Report + Foundations Curricula Report — 66
+people (down from 67, one person rolled off the assignment), 18 certified, 48 in progress.
+
+**New Hire tracking:** `isNewHire(p)` — true for a person's first 65 days of employment, a *rolling*
+window checked against the report date, so it self-maintains with zero manual updates on every future
+regeneration. Renamed "Existing Rep" → "Tenured Rep." Surfaced via a new Hire Status filter, roster
+card tag, detail-panel tag, and a new column in both exports.
+
+**Deadline / Timeline system:** every not-yet-certified person gets a due date (assignment date + 64
+days) and a status — On Track (>10 days left) / Due Soon (≤10 days) / Overdue (past due). Certified
+reps are excluded from this system entirely. New Timeline filter, roster due-date tags, detail panel
+field, export columns, and a new **Timeline donut chart** replacing the old Certification Pipeline
+bar chart (which was redundant with the stat row).
+
+**Real, meaningful data finding surfaced by this work, not just a UI change:** Completion Rate now
+measures actual 100%-of-coursework finish instead of the official Certified flag — revealing a
+23-person gap (41 of 66 people, 62%, have finished all 22 courses, but only 18, 27%, are officially
+Certified). Worth watching if this gap keeps growing — may point to a lagging administrative
+sign-off step downstream of course completion.
+
+**Real fix beyond a straight port:** Resmie's prototype hardcoded the `REPORT_DATE` JS constant
+(used for all the day-math above) to a fixed date string. Added a `_file_date_iso()` helper so it's
+derived from the actual data file's date on every regeneration instead — confirmed it correctly
+resolved to `2026-08-31` on this run.
 
 ---
 
