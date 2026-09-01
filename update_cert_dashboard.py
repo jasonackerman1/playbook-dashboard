@@ -1224,12 +1224,14 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   .section-hint{{font-size:11px;color:var(--muted);margin-top:3px;}}
   .roster-search{{width:180px;}}
   .roster-wrap{{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;}}
-  .roster-left{{width:300px;flex-shrink:0;overflow-y:auto;max-height:820px;border-right:1px solid var(--border);}}
-  .roster-person{{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}}
+  .roster-left{{width:340px;flex-shrink:0;overflow-y:auto;max-height:820px;border-right:1px solid var(--border);}}
+  .roster-person{{display:flex;flex-direction:column;gap:4px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}}
   .roster-person:last-child{{border-bottom:none;}}
   .roster-person:hover{{background:var(--surface2);}}
   .roster-person.active{{background:#4f8ef711;border-left:3px solid var(--accent);padding-left:11px;}}
-  .roster-name{{flex:1;font-size:13px;}}
+  .roster-name{{font-size:13px;font-weight:600;}}
+  .roster-title{{font-size:11px;color:var(--muted);}}
+  .course-tag{{font-size:10px;font-weight:600;border-radius:10px;padding:2px 8px;white-space:nowrap;background:var(--green-subtle);color:var(--green);border:1px solid var(--green);}}
   .cert-badge{{font-size:11px;font-weight:700;border-radius:10px;padding:2px 8px;white-space:nowrap;}}
   .cert-badge.yes{{color:var(--green);background:var(--green-subtle);}}
   .cert-badge.no{{color:var(--red);background:var(--red-subtle);}}
@@ -1249,6 +1251,16 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
   .detail-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;margin-top:14px;}}
   .detail-label{{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}}
   .detail-value{{font-size:14px;font-weight:500;}}
+  .curric-section{{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}}
+  .curric-section-hdr{{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}}
+  .curric-section-title{{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}}
+  .curric-section-count{{font-size:11px;color:var(--muted);}}
+  .curric-progress-track{{width:100%;height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-bottom:10px;}}
+  .curric-progress-fill{{height:100%;border-radius:4px;}}
+  .curric-item-row{{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px;}}
+  .curric-item-row:last-child{{border-bottom:none;}}
+  .curric-item-name{{display:flex;align-items:center;gap:7px;}}
+  .curric-item-date{{color:var(--muted);font-size:11.5px;white-space:nowrap;}}
   .badge-status{{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}}
   .badge-status.certified{{background:var(--green-subtle);color:var(--green);}}
   .badge-status.not-certified{{background:var(--red-subtle);color:var(--red);}}
@@ -1313,16 +1325,18 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
 
 <div class="stats">
   <div class="stat">
-    <div class="stat-label">Total Assigned <span class="info-btn" onclick="showInfo(event,'total-assigned')">?</span></div>
+    <div class="stat-label">Total Enrolled <span class="info-btn" onclick="showInfo(event,'total-assigned')">?</span></div>
     <div class="stat-value" id="s-total">&#8212;</div>
   </div>
   <div class="stat">
     <div class="stat-label">Completed <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
     <div class="stat-value green" id="s-certified">&#8212;</div>
+    <div class="stat-sub" id="s-certified-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Not Yet Completed <span class="info-btn" onclick="showInfo(event,'not-certified')">?</span></div>
     <div class="stat-value red" id="s-not">&#8212;</div>
+    <div class="stat-sub" id="s-not-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
@@ -1337,7 +1351,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
     <div class="chart-wrap"><canvas id="pipelineChart"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">Completions Over Time <span class="info-btn" onclick="showInfo(event,'over-time')">?</span></div>
+    <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'over-time')">?</span></div>
     <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
   </div>
 </div>
@@ -1345,7 +1359,7 @@ def generate_html_publicsector(slug, name, rows, date_label=''):
 <div class="section">
   <div class="section-header">
     <div>
-      <div class="section-title">Completion Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
+      <div class="section-title">Curriculum Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
       <div class="section-hint">Click a person to see their details &mdash; sorted by status then name</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -1453,12 +1467,12 @@ function runExport(type){{
     setupPrintHeader('{name} Curriculum Completion Report',`Generated: ${{now}}  |  ${{filtered.length}} People`);
     var pTotal=filtered.length, pCert=filtered.filter(p=>p.PublicSector==='Yes').length;
     var pNot=pTotal-pCert, pRate=pTotal>0?Math.round(pCert/pTotal*100):0;
-    sel('print-stats').innerHTML=pBox(pTotal,'Total Assigned')+pBox(pCert,'Completed')+pBox(pNot,'Not Completed')+pBox(pRate+'%','Completion Rate');
-    var qMap={{}};
-    filtered.filter(p=>p.PublicSector==='Yes'&&p.CertDate).forEach(p=>{{var q=pFiscalQtr(p.CertDate);if(q)qMap[q]=(qMap[q]||0)+1;}});
-    var qRows=Object.entries(qMap).sort((a,b)=>a[0].localeCompare(b[0]));
-    if(!qRows.length) qRows=[['No data','-']];
-    sel('print-charts').innerHTML=pSection('Completion Pipeline',[['In Progress',pNot],['Completed',pCert]])+pSection('Completions by Quarter',qRows);
+    sel('print-stats').innerHTML=pBox(pTotal,'Total Enrolled')+pBox(pCert,'Completed')+pBox(pNot,'Not Completed')+pBox(pRate+'%','Completion Rate');
+    var mMap={{}};
+    filtered.filter(p=>p.PublicSector==='Yes').forEach(p=>{{var m=p.Market||'Unknown';mMap[m]=(mMap[m]||0)+1;}});
+    var mRows=Object.entries(mMap).sort((a,b)=>a[0].localeCompare(b[0]));
+    if(!mRows.length) mRows=[['No data','-']];
+    sel('print-charts').innerHTML=pSection('Completion Pipeline',[['In Progress',pNot],['Completed',pCert]])+pSection('Completions by Market',mRows);
     sel('print-roster-head').innerHTML=thRow(['#','Name','Market','Job Title','Status','Completion Date','Manager','Email']);
     sel('print-roster-body').innerHTML=filtered.map((p,i)=>{{
       const status=p.PublicSector==='Yes'?'Completed':'Not Completed';
@@ -1509,13 +1523,13 @@ document.addEventListener('click', function(e){{
 }});
 
 const INFO_MSGS={{
-  'total-assigned':  'Total number of people currently assigned the {name} curriculum assignment, after any active filters.',
+  'total-assigned':  'Total number of people currently enrolled in the {name} curriculum, after any active filters.',
   'certified':       'People who have completed the {name} curriculum.',
-  'not-certified':   'People assigned the curriculum who have not yet completed it.',
-  'completion-rate': 'Percentage of assigned people who have completed the curriculum. Calculated as Completed ÷ Total Assigned.',
-  'pipeline':        'Two stages of the completion journey: In Progress (assigned but not yet complete) and Completed (curriculum finished).',
-  'over-time':       'Curriculum completions per KM fiscal quarter. KM quarters: Q1 = Apr–Jun, Q2 = Jul–Sep, Q3 = Oct–Dec, Q4 = Jan–Mar.',
-  'roster':          'Full list of assigned people with their completion status. Click a name to see job title, market, completion date, and manager info. Use the View toggle to group by manager.',
+  'not-certified':   'People enrolled in the curriculum who have not yet completed it.',
+  'completion-rate': 'Percentage of enrolled people who have completed the curriculum. Calculated as Completed ÷ Total Enrolled.',
+  'pipeline':        'Three stages of the completion journey: Not Started (no curriculum items begun), In Progress (some items done, not yet complete), and Completed (curriculum finished).',
+  'over-time':       'Number of people in each market broken down by status: green = completed the curriculum, amber = in progress, red = not started.',
+  'roster':          'Full list of enrolled people with their completion status. Click a name to see job title, market, completion date, and manager info. Use the View toggle to group by manager.',
   'export':          'Export a printable report of the data currently on screen. Apply filters first; the report only includes what is currently shown. Examples: filter to a specific region then export for a regional snapshot; hide TLG then export to share with managers; set Status = Not Completed then export for a targeted outreach list. Full Report lists everyone with full detail. Not Completed is a contact list for outreach. Manager Summary rolls up team count and completion % per manager.',
 }};
 function showInfo(e, key){{
@@ -1554,57 +1568,95 @@ function render(){{
   const total=filtered.length;
   const certified=filtered.filter(r=>r.PublicSector==='Yes').length;
   const notCert=total-certified;
+  const notStarted=filtered.filter(r=>r.items.every(i=>!i.done)).length;
+  const inProgress=total-certified-notStarted;
   const rate=total>0?Math.round(certified/total*100):0;
+  const pct=n=>total?Math.round(n/total*100)+'%':'—';
   sel('s-total').textContent=total;
-  sel('s-certified').textContent=certified;
-  sel('s-not').textContent=notCert;
+  sel('s-certified').textContent=pct(certified);
+  sel('s-certified-sub').textContent=`${{certified}} of ${{total}}`;
+  sel('s-not').textContent=pct(notCert);
+  sel('s-not-sub').textContent=`${{notCert}} of ${{total}}`;
   sel('s-rate').textContent=rate+'%';
-  sel('s-rate-sub').textContent=total>0?`${{certified}} of ${{total}} assigned`:'';
+  sel('s-rate-sub').textContent=total>0?`${{certified}} of ${{total}} enrolled`:'';
 
   if(pipelineChart) pipelineChart.destroy();
+  const pipelinePct=n=>total?Math.round(n/total*100):0;
   pipelineChart=new Chart(sel('pipelineChart'),{{
     type:'bar',
     data:{{
-      labels:['In Progress','Completed'],
+      labels:['Not Started','In Progress','Completed'],
       datasets:[{{
-        data:[notCert,certified],
-        backgroundColor:[cv('--red')+'cc',cv('--green')+'cc'],
+        data:[pipelinePct(notStarted),pipelinePct(inProgress),pipelinePct(certified)],
+        backgroundColor:[cv('--red')+'cc',cv('--accent3')+'cc',cv('--green')+'cc'],
         borderRadius:4, borderSkipped:false,
       }}]
     }},
     options:{{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{{legend:{{display:false}},tooltip:{{callbacks:{{label:ctx=>` ${{ctx.raw}} People`}}}},datalabels:{{display:false}}}},
+      plugins:{{
+        legend:{{display:false}},
+        tooltip:{{callbacks:{{label:ctx=>{{
+          const raw=[notStarted,inProgress,certified][ctx.dataIndex];
+          return ` ${{ctx.raw}}% (${{raw}} People)`;
+        }}}}}},
+        datalabels:{{display:false}}
+      }},
       scales:{{
-        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}},stepSize:1}}}},
+        x:{{min:0,max:100,grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}},callback:v=>v+'%'}}}},
         y:{{grid:{{display:false}},ticks:{{color:chartLabel,font:{{size:12}}}}}}
       }}
     }}
   }});
 
-  const parseQtr=s=>{{const m=s.match(/FY(\d+)\s+Q(\d)/);return m?parseInt(m[1])*10+parseInt(m[2]):0;}};
-  const allQtrs=new Set();
-  filtered.forEach(r=>{{if(r.PublicSector==='Yes'&&r.CertQtr) allQtrs.add(r.CertQtr);}});
-  const trendQtrs=[...allQtrs].sort((a,b)=>parseQtr(a)-parseQtr(b));
-  const trendData=trendQtrs.map(q=>filtered.filter(r=>r.PublicSector==='Yes'&&r.CertQtr===q).length);
+  const marketTotals=[...new Set(filtered.map(r=>r.Market).filter(Boolean))]
+    .map(m=>{{
+      const mp=filtered.filter(r=>r.Market===m);
+      const complete=mp.filter(r=>r.PublicSector==='Yes').length;
+      const notStarted=mp.filter(r=>r.items.every(i=>!i.done)).length;
+      const inProgress=mp.length-complete-notStarted;
+      return {{market:m, complete, inProgress, notStarted, total:mp.length}};
+    }})
+    .sort((a,b)=>b.total-a.total);
+  const markets=marketTotals.map(s=>s.market);
+  const trendWrap=sel('trendChart').closest('.chart-wrap');
+  trendWrap.style.height=Math.max(220, markets.length*32)+'px';
   if(trendChart) trendChart.destroy();
   trendChart=new Chart(sel('trendChart'),{{
     type:'bar',
     data:{{
-      labels:trendQtrs.length?trendQtrs:['No data yet'],
-      datasets:[{{
-        label:'Completed',
-        data:trendData.length?trendData:[0],
-        backgroundColor:cv('--green')+'bb',
-        borderRadius:3, borderSkipped:false,
-      }}]
+      labels:markets.length?markets:['No data yet'],
+      datasets:[
+        {{
+          label:'Completed',
+          data:marketTotals.length?marketTotals.map(s=>s.complete):[0],
+          backgroundColor:cv('--green')+'cc',
+          borderRadius:3, borderSkipped:false,
+        }},
+        {{
+          label:'In Progress',
+          data:marketTotals.length?marketTotals.map(s=>s.inProgress):[0],
+          backgroundColor:cv('--accent3')+'cc',
+          borderRadius:3, borderSkipped:false,
+        }},
+        {{
+          label:'Not Started',
+          data:marketTotals.length?marketTotals.map(s=>s.notStarted):[0],
+          backgroundColor:cv('--red')+'cc',
+          borderRadius:3, borderSkipped:false,
+        }}
+      ]
     }},
     options:{{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{{legend:{{display:false}},tooltip:{{mode:'index',intersect:false}},datalabels:{{display:false}}}},
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{{
+        legend:{{display:true, position:'bottom', labels:{{color:chartLabel, font:{{size:11}}, boxWidth:12, padding:12}}}},
+        tooltip:{{mode:'index',intersect:false}},
+        datalabels:{{display:false}}
+      }},
       scales:{{
-        x:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:10}},maxRotation:45}}}},
-        y:{{grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}},stepSize:1}}}}
+        x:{{stacked:true, grid:{{color:cv('--border')}},ticks:{{color:chartLabel,font:{{size:11}},stepSize:1}}}},
+        y:{{stacked:true, grid:{{display:false}},ticks:{{color:chartLabel,font:{{size:10}},autoSkip:false}}}}
       }}
     }}
   }});
@@ -1626,13 +1678,34 @@ function setRosterView(v){{
 }}
 function toggleMgrGroup(el){{ el.classList.toggle('open'); el.nextElementSibling.classList.toggle('open'); }}
 
+function personStatus(p){{
+  if(p.PublicSector==='Yes') return 'completed';
+  if(p.items.every(i=>!i.done)) return 'notstarted';
+  return 'inprogress';
+}}
+function statusPill(p,small){{
+  const st=personStatus(p);
+  const cfg={{
+    completed:  {{label:'&#10003; Completed', color:cv('--green'), bg:'var(--green-subtle)'}},
+    inprogress: {{label:'In Progress',        color:cv('--accent3'), bg:cv('--accent3')+'22'}},
+    notstarted: {{label:'Not Started',        color:cv('--red'), bg:'var(--red-subtle)'}},
+  }}[st];
+  const pad=small?'2px 9px':'3px 12px', fs=small?'10px':'12px';
+  return `<span style="display:inline-block;padding:${{pad}};border-radius:20px;font-size:${{fs}};font-weight:700;white-space:nowrap;background:${{cfg.bg}};color:${{cfg.color}}">${{cfg.label}}</span>`;
+}}
+function courseTag(p){{
+  const done=p.items.filter(i=>i.done).length, total=p.items.length;
+  const color=done===total?cv('--green'):done===0?cv('--red'):cv('--accent3');
+  return `<span class="course-tag" style="background:${{color}}22;color:${{color}};border-color:${{color}}">Public Sector ${{done}}/${{total}}</span>`;
+}}
+function coursePct(p){{
+  const done=p.items.filter(i=>i.done).length, total=p.items.length;
+  const pct=total?Math.round(done/total*100):0;
+  const color=pct===100?cv('--green'):pct===0?cv('--red'):cv('--accent3');
+  return `<span style="font-size:12px;font-weight:700;color:${{color}}">${{pct}}%</span>`;
+}}
 function certIndicator(p){{
-  const isCert=p.PublicSector==='Yes';
-  const color=isCert?cv('--green'):cv('--red');
-  const bg=isCert?color+'33':'var(--surface2)';
-  const border=isCert?color:'var(--border)';
-  const txt=isCert?color:'var(--muted)';
-  return `<div title="${{isCert?'Completed':'Not Completed'}}" style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:${{bg}};border:1.5px solid ${{border}};color:${{txt}}">${{isCert?'&#10003;':''}}</div>`;
+  return statusPill(p,true);
 }}
 
 function renderRosterList(){{
@@ -1653,8 +1726,15 @@ function renderRosterList(){{
           const fullName=`${{p.FirstName}} ${{p.LastName}}`;
           const ts=p.PublicSector==='Yes'?`border-left:3px solid ${{cv('--green')}};padding-left:21px;`:'padding-left:24px;';
           return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}" style="${{ts}}">
-            <span class="roster-name">${{fullName}}</span>
-            ${{certIndicator(p)}}
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+              <span class="roster-name">${{fullName}}</span>
+              ${{statusPill(p,true)}}
+            </div>
+            <div class="roster-title">${{p.JobTitle||''}}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px;">
+              ${{courseTag(p)}}
+              ${{coursePct(p)}}
+            </div>
           </div>`;
         }}).join('');
       return `<div>
@@ -1696,8 +1776,15 @@ function renderRosterList(){{
     const fullName=`${{p.FirstName}} ${{p.LastName}}`;
     const ts=p.PublicSector==='Yes'?`border-left:3px solid ${{cv('--green')}};padding-left:11px;`:'';
     return `<div class="roster-person" onclick="rosterSelect(this)" data-name="${{fullName}}" style="${{ts}}">
-      <span class="roster-name">${{fullName}}</span>
-      ${{certIndicator(p)}}
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <span class="roster-name">${{fullName}}</span>
+        ${{statusPill(p,true)}}
+      </div>
+      <div class="roster-title">${{p.JobTitle||''}}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px;">
+        ${{courseTag(p)}}
+        ${{coursePct(p)}}
+      </div>
     </div>`;
   }}).join('')||`<div class="no-data">No people match filters</div>`;
 
@@ -1720,43 +1807,37 @@ function rosterSelect(el){{
     const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return months[parseInt(mo)-1]+' '+parseInt(dy)+', '+y;
   }}
+  const done=p.items.filter(i=>i.done).length, total=p.items.length;
+  const barColor=done===total?cv('--green'):done===0?cv('--red'):cv('--accent3');
+  const itemsHtml=p.items.map(i=>`
+    <div class="curric-item-row">
+      <div class="curric-item-name">
+        <span style="color:${{i.done?cv('--green'):'var(--muted)'}};font-weight:700;">${{i.done?'&#10003;':'&#9675;'}}</span>
+        <span>${{i.title}}</span>
+      </div>
+      <div class="curric-item-date">${{i.date?fmtDate(i.date):'&#8212;'}}</div>
+    </div>`).join('');
   sel('roster-right').innerHTML=`
     <div class="roster-right-header">
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">${{p.FirstName}} ${{p.LastName}}</div>
-      <span class="badge-status ${{isCert?'certified':'not-certified'}}">${{isCert?'Completed':'Not Yet Completed'}}</span>
-      ${{isCert&&p.CertDate?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${{fmtDate(p.CertDate)}}</span>`:''}}
+      ${{statusPill(p,false)}}${{isCert&&p.CertDate?` <span style="font-size:12px;color:var(--muted)">&middot; ${{fmtDate(p.CertDate)}}</span>`:''}}
     </div>
     <div class="detail-grid">
       <div><div class="detail-label">Job Title</div><div class="detail-value">${{p.JobTitle||'&#8212;'}}</div></div>
       <div><div class="detail-label">Market</div><div class="detail-value">${{p.Market||'&#8212;'}}</div></div>
-      <div><div class="detail-label">Assigned</div><div class="detail-value">${{fmtDate(p.Date)}}</div></div>
-      <div><div class="detail-label">Completion Date</div><div class="detail-value">${{fmtDate(p.CertDate)}}</div></div>
-      <div><div class="detail-label">Cert Quarter</div><div class="detail-value">${{p.CertQtr||'&#8212;'}}</div></div>
-      <div><div class="detail-label">Hire Date</div><div class="detail-value">${{fmtDate(p.HireDate)}}</div></div>
-      <div style="grid-column:1/-1"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
+      <div><div class="detail-label">Hired</div><div class="detail-value">${{fmtDate(p.HireDate)}}</div></div>
+      <div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.Email}}" style="color:var(--accent);text-decoration:none">${{p.Email||'&#8212;'}}</a></div></div>
+      <div><div class="detail-label">Manager</div><div class="detail-value">${{p.Manager||'&#8212;'}}</div></div>
+      <div><div class="detail-label">Manager Email</div><div class="detail-value"><a href="mailto:${{p.MgrEmail}}" style="color:var(--accent);text-decoration:none">${{p.MgrEmail||'&#8212;'}}</a></div></div>
     </div>
-    ${{p.Manager?`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Manager</div>
-      <div class="detail-grid">
-        <div><div class="detail-label">Name</div><div class="detail-value">${{p.Manager}}</div></div>
-        <div><div class="detail-label">Title</div><div class="detail-value">${{p.MgrTitle||'&#8212;'}}</div></div>
-        <div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${{p.MgrEmail}}" style="color:var(--accent);text-decoration:none">${{p.MgrEmail||'&#8212;'}}</a></div></div>
+    <div class="curric-section">
+      <div class="curric-section-hdr">
+        <div class="curric-section-title">Public Sector</div>
+        <div class="curric-section-count">${{done}} / ${{total}} courses</div>
       </div>
-    </div>`:''}}
-    ${{p.items&&p.items.length?`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Curriculum Items</div>
-      ${{p.items.map(item=>`
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
-            background:${{item.done?'var(--green-subtle)':'var(--surface2)'}};
-            border:1.5px solid ${{item.done?'var(--green)':'var(--border)'}};
-            color:${{item.done?'var(--green)':'var(--muted)'}}">${{item.done?'&#10003;':''}}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:500;color:var(--text)">${{item.title}}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${{item.done?fmtDate(item.date):'Not yet completed'}}</div>
-          </div>
-        </div>`).join('')}}
-    </div>`:''}}
+      <div class="curric-progress-track"><div class="curric-progress-fill" style="width:${{total?Math.round(done/total*100):0}}%;background:${{barColor}}"></div></div>
+      ${{itemsHtml}}
+    </div>
   `;
 }}
 
@@ -1787,7 +1868,7 @@ function runExportXLSX(type){{
       ['Generated:',now],
       [],
       ['SUMMARY'],
-      ['Total Assigned',pTotal],
+      ['Total Enrolled',pTotal],
       ['Completed',pCert],
       ['Not Completed',pNot],
       ['Completion Rate',pRate+'%'],
