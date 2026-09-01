@@ -233,6 +233,19 @@
   </select>
   <span class="filter-label">Market</span>
   <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
+  <span class="filter-label">Hire Status</span>
+  <select id="f-hirestatus" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="New Hire">New Hires</option>
+    <option value="Tenured Rep">Tenured Reps</option>
+  </select>
+  <span class="filter-label">Timeline</span>
+  <select id="f-deadline" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="Overdue">Overdue</option>
+    <option value="Due Soon">Due Soon</option>
+    <option value="On Track">On Track</option>
+  </select>
   <span class="filter-label" style="margin-right:2px;display:none">Date From</span>
   <input type="date" id="f-date-from" onchange="applyFilters()" style="display:none">
   <span class="filter-label" style="margin:0 2px;display:none">To</span>
@@ -248,9 +261,9 @@
     <div class="stat-value" id="s-total">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
-    <div class="stat-value green" id="s-certified">&#8212;</div>
-    <div class="stat-sub" id="s-certified-sub"></div>
+    <div class="stat-label">Not Started <span class="info-btn" onclick="showInfo(event,'not-started')">?</span></div>
+    <div class="stat-value red" id="s-notstarted">&#8212;</div>
+    <div class="stat-sub" id="s-notstarted-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
@@ -258,23 +271,19 @@
     <div class="stat-sub" id="s-inprog-sub"></div>
   </div>
   <div class="stat">
-    <div class="stat-label">Not Started <span class="info-btn" onclick="showInfo(event,'not-started')">?</span></div>
-    <div class="stat-value red" id="s-notstarted">&#8212;</div>
-    <div class="stat-sub" id="s-notstarted-sub"></div>
-  </div>
-  <div class="stat">
     <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
     <div class="stat-value teal" id="s-rate">&#8212;</div>
     <div class="stat-sub" id="s-rate-sub"></div>
   </div>
+  <div class="stat">
+    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
+    <div class="stat-value green" id="s-certified">&#8212;</div>
+    <div class="stat-sub" id="s-certified-sub"></div>
+  </div>
 </div>
 
 <!-- ── Charts ──────────────────────────────────────────────────────────── -->
-<div class="charts" style="grid-template-columns:1fr 1fr 1fr 1fr;">
-  <div class="chart-card">
-    <div class="chart-title">Certification Pipeline <span class="info-btn" onclick="showInfo(event,'pipeline-chart')">?</span></div>
-    <div class="chart-wrap"><canvas id="pipelineChart"></canvas></div>
-  </div>
+<div class="charts" style="grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));">
   <div class="chart-card">
     <div class="chart-title">Healthcare Team Progress Update <span class="info-btn" onclick="showInfo(event,'manual-chart')">?</span></div>
     <div class="chart-wrap"><canvas id="manualChart"></canvas></div>
@@ -282,6 +291,10 @@
   <div class="chart-card">
     <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
     <div class="chart-wrap"><canvas id="marketChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Timeline <span class="info-btn" onclick="showInfo(event,'deadline-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="deadlineChart"></canvas></div>
   </div>
   <div class="chart-card">
     <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'trend-chart')">?</span></div>
@@ -347,16 +360,62 @@ const TLG_SET = new Set(["Bianca Davis", "Bianca DiPasquale", "Bradley Pierce", 
 // ── Healthcare Team Progress Update data ─────────────────────────────────
 // Derived live from the certification roster (PEOPLE) rather than reported
 // by hand. Managers are excluded since manager certification is already
-// shown in the Certification Pipeline chart above. Reps who are already
-// fully Certified are also excluded from these buckets since they've
-// completed the process (video included).
+// tracked in the stat row above. Reps who are already fully Certified
+// are also excluded from these buckets since they've completed the
+// process (video included).
 let filtered = [];
+
+// ── New Hire designation ─────────────────────────────────────────────────
+// A person is a "New Hire" for their first 65 days of employment (a rolling
+// window from their hire date, checked against the report date below), and
+// automatically becomes a "Tenured Rep" on day 65 and beyond.
+var NEW_HIRE_WINDOW_DAYS = 65;
+function isNewHire(p){
+  if(!p.HireDate) return false;
+  var hire = new Date(p.HireDate + "T00:00:00");
+  var today = new Date(REPORT_DATE + "T00:00:00");
+  var daysSinceHire = Math.round((today - hire) / 86400000);
+  return daysSinceHire >= 0 && daysSinceHire < NEW_HIRE_WINDOW_DAYS;
+}
+function hireStatusLabel(p){
+  if(!p.HireDate) return "Unknown";
+  return isNewHire(p) ? "New Hire" : "Tenured Rep";
+}
+
+// ── Deadline / Overdue status ────────────────────────────────────────────
+// Every curriculum carries a fixed 64-day completion window from its
+// assignment date (the modal SLA observed across assignments in the
+// source data). Certified reps have no deadline exposure. Adjust
+// SLA_DAYS / DUE_SOON_DAYS / REPORT_DATE if the policy changes.
+var SLA_DAYS      = 64;
+var DUE_SOON_DAYS = 10;
+var REPORT_DATE   = "2026-08-31";
+function dueDate(p){
+  if(!p.AssignDate) return null;
+  var d = new Date(p.AssignDate + "T00:00:00");
+  d.setDate(d.getDate() + SLA_DAYS);
+  return d;
+}
+function daysRemaining(p){
+  var due = dueDate(p);
+  if(!due) return null;
+  var today = new Date(REPORT_DATE + "T00:00:00");
+  return Math.round((due - today) / 86400000);
+}
+function deadlineStatus(p){
+  if(p.Certified === "Yes") return "Certified";
+  var dr = daysRemaining(p);
+  if(dr === null) return "Unknown";
+  if(dr < 0) return "Overdue";
+  if(dr <= DUE_SOON_DAYS) return "Due Soon";
+  return "On Track";
+}
 
 let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
 let rosterView = "individual";
-let pipelineChart, trendChart, marketChart, manualChart;
+let trendChart, marketChart, manualChart, deadlineChart;
 
 function sel(id) { return document.getElementById(id); }
 function cv(v)  { return getComputedStyle(document.body).getPropertyValue(v).trim(); }
@@ -392,12 +451,16 @@ var INFO_MSGS = {
   "certified":       "People who have completed all required coursework and earned their Healthcare certification. Certification is confirmed by the LMS system.",
   "in-progress":     "People who have started the program and completed at least one course, but haven't finished everything yet.",
   "not-started":     "People who are assigned to the program but haven't completed any courses yet.",
-  "completion-rate": "The percentage of assigned people who have earned full certification so far. For example, 25% means 1 in 4 people is certified. This number updates when you apply filters.",
-  "pipeline-chart":  "A quick snapshot of where everyone stands: how many haven't started yet, how many are actively working through the courses, and how many have finished and are fully certified.",
+  "overdue":         "Past the due date for completing the curriculum and earning certification.",
+  "duesoon":         "Not certified, with 10 days or less until the due date.",
+  "ontrack":         "Not certified, with more than 10 days until the due date.",
+  "deadline-chart":  "Splits the roster into four groups: Certified, On Track (not yet certified, more than 10 days left), Due Soon (not yet certified, 10 days or less left), and Overdue (past the due date to complete the curriculum and earn certification). Updates with your filters.",
+  "completion-rate": "The percentage of assigned people who have finished all 22 courses in the curriculum (100% complete), regardless of whether they've since been marked officially Certified. This number updates when you apply filters.",
+  "new-hires":       "People within their first 65 days of employment as of the report date. This is a rolling window — once someone passes day 65 from their hire date, they automatically become a \"Tenured Rep,\" no manual update needed. Use the Hire Status filter above to isolate either group.",
+  "roster":          "The full list of people in the program. Each card shows their name and job title, their progress on Layered Security and HC Foundations (bottom left), their overall completion percentage (bottom right), and their current status (top right). A \"New Hire\" tag appears under the name for anyone within their first 65 days of employment, and anyone not yet certified also shows their due date plus an \"Overdue\", \"Due Soon\", or \"On Track\" tag against that due date. Click any card to see a full course-by-course breakdown in the panel on the right.",
   "trend-chart":     "Shows how many people earned their Healthcare certification in each quarter. KM's fiscal year runs April through March. Q1 is April to June, Q2 is July to September, Q3 is October to December, and Q4 is January to March.",
   "market-chart":    "Certification progress broken down by sales market. Each bar shows how many people in that market are Certified, In Progress, or Not Started. Hover over any bar to see the exact counts and total enrolled for that market. Updates when you apply filters.",
   "manual-chart":    "Shows where sales reps on the healthcare team currently stand: how many have finished coursework and just need to record their certification video, how many are 50% or more through the coursework, and how many are still below 50%.",
-  "roster":          "The full list of people in the program. Each card shows their name and job title, their progress on Layered Security and HC Foundations (bottom left), their overall completion percentage (bottom right), and their current status (top right). Click any card to see a full course-by-course breakdown in the panel on the right.",
   "export":          "Download a report based on whoever is currently shown on screen. Apply filters first to scope the report to a specific group. Full Report includes everyone with all course progress columns. Not Certified is a contact list of people still working through the program, sorted by manager, useful for follow-up. Manager Summary shows each manager's team size and how many on their team have certified."
 };
 function showInfo(e, key){
@@ -432,6 +495,11 @@ function fmtDate(d){
   var pts = d.split("-"), months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return months[parseInt(pts[1]) - 1] + " " + parseInt(pts[2]) + ", " + pts[0];
 }
+function fmtDateObj(d){
+  if(!d) return "-";
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return months[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear();
+}
 function pillClass(pct, total){
   if(pct === 100 || (total > 0 && pct >= 100)) return "green";
   if(pct > 0) return "yellow";
@@ -449,6 +517,8 @@ function pillClass(pct, total){
 function resetFilters(){
   sel("f-market").value = "";
   sel("f-status").value = "";
+  sel("f-hirestatus").value = "";
+  sel("f-deadline").value = "";
   sel("f-date-from").value = "";
   sel("f-date-to").value = "";
   sel("f-search").value = "";
@@ -491,6 +561,8 @@ function setSort(field){
 function applyFilters(){
   var market = sel("f-market").value;
   var status = sel("f-status").value;
+  var hireStatus = sel("f-hirestatus").value;
+  var deadline = sel("f-deadline").value;
   var from   = sel("f-date-from").value;
   var to     = sel("f-date-to").value;
   var q      = (sel("f-search").value || "").toLowerCase();
@@ -498,6 +570,8 @@ function applyFilters(){
     if(TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
     if(market && p.Market !== market) return false;
     if(status && personStatus(p) !== status) return false;
+    if(hireStatus && hireStatusLabel(p) !== hireStatus) return false;
+    if(deadline && deadlineStatus(p) !== deadline) return false;
     if(from && p.AssignDate && p.AssignDate < from) return false;
     if(to && p.AssignDate && p.AssignDate > to) return false;
     if(q && !(p.FirstName + " " + p.LastName).toLowerCase().includes(q)) return false;
@@ -516,7 +590,6 @@ function renderStats(){
   var cert    = filtered.filter(function(p){ return p.Certified === "Yes"; }).length;
   var inprog  = filtered.filter(function(p){ return p.overallPct > 0 && p.Certified !== "Yes"; }).length;
   var nostart = filtered.filter(function(p){ return p.overallPct === 0 && p.Certified !== "Yes"; }).length;
-  var rate    = total > 0 ? Math.round(cert / total * 100) : 0;
   var certPct    = total > 0 ? Math.round(cert / total * 100) : 0;
   var inprogPct  = total > 0 ? Math.round(inprog / total * 100) : 0;
   var nostartPct = total > 0 ? Math.round(nostart / total * 100) : 0;
@@ -527,8 +600,11 @@ function renderStats(){
   sel("s-inprog-sub").textContent = total > 0 ? (inprog + " of " + total + " enrolled") : "";
   sel("s-notstarted").textContent= nostartPct + "%";
   sel("s-notstarted-sub").textContent = total > 0 ? (nostart + " of " + total + " enrolled") : "";
-  sel("s-rate").textContent      = rate + "%";
-  sel("s-rate-sub").textContent  = total > 0 ? (cert + " of " + total + " enrolled") : "";
+
+  var fullComplete = filtered.filter(function(p){ return p.overallPct === 100; }).length;
+  var completeRate = total > 0 ? Math.round(fullComplete / total * 100) : 0;
+  sel("s-rate").textContent      = completeRate + "%";
+  sel("s-rate-sub").textContent  = total > 0 ? (fullComplete + " of " + total + " finished all courses") : "";
 }
 
 // ── renderCharts ───────────────────────────────────────────────────────────
@@ -537,33 +613,30 @@ function renderCharts(){
   var labelColor = isLight ? cv("--text") : cv("--muted");
   var gridColor  = cv("--border");
 
-  // Chart 1: certification pipeline — Not Started, In Progress, Certified
-  var pipelineNotStarted = filtered.filter(function(p){ return personStatus(p) === "Not Started"; }).length;
-  var pipelineInProgress = filtered.filter(function(p){ return personStatus(p) === "In Progress"; }).length;
-  var pipelineCertified  = filtered.filter(function(p){ return personStatus(p) === "Certified";   }).length;
+  // Chart 1b: deadline status among not-yet-certified people
+  var deadlineOverdue   = filtered.filter(function(p){ return deadlineStatus(p) === "Overdue"; }).length;
+  var deadlineDueSoon   = filtered.filter(function(p){ return deadlineStatus(p) === "Due Soon"; }).length;
+  var deadlineOnTrack   = filtered.filter(function(p){ return deadlineStatus(p) === "On Track"; }).length;
+  var deadlineCertified = filtered.filter(function(p){ return p.Certified === "Yes"; }).length;
 
-  if(pipelineChart) pipelineChart.destroy();
-  pipelineChart = new Chart(sel("pipelineChart"), {
-    type: "bar",
+  if(deadlineChart) deadlineChart.destroy();
+  deadlineChart = new Chart(sel("deadlineChart"), {
+    type: "doughnut",
     data: {
-      labels: ["Not Started", "In Progress", "Certified"],
+      labels: ["Overdue", "Due Soon", "On Track", "Certified"],
       datasets: [{
-        data: [pipelineNotStarted, pipelineInProgress, pipelineCertified],
-        backgroundColor: [cv("--red") + "cc", "#f59e0b" + "cc", cv("--green") + "cc"],
-        borderRadius: 4,
-        borderSkipped: false
+        data: [deadlineOverdue, deadlineDueSoon, deadlineOnTrack, deadlineCertified],
+        backgroundColor: [cv("--red") + "cc", "#f59e0bcc", cv("--teal") + "cc", cv("--green") + "cc"],
+        borderColor: isLight ? "#fff" : "#0d0f1a",
+        borderWidth: 2
       }]
     },
     options: {
-      indexAxis: "y",
       responsive: true, maintainAspectRatio: false,
+      cutout: "62%",
       plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: function(ctx){ return " " + ctx.raw + " people"; } } }
-      },
-      scales: {
-        x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 }, stepSize: 1 } },
-        y: { grid: { display: false }, ticks: { color: labelColor, font: { size: 12 } } }
+        legend: { position: "bottom", labels: { color: labelColor, font: { size: 11 }, boxWidth: 12, padding: 12 } },
+        tooltip: { callbacks: { label: function(ctx){ return " " + ctx.label + ": " + ctx.raw + " people"; } } }
       }
     }
   });
@@ -717,11 +790,27 @@ function buildPersonCard(p){
   var pctClass       = status === "Certified" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
   var badgeStatusCls = status === "Certified" ? "certified" : status === "In Progress" ? "in-progress" : "not-certified";
   var badgeStatusTxt = status === "Certified" ? "✓ Certified" : status === "In Progress" ? "In Progress" : "Not Started";
+  var newHireTag     = isNewHire(p) ? '<span class="pill" style="color:var(--accent3);background:var(--accent3)22;border:1px solid var(--accent3)44;margin-top:4px;display:inline-block">New Hire</span>' : "";
+  var dStatus        = deadlineStatus(p);
+  var deadlineTag    = dStatus === "Overdue" ? '<span class="pill" style="color:var(--red);background:var(--red-subtle);border:1px solid var(--red)44;margin-top:4px;margin-left:4px;display:inline-block">Overdue</span>'
+                      : dStatus === "Due Soon" ? '<span class="pill" style="color:#b45309;background:#fef3c7;border:1px solid #f59e0b44;margin-top:4px;margin-left:4px;display:inline-block">Due Soon</span>'
+                      : dStatus === "On Track" ? '<span class="pill" style="color:#0f766e;background:#ccfbf122;border:1px solid #0f766e44;margin-top:4px;margin-left:4px;display:inline-block">On Track</span>'
+                      : "";
+  var dueLine = "";
+  if(p.Certified !== "Yes"){
+    var due = dueDate(p);
+    if(due){
+      var dueColor = dStatus === "Overdue" ? "var(--red)" : dStatus === "Due Soon" ? "#b45309" : "var(--muted)";
+      dueLine = '<div class="roster-title" style="color:' + dueColor + ';margin-top:2px;">Due ' + fmtDateObj(due) + "</div>";
+    }
+  }
   var h = '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
   h += '<div class="roster-top">';
   h += '<div class="roster-name-block">';
   h += '<div class="roster-name">' + fullName + "</div>";
   h += '<div class="roster-title">' + (p.JobTitle || "") + "</div>";
+  h += dueLine;
+  h += newHireTag + deadlineTag;
   h += "</div>";
   h += '<span class="badge-status ' + badgeStatusCls + '">' + badgeStatusTxt + "</span>";
   h += "</div>";
@@ -855,7 +944,16 @@ function showDetail(email){
   detailHtml += '<div class="detail-grid">';
   detailHtml += '<div><div class="detail-label">Job Title</div><div class="detail-value">' + (p.JobTitle || "-") + "</div></div>";
   detailHtml += '<div><div class="detail-label">Market</div><div class="detail-value">' + (p.Market || "-") + "</div></div>";
-  detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + (isNewHire(p) ? ' <span class="pill" style="color:var(--accent3);background:var(--accent3)22;border:1px solid var(--accent3)44;">New Hire</span>' : "") + "</div></div>";
+  if(p.Certified !== "Yes"){
+    var dStat = deadlineStatus(p);
+    var dr    = daysRemaining(p);
+    var due   = dueDate(p);
+    var dueStr = due ? (due.getMonth()+1) + "/" + due.getDate() + "/" + due.getFullYear() : "-";
+    var dColor = dStat === "Overdue" ? "var(--red)" : dStat === "Due Soon" ? "#b45309" : "#0f766e";
+    var drTxt  = dr === null ? "-" : dr < 0 ? (Math.abs(dr) + " days overdue") : (dr + " days left");
+    detailHtml += '<div><div class="detail-label">Deadline</div><div class="detail-value" style="color:' + dColor + '">' + dueStr + " · " + drTxt + "</div></div>";
+  }
   detailHtml += '<div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:' + p.Email + '" style="color:var(--accent);text-decoration:none">' + (p.Email || "-") + "</a></div></div>";
   if(p.Manager){
     detailHtml += '<div><div class="detail-label">Manager</div><div class="detail-value">' + p.Manager + "</div></div>";
@@ -882,8 +980,9 @@ function setupPrintHeader(title, subtitle){
   sel("ph-date").textContent    = subtitle;
   var market = sel("f-market").value || "All Markets";
   var status = sel("f-status").options[sel("f-status").selectedIndex].text;
+  var hireStatus = sel("f-hirestatus").options[sel("f-hirestatus").selectedIndex].text;
   var search = sel("f-search").value;
-  var parts  = ["Status: " + status, "Market: " + market];
+  var parts  = ["Status: " + status, "Market: " + market, "Hire Status: " + hireStatus];
   if(search) parts.push("Search: " + search);
   sel("ph-filters").textContent = parts.join("  |  ");
 }
@@ -903,12 +1002,16 @@ function runExport(type){
     var total  = filtered.length;
     var cert   = filtered.filter(function(p){ return p.Certified === "Yes"; }).length;
     var inprog = filtered.filter(function(p){ return p.overallPct > 0 && p.Certified !== "Yes"; }).length;
-    var rate   = total > 0 ? Math.round(cert / total * 100) : 0;
-    sel("print-stats").innerHTML = pBox(total,"Total Enrolled") + pBox(cert,"Certified") + pBox(inprog,"In Progress") + pBox(rate+"%","Completion Rate");
-    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Status","HC Foundations %","Layered Security %","Overall %","Cert Date","Manager"]);
+    var rate   = total > 0 ? Math.round(filtered.filter(function(p){ return p.overallPct === 100; }).length / total * 100) : 0;
+    var newHires = filtered.filter(isNewHire).length;
+    var overdueCt = filtered.filter(function(p){ return deadlineStatus(p) === "Overdue"; }).length;
+    var dueSoonCt = filtered.filter(function(p){ return deadlineStatus(p) === "Due Soon"; }).length;
+    var onTrackCt = filtered.filter(function(p){ return deadlineStatus(p) === "On Track"; }).length;
+    sel("print-stats").innerHTML = pBox(total,"Total Enrolled") + pBox(cert,"Certified") + pBox(inprog,"In Progress") + pBox(rate+"%","Completion Rate") + pBox(newHires,"New Hires") + pBox(overdueCt,"Overdue") + pBox(dueSoonCt,"Due Soon") + pBox(onTrackCt,"On Track");
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Hire Status","Status","Deadline","HC Foundations %","Layered Security %","Overall %","Cert Date","Manager"]);
     sel("print-roster-body").innerHTML = filtered.map(function(p,i){
       return tds([i+1, "<b>"+p.FirstName+" "+p.LastName+"</b>", p.Market||"-", p.JobTitle||"-",
-        personStatus(p), p.hcf.pct+"%", p.ls.pct+"%", p.overallPct+"%",
+        hireStatusLabel(p), personStatus(p), deadlineStatus(p), p.hcf.pct+"%", p.ls.pct+"%", p.overallPct+"%",
         p.CertDate||"-", p.Manager||"-"]);
     }).join("");
     sel("ph-desc").style.display = "none";
@@ -967,9 +1070,13 @@ function runExportXLSX(type){
   if(type==="full"){
     var total=filtered.length;
     var cert=filtered.filter(function(p){ return p.Certified==="Yes"; }).length;
-    var rate=total>0?Math.round(cert/total*100):0;
+    var rate=total>0?Math.round(filtered.filter(function(p){ return p.overallPct===100; }).length/total*100):0;
     var inprogXL  = filtered.filter(function(p){ return p.overallPct > 0 && p.Certified !== "Yes"; }).length;
     var nostartXL = filtered.filter(function(p){ return p.overallPct === 0 && p.Certified !== "Yes"; }).length;
+    var newHiresXL = filtered.filter(isNewHire).length;
+    var overdueXL  = filtered.filter(function(p){ return deadlineStatus(p) === "Overdue"; }).length;
+    var dueSoonXL  = filtered.filter(function(p){ return deadlineStatus(p) === "Due Soon"; }).length;
+    var onTrackXL  = filtered.filter(function(p){ return deadlineStatus(p) === "On Track"; }).length;
     var sumRows=[
       ["Healthcare Certification Report"],
       ["Generated:",now],
@@ -980,13 +1087,18 @@ function runExportXLSX(type){
       ["In Progress",inprogXL],
       ["Not Started",nostartXL],
       ["Completion Rate",rate+"%"],
+      ["New Hires",newHiresXL],
+      ["Overdue",overdueXL],
+      ["Due Soon",dueSoonXL],
+      ["On Track",onTrackXL],
     ];
     XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),"Summary");
-    var rRows=[["Name","Market","Job Title","Status","HC Foundations %","Layered Security %","Overall %","Cert Date","Manager"]];
+    var rRows=[["Name","Market","Job Title","Hire Status","Status","Deadline","Days Remaining","HC Foundations %","Layered Security %","Overall %","Cert Date","Manager"]];
     filtered.forEach(function(p){
-      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",personStatus(p),p.hcf.pct+"%",p.ls.pct+"%",p.overallPct+"%",p.CertDate||"-",p.Manager||"-"]);
+      var dr = daysRemaining(p);
+      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",hireStatusLabel(p),personStatus(p),deadlineStatus(p),(p.Certified==="Yes"?"-":(dr===null?"-":dr)),p.hcf.pct+"%",p.ls.pct+"%",p.overallPct+"%",p.CertDate||"-",p.Manager||"-"]);
     });
-    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,16,16,12,14,28]),"Roster");
+    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,12,14,16,16,12,14,28]),"Roster");
     dlXLSX("hc-full-report",wb);
   } else if(type==="not-certified"){
     var notCert=filtered.filter(function(p){ return p.Certified!=="Yes"; }).slice().sort(function(a,b){
