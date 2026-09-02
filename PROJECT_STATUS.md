@@ -14,8 +14,34 @@ Last updated: 2026-09-02
 | Public Sector Certification | `cert-publicsector.html` | August 21, 2026 | 122 unique people, 92 completed (75%); roster/chart redesign added 2026-09-01 (see below) |
 | Accelerate Onboarding | `onboarding.html` | August 31, 2026 | 56 learners; major Resmie port + new Registration Status tags 2026-08-31 (see below) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
-| Layered Security Certification | `cert-layered-security.html` | August 21, 2026 | 502 learners, 60 complete; first real Closed Won deal appeared ($5,788.25, see below) |
+| Layered Security Certification | `cert-layered-security.html` | September 2, 2026 | 502 learners, 92 complete; percent-based stat cards added 2026-09-02 (see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-09-02, later) — Layered Security: percent-based stat cards + a "changelog says X, file has no X" incident
+
+Resmie sent `cert-layered-security-RB-090226.html` + a `.docx` changelog describing one change:
+Curriculum Complete / In Progress / Not Started stat cards changed to a percentage (primary value)
+with the raw count as sub-text — same treatment already shipped this week on Healthcare/Onboarding/
+Public Sector.
+
+**Real finding:** her HTML file was byte-for-byte identical to what was already live — confirmed via
+a full-file `cmp`/`diff`, zero differences anywhere, not just in the code. None of her described
+changes were actually present. Jason asked directly whether he might have already made the change
+himself; checked the commit right before this session's edit and confirmed no — it still had the
+old raw-count display, so it was genuinely unbuilt on both the live site and in Resmie's own file
+(most likely her save/export didn't capture the edits before sending).
+
+Since the changelog's description was simple and already precedented three times this same week,
+built it directly from the changelog spec (flagged to Jason first, who confirmed to proceed) rather
+than waiting on a corrected file. Jason sent Resmie a short heads-up about the mismatch. Pushed as
+commit `37c7050` (merged into `f181f0e`); confirmed `build`+`deploy` both `success` and the live page
+reflects it.
+
+**Same push also refreshed the data to 09.02.2026** (502 learners, 92 complete, up from 60) — old
+08.21 files had already been correctly replaced per the established cadence before this session
+started. Full detail in project memory [[layered_security_dashboard]].
 
 ---
 
