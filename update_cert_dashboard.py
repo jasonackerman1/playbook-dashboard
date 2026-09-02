@@ -2087,7 +2087,14 @@ def load_rows_healthcare_v2(cert_file, learning_file):
     }
 
     def _date(v):
-        return v.strftime('%Y-%m-%d') if v and hasattr(v, 'strftime') else ''
+        if not v:
+            return ''
+        if hasattr(v, 'strftime'):
+            return v.strftime('%Y-%m-%d')
+        m = re.match(r'(\d{1,2})/(\d{1,2})/(\d{4})', str(v).strip())
+        if m:
+            return f'{int(m.group(3)):04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}'
+        return ''
 
     def _str(v):
         return str(v).strip() if v is not None else ''
@@ -2132,6 +2139,7 @@ def load_rows_healthcare_v2(cert_file, learning_file):
     }
     learning = {}
     assign_dates = {}   # email -> earliest assignment date across all curricula
+    required_dates = {}   # email -> Item Required Date (same value across all of a person's items)
     wb_l = openpyxl.load_workbook(learning_file, read_only=True, data_only=True)
     ws_l = wb_l.active
     for raw in ws_l.iter_rows(min_row=2, values_only=True):
@@ -2151,6 +2159,11 @@ def load_rows_healthcare_v2(cert_file, learning_file):
         if assign_str:
             if email not in assign_dates or assign_str < assign_dates[email]:
                 assign_dates[email] = assign_str
+        # Track Item Required Date (col 30) — same value across all item rows for a person
+        if email not in required_dates:
+            req_str = _date(raw[30])
+            if req_str:
+                required_dates[email] = req_str
         item_id = _str(item_id).upper()
         title   = _str(raw[26])          # col 26: Item Title (was col 24)
         comp_date_raw = raw[27]          # col 27: Item Completion Date (was col 25)
@@ -2219,6 +2232,7 @@ def load_rows_healthcare_v2(cert_file, learning_file):
             'MgrTitle':    person['MgrTitle'],
             'HireDate':    person['HireDate'],
             'AssignDate':  assign_dates.get(email, ''),
+            'RequiredDate': required_dates.get(email, ''),
             'Certified':   person['Certified'],
             'CertDate':    person['CertDate'],
             'CertQtr':     person['CertQtr'],
@@ -2242,6 +2256,14 @@ def generate_html_healthcare_v2(slug, name, rows, date_label='', date_iso=''):
     """
     raw_json = json.dumps(rows)
     tlg_json = json.dumps(sorted(TLG))
+
+    # Fallback due date for not-yet-certified people whose LMS export no longer reports an
+    # active Item Required Date (they've already finished coursework, nothing left to track).
+    # Uses the most common real Required Date across this pull — i.e. "the rest of their
+    # cohort's deadline" — rather than a hand-picked date, so it self-updates every regeneration.
+    from collections import Counter
+    _req_dates = [r['RequiredDate'] for r in rows if r.get('RequiredDate')]
+    fallback_due_date = Counter(_req_dates).most_common(1)[0][0] if _req_dates else ''
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -2491,6 +2513,12 @@ def generate_html_healthcare_v2(slug, name, rows, date_label='', date_iso=''):
     <option value="Due Soon">Due Soon</option>
     <option value="On Track">On Track</option>
   </select>
+  <span class="filter-label">Role</span>
+  <select id="f-role" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="Manager">Managers</option>
+    <option value="Rep">Reps</option>
+  </select>
   <span class="filter-label" style="margin-right:2px;display:none">Date From</span>
   <input type="date" id="f-date-from" onchange="applyFilters()" style="display:none">
   <span class="filter-label" style="margin:0 2px;display:none">To</span>
@@ -2628,18 +2656,28 @@ function hireStatusLabel(p){{
 }}
 
 // ── Deadline / Overdue status ────────────────────────────────────────────
-// Every curriculum carries a fixed 64-day completion window from its
-// assignment date (the modal SLA observed across assignments in the
-// source data). Certified reps have no deadline exposure. Adjust
-// SLA_DAYS / DUE_SOON_DAYS / REPORT_DATE if the policy changes.
-var SLA_DAYS      = 64;
-var DUE_SOON_DAYS = 10;
-var REPORT_DATE   = "{date_iso}";
+// Deadline data comes straight from the LMS's own "Item Required Date"
+// field in the curricula export (per-person, as of import), not a
+// computed policy. This carries forward automatically on every future
+// data import: whatever required date the curricula export has for a
+// not-yet-certified person is what shows here, no manual override needed.
+//
+// Fallback: some not-yet-certified people have finished all their
+// coursework already, so the LMS no longer reports an active required
+// date for them (nothing left to track). If they're still "In Progress"
+// (i.e. not yet officially Certified) and not a new hire, they still
+// carry the same fallback deadline as the rest of their cohort rather
+// than showing as "Unknown". New hires and anyone with no coursework
+// started at all fall through to "Unknown" as before.
+var DUE_SOON_DAYS   = 10;
+var REPORT_DATE     = "{date_iso}";
+var FALLBACK_DUE_DATE = "{fallback_due_date}";
 function dueDate(p){{
-  if(!p.AssignDate) return null;
-  var d = new Date(p.AssignDate + "T00:00:00");
-  d.setDate(d.getDate() + SLA_DAYS);
-  return d;
+  if(p.RequiredDate) return new Date(p.RequiredDate + "T00:00:00");
+  if(personStatus(p) === "In Progress" && !isNewHire(p)) {{
+    return new Date(FALLBACK_DUE_DATE + "T00:00:00");
+  }}
+  return null;
 }}
 function daysRemaining(p){{
   var due = dueDate(p);
@@ -2705,7 +2743,7 @@ var INFO_MSGS = {{
   "roster":          "The full list of people in the program. Each card shows their name and job title, their progress on Layered Security and HC Foundations (bottom left), their overall completion percentage (bottom right), and their current status (top right). A \\"New Hire\\" tag appears under the name for anyone within their first 65 days of employment, and anyone not yet certified also shows their due date plus an \\"Overdue\\", \\"Due Soon\\", or \\"On Track\\" tag against that due date. Click any card to see a full course-by-course breakdown in the panel on the right.",
   "trend-chart":     "Shows how many people earned their Healthcare certification in each quarter. KM's fiscal year runs April through March. Q1 is April to June, Q2 is July to September, Q3 is October to December, and Q4 is January to March.",
   "market-chart":    "Certification progress broken down by sales market. Each bar shows how many people in that market are Certified, In Progress, or Not Started. Hover over any bar to see the exact counts and total enrolled for that market. Updates when you apply filters.",
-  "manual-chart":    "Shows where sales reps on the healthcare team currently stand: how many have finished coursework and just need to record their certification video, how many are 50% or more through the coursework, and how many are still below 50%.",
+  "manual-chart":    "Shows where everyone still working toward certification stands, split by Reps and Managers: what share of each group has finished coursework and just needs to record their certification video (Awaiting Video), what share is 50% or more through the coursework, and what share is still below 50%. Bars show percent of each group (Reps and Managers are counted separately, so groups of different sizes compare fairly) — hover for the underlying headcount.",
   "export":          "Download a report based on whoever is currently shown on screen. Apply filters first to scope the report to a specific group. Full Report includes everyone with all course progress columns. Not Certified is a contact list of people still working through the program, sorted by manager, useful for follow-up. Manager Summary shows each manager's team size and how many on their team have certified."
 }};
 function showInfo(e, key){{
@@ -2764,6 +2802,7 @@ function resetFilters(){{
   sel("f-status").value = "";
   sel("f-hirestatus").value = "";
   sel("f-deadline").value = "";
+  sel("f-role").value = "";
   sel("f-date-from").value = "";
   sel("f-date-to").value = "";
   sel("f-search").value = "";
@@ -2808,6 +2847,7 @@ function applyFilters(){{
   var status = sel("f-status").value;
   var hireStatus = sel("f-hirestatus").value;
   var deadline = sel("f-deadline").value;
+  var role   = sel("f-role").value;
   var from   = sel("f-date-from").value;
   var to     = sel("f-date-to").value;
   var q      = (sel("f-search").value || "").toLowerCase();
@@ -2817,6 +2857,7 @@ function applyFilters(){{
     if(status && personStatus(p) !== status) return false;
     if(hireStatus && hireStatusLabel(p) !== hireStatus) return false;
     if(deadline && deadlineStatus(p) !== deadline) return false;
+    if(role && (isManager(p) ? "Manager" : "Rep") !== role) return false;
     if(from && p.AssignDate && p.AssignDate < from) return false;
     if(to && p.AssignDate && p.AssignDate > to) return false;
     if(q && !(p.FirstName + " " + p.LastName).toLowerCase().includes(q)) return false;
@@ -2987,39 +3028,55 @@ function renderCharts(){{
 function renderManualChart(){{
   var isLight    = document.body.classList.contains("light-mode");
   var labelColor = isLight ? cv("--text") : cv("--muted");
+  var gridColor  = cv("--border");
 
-  // Reps only (managers excluded, already covered by the Pipeline chart),
-  // and only those not yet fully Certified.
-  var reps = filtered.filter(function(p){{ return !isManager(p) && p.Certified !== "Yes"; }});
-  var awaitingVideo = reps.filter(function(p){{ return p.overallPct === 100; }}).length;
-  var over50        = reps.filter(function(p){{ return p.overallPct >= 50 && p.overallPct < 100; }}).length;
-  var under50        = reps.filter(function(p){{ return p.overallPct < 50; }}).length;
+  // All not-yet-certified people, split into Reps vs Managers per tier.
+  var notCert   = filtered.filter(function(p){{ return p.Certified !== "Yes"; }});
+  var reps      = notCert.filter(function(p){{ return !isManager(p); }});
+  var mgrs      = notCert.filter(isManager);
 
-  var labels = [
-    "Reps Awaiting Video",
-    "Reps \\u226550% Complete",
-    "Reps <50% Complete"
-  ];
-  var data = [awaitingVideo, over50, under50];
-  var colors = [cv("--teal"), "#f59e0b", cv("--red")];
+  function tiers(list){{
+    return [
+      list.filter(function(p){{ return p.overallPct === 100; }}).length,
+      list.filter(function(p){{ return p.overallPct >= 50 && p.overallPct < 100; }}).length,
+      list.filter(function(p){{ return p.overallPct < 50; }}).length
+    ];
+  }}
+  function toPct(counts, total){{
+    return counts.map(function(c){{ return total > 0 ? Math.round(c / total * 100) : 0; }});
+  }}
+  var repsCounts = tiers(reps);
+  var mgrsCounts = tiers(mgrs);
+  var repsTotal  = reps.length;
+  var mgrsTotal  = mgrs.length;
+  var repsPct    = toPct(repsCounts, repsTotal);
+  var mgrsPct    = toPct(mgrsCounts, mgrsTotal);
+
+  var labels = ["Awaiting Video", "\\u226550% Complete", "<50% Complete"];
 
   if(manualChart) manualChart.destroy();
   manualChart = new Chart(sel("manualChart"), {{
-    type: "pie",
+    type: "bar",
     data: {{
       labels: labels,
-      datasets: [{{
-        data: data,
-        backgroundColor: colors,
-        borderColor: cv("--surface"),
-        borderWidth: 2
-      }}]
+      datasets: [
+        {{ label: "Reps",     data: repsPct, counts: repsCounts, total: repsTotal, backgroundColor: "#8b5cf6bb", borderRadius: 3, borderSkipped: false }},
+        {{ label: "Managers", data: mgrsPct, counts: mgrsCounts, total: mgrsTotal, backgroundColor: cv("--accent") + "bb", borderRadius: 3, borderSkipped: false }}
+      ]
     }},
     options: {{
       responsive: true, maintainAspectRatio: false,
+      scales: {{
+        x: {{ ticks: {{ color: labelColor, font: {{ size: 11 }} }}, grid: {{ display: false }} }},
+        y: {{ beginAtZero: true, max: 100, ticks: {{ color: labelColor, font: {{ size: 11 }}, callback: function(v){{ return v + "%"; }} }}, grid: {{ color: gridColor }} }}
+      }},
       plugins: {{
         legend: {{ display: true, position: "bottom", labels: {{ color: labelColor, font: {{ size: 11 }}, padding: 14, boxWidth: 12 }} }},
-        tooltip: {{ callbacks: {{ label: function(ctx){{ return " " + ctx.label + ": " + ctx.raw + " people"; }} }} }}
+        tooltip: {{ callbacks: {{ label: function(ctx){{
+          var count = ctx.dataset.counts[ctx.dataIndex];
+          var total = ctx.dataset.total;
+          return " " + ctx.dataset.label + ": " + ctx.raw + "% (" + count + " of " + total + ")";
+        }} }} }}
       }}
     }}
   }});
@@ -3226,8 +3283,9 @@ function setupPrintHeader(title, subtitle){{
   var market = sel("f-market").value || "All Markets";
   var status = sel("f-status").options[sel("f-status").selectedIndex].text;
   var hireStatus = sel("f-hirestatus").options[sel("f-hirestatus").selectedIndex].text;
+  var role = sel("f-role").options[sel("f-role").selectedIndex].text;
   var search = sel("f-search").value;
-  var parts  = ["Status: " + status, "Market: " + market, "Hire Status: " + hireStatus];
+  var parts  = ["Status: " + status, "Market: " + market, "Hire Status: " + hireStatus, "Role: " + role];
   if(search) parts.push("Search: " + search);
   sel("ph-filters").textContent = parts.join("  |  ");
 }}
