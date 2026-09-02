@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-09-01
+Last updated: 2026-09-02
 
 ---
 
@@ -10,12 +10,47 @@ Last updated: 2026-09-01
 |---|---|---|---|
 | Analytics Hub Homepage | `index.html` | — | Links to all dashboards |
 | Playbook Traffic | `playbook.html` | August 14, 2026 | 7,502 rows; cadence is monthly → weekly (see below); date filters anchor to newest data date |
-| Healthcare Certification | `cert-healthcare.html` | August 31, 2026 | 66 people, 18 certified, 48 in progress; New Hire tracking + deadline/Timeline system added 2026-09-01 (see below) |
+| Healthcare Certification | `cert-healthcare.html` | September 2, 2026 | 66 people, 19 certified, 46 in progress; deadlines switched to LMS Item Required Date + Role filter added 2026-09-02 (see below) |
 | Public Sector Certification | `cert-publicsector.html` | August 21, 2026 | 122 unique people, 92 completed (75%); roster/chart redesign added 2026-09-01 (see below) |
 | Accelerate Onboarding | `onboarding.html` | August 31, 2026 | 56 learners; major Resmie port + new Registration Status tags 2026-08-31 (see below) |
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | August 21, 2026 | 502 learners, 60 complete; first real Closed Won deal appeared ($5,788.25, see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+
+---
+
+## Recent Changes (2026-09-02) — Healthcare dashboard: LMS Item Required Date deadlines, Role filter
+
+Third Resmie prototype port for Healthcare in two weeks (`cert-healthcare-dashboard-RB-090226.html`
++ a `.docx` changelog, both deleted after porting). Ported into `update_cert_dashboard.py`, verified
+byte-for-byte identical to her file on every function/HTML/tooltip diff except one deliberate
+comment rewording (see below). Pushed as commit `2eee562` together with the new 09.02 data files;
+confirmed `build` and `deploy` both `success` and the live page reflects it. Full detail in project
+memory [[cert_dashboard_plan]].
+
+**Deadline source completely replaced** — supersedes the `AssignDate + 64 days` system from
+2026-08-31 entirely. Due dates now come straight from the LMS's own "Item Required Date" field
+(confirmed to be one value per curriculum per person, not per individual course item). A fallback
+rule now covers people who've already finished all coursework (so the LMS stops reporting a
+required date for them) but aren't yet officially Certified — they get a shared fallback deadline
+instead of showing "Unknown." New Hires and anyone who hasn't started any coursework still
+correctly fall through to "Unknown."
+
+**Real improvement beyond a straight port:** Resmie's file hardcoded that fallback deadline
+(`"2026-09-11"`) for this one data pull. Made it self-computing instead — derived as the most common
+real required date across the current roster, so it won't go stale next month the way a hardcoded
+date would. Confirmed it computes to the identical `2026-09-11` value from this exact data.
+
+**New Role filter** (All / Managers / Reps) added to the filter bar, reusing the existing
+manager-detection logic — reshapes every stat/chart/roster like any other filter, included in the
+print-header summary, not an exported column (filter-only, per Resmie's note).
+
+**Healthcare Team Progress Update chart rebuilt again** (was a Reps-only pie chart as of 2026-08-31)
+— now a grouped bar chart comparing Reps vs. Managers side by side, shown as percent of each group
+rather than raw counts, so the very different group sizes compare fairly. Current data shows a stark
+gap: 0% of managers vs. ~60% of reps are in the "Awaiting Video" (fully done) tier.
+
+**Data refresh, same push:** 66 people, 19 certified (up from 18), 46 in progress, 1 not started.
 
 ---
 
