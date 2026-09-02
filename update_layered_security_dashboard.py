@@ -579,14 +579,17 @@ def generate_html(people, date_label, sales_cert, sales_deals):
   <div class="stat">
     <div class="stat-label">Curriculum Complete <span class="info-btn" onclick="showInfo(event,'complete')">?</span></div>
     <div class="stat-value green" id="s-complete">&#8212;</div>
+    <div class="stat-sub" id="s-complete-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
     <div class="stat-value blue" id="s-inprog">&#8212;</div>
+    <div class="stat-sub" id="s-inprog-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Not Started <span class="info-btn" onclick="showInfo(event,'not-started')">?</span></div>
     <div class="stat-value red" id="s-notstarted">&#8212;</div>
+    <div class="stat-sub" id="s-notstarted-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
@@ -861,10 +864,16 @@ function renderStats(){{
   var inprog  = filtered.filter(function(p){{ return personStatus(p) === "In Progress"; }}).length;
   var nostart = filtered.filter(function(p){{ return personStatus(p) === "Not Started"; }}).length;
   var rate    = total > 0 ? Math.round(cert / total * 100) : 0;
+  var certPct    = total > 0 ? Math.round(cert / total * 100) : 0;
+  var inprogPct  = total > 0 ? Math.round(inprog / total * 100) : 0;
+  var nostartPct = total > 0 ? Math.round(nostart / total * 100) : 0;
   sel("s-total").textContent      = PEOPLE.length;
-  sel("s-complete").textContent   = cert;
-  sel("s-inprog").textContent     = inprog;
-  sel("s-notstarted").textContent = nostart;
+  sel("s-complete").textContent   = certPct + "%";
+  sel("s-complete-sub").textContent = total > 0 ? (cert + " of " + total) : "";
+  sel("s-inprog").textContent     = inprogPct + "%";
+  sel("s-inprog-sub").textContent = total > 0 ? (inprog + " of " + total) : "";
+  sel("s-notstarted").textContent = nostartPct + "%";
+  sel("s-notstarted-sub").textContent = total > 0 ? (nostart + " of " + total) : "";
   sel("s-rate").textContent       = rate + "%";
   sel("s-rate-sub").textContent   = total > 0 ? (cert + " of " + total + " enrolled") : "";
   var salesCert = filtered.filter(function(p){{ return isSalesCertified(p.Email); }}).length;
