@@ -394,7 +394,7 @@ function render(){
     <div class="stat"><div class="stat-label">Unique Users<span class="info-btn" onclick="showInfo(event,'unique-users')">?</span></div><div class="stat-value purple">${uniqueUsers}</div><div class="stat-sub">employees &amp; dealers</div></div>
     <div class="stat"><div class="stat-label">Avg Visits / Person<span class="info-btn" onclick="showInfo(event,'avg-visits')">?</span></div><div class="stat-value" style="color:${cv('--teal')}">${avgVisits}</div><div class="stat-sub">views per unique visitor</div></div>
     <div class="stat"><div class="stat-label">Top Dashboard<span class="info-btn" onclick="showInfo(event,'top-dashboard')">?</span></div><div class="stat-value yellow" style="font-size:16px;padding-top:4px">${topDash[0]}</div><div class="stat-sub">${topDash[1].toLocaleString()} views</div></div>
-    <div class="stat"><div class="stat-label">Dashboards Active<span class="info-btn" onclick="showInfo(event,'dashboards-active')">?</span></div><div class="stat-value green">${Object.keys(dashCounts).length}</div><div class="stat-sub">out of 7 total</div></div>
+    <div class="stat"><div class="stat-label">Dashboards Active<span class="info-btn" onclick="showInfo(event,'dashboards-active')">?</span></div><div class="stat-value green">${Object.keys(dashCounts).length}</div><div class="stat-sub">out of 8 total</div></div>
   `;
 
   const dashAll = {...dashCounts};
@@ -569,7 +569,7 @@ const INFO = {
   'unique-users':     'The number of distinct people who visited an internal dashboard in the selected period. Each person is counted once regardless of how many pages they viewed.',
   'avg-visits':       'Total views divided by unique users. Higher scores mean people are returning to these dashboards repeatedly, not just visiting once.',
   'top-dashboard':    'The internal dashboard with the highest total views in the selected period.',
-  'dashboards-active': `The number of internal dashboards that received at least one view in the selected period, out of 7 total tracked.`,
+  'dashboards-active': `The number of internal dashboards that received at least one view in the selected period, out of 8 total tracked.`,
   'chart-dashboard':  'Total views per internal dashboard for the selected period. Hover a bar for the exact count.',
   'chart-region':     'Breakdown of total views by sales region. Hover over a segment to see the exact count for that region.',
   'chart-trend':      'View trends over time. Only the top 5 dashboards by total volume are shown.',
