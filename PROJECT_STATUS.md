@@ -1,6 +1,6 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-09-02
+Last updated: 2026-09-17
 
 ---
 
@@ -16,6 +16,46 @@ Last updated: 2026-09-02
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | September 2, 2026 | 502 learners, 92 complete; percent-based stat cards added 2026-09-02 (see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
+| Learning Engagement | `learning-engagement.html` | September 12, 2026 | NEW 2026-09-17; 724 learners on placeholder data — see below |
+
+---
+
+## Recent Changes (2026-09-17) — Learning Engagement Dashboard built from Resmie's prototype
+
+Resmie sent a static HTML prototype (`learning_engagement_dashboard (1).html`, LinkedIn Learning
+activity: content-type mix, unique learners, active-workforce reach %, avg engagement/time/hours,
+BUS vs BCA compare, month-over-month trend, top topics/markets/departments) while she gets the real
+source files together. Reverse-engineered into the real repo architecture:
+
+- **New script:** `update_learning_engagement_dashboard.py` → `learning-engagement.html`
+- **New data folder:** `learning-engagement-data/learning_engagement_data.json` — currently
+  Resmie's own prototype sample data (6,731 records), used only to prove the generator matches her
+  design. **Not real data yet.**
+- **New workflow:** `.github/workflows/update-learning-engagement-dashboard.yml`
+- **New homepage card** (7th card) in `generate_homepage.py`
+
+Brought fully into house style: KM Academy logo, "Data through [date]" header (derived from the max
+engagement date in the data), triple-click-to-home, `?` info tooltips, shared `pb-theme` light/dark
+toggle, PDF + Excel export, and a real Hide/Show TLG toggle button (reused `playbook.html`'s pattern).
+Verified via a temporary headless-browser pass — zero console errors across filters, TLG toggle,
+theme toggle, tooltips, and both export paths.
+
+**Real open gap:** Resmie's data has an employee ID (`u`) but no name field. Every other dashboard's
+TLG button matches by name. `TLG_IDS` in the new script starts **empty** — the button is fully wired
+and defaults to hiding, but currently excludes nobody. Needs either a name column or a confirmed
+employee-ID mapping for the 19 TLG people from Resmie before it actually does anything.
+
+**Also open:** Jason asked whether this dashboard should get a rolling date-range filter (30D/60D/
+90D/All + custom), same pattern as Playbook Traffic. Recommended yes — not yet built, waiting on
+his go-ahead.
+
+Deleted Resmie's raw prototype file once ported (same diff-then-delete convention as every other
+Resmie handoff in this repo). Committed and pushed live (commit `efd0618`) at Jason's explicit
+request. Full detail in project memory `learning_engagement_dashboard.md`.
+
+**Separately, still ON HOLD, unrelated to the above:** a saved plan to remove Commission Confidence
++ retire the "Coming Soon = never Overdue" exemption in the onboarding dashboard — waiting on Jason
+to say it's time (he's talking to Resmie first). See project memory `course_removal_plan.md`.
 
 ---
 
