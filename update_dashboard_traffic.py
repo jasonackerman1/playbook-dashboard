@@ -39,6 +39,7 @@ DASHBOARD_MAP = {
     "cert-healthcare.html":       "Healthcare Certification",
     "cert-publicsector.html":     "Public Sector Curriculum",
     "cert-layered-security.html": "Layered Security Curriculum",
+    "learning-engagement.html":   "Learning Engagement Dashboard",
 }
 
 def get_dashboard(url):

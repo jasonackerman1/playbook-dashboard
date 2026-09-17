@@ -256,8 +256,29 @@ def leaderboard_stats():
         os.chdir(orig)
 
 
+# ── Learning Engagement stats ─────────────────────────────────────────────────
+def learning_engagement_stats():
+    try:
+        from update_learning_engagement_dashboard import load_learning_engagement_data
+        orig = os.getcwd()
+        try:
+            os.chdir(str(SCRIPT_DIR))
+            records, total_active, date_label = load_learning_engagement_data()
+        finally:
+            os.chdir(orig)
+        active_records = [r for r in records if r.get('a')]
+        learners = len({r['u'] for r in active_records})
+        reach = round(learners / total_active * 100, 1) if total_active else 0
+        total_hours = round(sum(r.get('h', 0) for r in active_records))
+        return {'learners': learners, 'reach': reach, 'total_hours': total_hours,
+                'date_label': date_label}
+    except Exception as e:
+        print(f"    Learning Engagement stats error: {e}")
+        return None
+
+
 # ── HTML generation ───────────────────────────────────────────────────────────
-def generate_html(pb, hc, ps, ob, lb=None, ls=None):
+def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None):
     today = datetime.now().strftime('%B %-d, %Y')
 
     pb_views = pb['total_views']   if pb else '—'
@@ -297,6 +318,11 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None):
     ls_in_prog    = ls['in_progress'] if ls else '—'
     ls_not_start  = ls['not_started'] if ls else '—'
     ls_rate       = ls['rate']        if ls else '—'
+
+    le_learners    = le['learners']    if le else '—'
+    le_reach       = le['reach']       if le else '—'
+    le_total_hours = f"{le['total_hours']:,}" if le else '—'
+    le_date_label  = le['date_label']  if le else '—'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -566,6 +592,32 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None):
       </div>
     </div>
 
+    <!-- Learning Engagement -->
+    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg')">
+      <div class="card-head">
+        <span class="card-icon">&#128218;</span>
+        <div>
+          <div class="card-title">Learning Engagement</div>
+          <div class="card-desc">LinkedIn Learning activity org-wide</div>
+        </div>
+      </div>
+      <div>
+        <div class="stat-main">
+          <span class="stat-num" style="color:var(--accent)">{le_learners}</span>
+          <span class="stat-unit">unique learners</span>
+        </div>
+        <div class="stat-sub">{le_reach}% of active workforce reached</div>
+      </div>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-blue">&#9679; {le_total_hours} hours viewed</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-muted">Data through {le_date_label}</span>
+        </div>
+        <a href="learning-engagement.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -694,7 +746,14 @@ def main():
     else:
         print("    No Layered Security data found")
 
-    html = generate_html(pb, hc, ps, ob, lb, ls)
+    print("  Reading Learning Engagement data...")
+    le = learning_engagement_stats()
+    if le:
+        print(f"    {le['learners']} learners, {le['reach']}% reach, {le['total_hours']} total hours")
+    else:
+        print("    No Learning Engagement data found")
+
+    html = generate_html(pb, hc, ps, ob, lb, ls, le)
     out  = SCRIPT_DIR / 'index.html'
     out.write_text(html, encoding='utf-8')
     print(f"\nHomepage written to: {out}")
