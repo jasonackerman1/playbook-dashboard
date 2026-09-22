@@ -1,6 +1,19 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-09-17
+Last updated: 2026-09-22
+
+---
+
+## Recent Changes (2026-09-22) — Healthcare `isManager()` now includes Regional Account Executive
+
+Jason asked to add "Regional Account Executive" to the Manager title list on the Healthcare
+dashboard. `isManager(p)` in `update_cert_dashboard.py` (used only by the Healthcare v2
+generator — it's the sole definition in the repo) previously matched job titles containing
+"director of sales" or "vice president"; now also matches "regional account executive". This
+function drives the Role filter (All/Managers/Reps) and the Reps-vs-Managers grouped bar chart
+("Healthcare Team Progress Update") on `cert-healthcare.html`. Committed (`4c41135`) and pushed —
+generated HTML was reverted locally before committing so GitHub Actions regenerates it, per the
+"never commit generated HTML manually" rule.
 
 ---
 
