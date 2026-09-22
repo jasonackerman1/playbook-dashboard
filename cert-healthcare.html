@@ -498,7 +498,7 @@ function personStatus(p){
 }
 function isManager(p){
   var t = (p.JobTitle || "").toLowerCase();
-  return t.indexOf("director of sales") !== -1 || t.indexOf("vice president") !== -1;
+  return t.indexOf("director of sales") !== -1 || t.indexOf("vice president") !== -1 || t.indexOf("regional account executive") !== -1;
 }
 function pFiscalQtr(d){
   if(!d) return null;
