@@ -277,8 +277,23 @@ def learning_engagement_stats():
         return None
 
 
+# ── LMS Engagement stats ──────────────────────────────────────────────────────
+def lms_engagement_stats():
+    try:
+        from update_lms_engagement_dashboard import load_lms_engagement_stats
+        orig = os.getcwd()
+        try:
+            os.chdir(str(SCRIPT_DIR))
+            return load_lms_engagement_stats()
+        finally:
+            os.chdir(orig)
+    except Exception as e:
+        print(f"    LMS Engagement stats error: {e}")
+        return None
+
+
 # ── HTML generation ───────────────────────────────────────────────────────────
-def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None):
+def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
     today = datetime.now().strftime('%B %-d, %Y')
 
     pb_views = pb['total_views']   if pb else '—'
@@ -323,6 +338,12 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None):
     le_reach       = le['reach']       if le else '—'
     le_total_hours = f"{le['total_hours']:,}" if le else '—'
     le_date_label  = le['date_label']  if le else '—'
+
+    cc_learners    = f"{cc['learners']:,}" if cc else '—'
+    cc_courses     = f"{cc['courses']:,}"  if cc else '—'
+    cc_hours       = f"{cc['hours']:,}"    if cc else '—'
+    cc_date_label  = cc['lastMonthLabel']  if cc else '—'
+    cc_fy_label    = f"FY{cc['fy']}"       if cc else ''
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -618,6 +639,32 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None):
       </div>
     </div>
 
+    <!-- LMS Engagement -->
+    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg')">
+      <div class="card-head">
+        <span class="card-icon">&#128202;</span>
+        <div>
+          <div class="card-title">LMS Engagement</div>
+          <div class="card-desc">FY learning completion summary, BUS and BCA</div>
+        </div>
+      </div>
+      <div>
+        <div class="stat-main">
+          <span class="stat-num" style="color:var(--accent)">{cc_learners}</span>
+          <span class="stat-unit">unique learners, {cc_fy_label}</span>
+        </div>
+        <div class="stat-sub">{cc_courses} courses completed</div>
+      </div>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-blue">&#9679; {cc_hours} training hours</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-muted">Data through {cc_date_label}</span>
+        </div>
+        <a href="lms-engagement.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -753,7 +800,14 @@ def main():
     else:
         print("    No Learning Engagement data found")
 
-    html = generate_html(pb, hc, ps, ob, lb, ls, le)
+    print("  Reading LMS Engagement data...")
+    cc = lms_engagement_stats()
+    if cc:
+        print(f"    {cc['learners']} learners, {cc['courses']} courses, {cc['hours']} hours (data through {cc['lastMonthLabel']})")
+    else:
+        print("    No LMS Engagement data found")
+
+    html = generate_html(pb, hc, ps, ob, lb, ls, le, cc)
     out  = SCRIPT_DIR / 'index.html'
     out.write_text(html, encoding='utf-8')
     print(f"\nHomepage written to: {out}")

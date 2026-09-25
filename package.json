@@ -1,0 +1,8 @@
+{
+  "name": "playbook-dashboard-node-pipeline",
+  "private": true,
+  "description": "Node dependencies for build-time data pipelines (currently: LMS Engagement dashboard, which runs Resmie's original browser/Node parsing+classification code verbatim via lms_engagement_build.js instead of reimplementing it in Python).",
+  "dependencies": {
+    "xlsx": "0.18.5"
+  }
+}
