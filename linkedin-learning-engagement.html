@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Learning Engagement Dashboard</title>
+<title>LinkedIn Learning Engagement Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -149,7 +149,7 @@
 
   <div class="header">
     <div>
-      <h1 id="dash-title">Learning Engagement <span>Dashboard</span></h1>
+      <h1 id="dash-title">LinkedIn Learning Engagement <span>Dashboard</span></h1>
       <div class="header-date">Data through September 12, 2026</div>
     </div>
     <div class="header-center">
@@ -272,7 +272,7 @@
   <div id="info-popover" class="info-popover"></div>
 
   <div id="print-header">
-    <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title">Learning Engagement Report</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title">LinkedIn Learning Engagement Report</div>
     <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
     <div style="font-size:12px;color:#555;margin-bottom:10px;" id="ph-filters"></div>
   </div>
@@ -636,7 +636,7 @@ const TLG_IDS = new Set([]);
 
     const wb = XLSX.utils.book_new();
     const summaryRows = [
-      ['Learning Engagement Report'],
+      ['LinkedIn Learning Engagement Report'],
       ['Generated: ' + dateStr],
       ['Filters: ' + (parts.length ? parts.join(' | ') : 'No filters active \u2014 showing all data')],
       [],
@@ -661,7 +661,7 @@ const TLG_IDS = new Set([]);
       ...deptData.map(o=>[o.dept,o.users]),
     ];
     XLSX.utils.book_append_sheet(wb, makeSheet(summaryRows,[32,26,18]), 'Summary');
-    XLSX.writeFile(wb, 'learning-engagement-report.xlsx');
+    XLSX.writeFile(wb, 'linkedin-learning-engagement-report.xlsx');
   };
 
   document.getElementById('filterSeg').addEventListener('click', (e)=>{

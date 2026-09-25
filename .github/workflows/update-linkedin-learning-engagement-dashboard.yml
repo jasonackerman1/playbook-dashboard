@@ -1,10 +1,10 @@
-name: Update Learning Engagement Dashboard
+name: Update LinkedIn Learning Engagement Dashboard
 
 on:
   push:
     paths:
-      - 'learning-engagement-data/*.json'
-      - 'update_learning_engagement_dashboard.py'
+      - 'linkedin-learning-engagement-data/*.json'
+      - 'update_linkedin_learning_engagement_dashboard.py'
   workflow_dispatch:
 
 permissions:
@@ -28,8 +28,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate Learning Engagement dashboard
-        run: python update_learning_engagement_dashboard.py
+      - name: Generate LinkedIn Learning Engagement dashboard
+        run: python update_linkedin_learning_engagement_dashboard.py
 
       - name: Generate homepage
         run: python generate_homepage.py
@@ -38,8 +38,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add learning-engagement.html index.html
-          git diff --staged --quiet || git commit -m "Auto-update learning-engagement.html and index.html [skip ci]"
+          git add linkedin-learning-engagement.html index.html
+          git diff --staged --quiet || git commit -m "Auto-update linkedin-learning-engagement.html and index.html [skip ci]"
           git push
 
   deploy:

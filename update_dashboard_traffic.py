@@ -39,7 +39,8 @@ DASHBOARD_MAP = {
     "cert-healthcare.html":       "Healthcare Certification",
     "cert-publicsector.html":     "Public Sector Curriculum",
     "cert-layered-security.html": "Layered Security Curriculum",
-    "learning-engagement.html":   "Learning Engagement Dashboard",
+    "linkedin-learning-engagement.html": "LinkedIn Learning Engagement",
+    "lms-engagement.html":        "LMS Engagement",
 }
 
 def get_dashboard(url):
@@ -356,18 +357,20 @@ const DASHBOARD_COLORS = {{
   "Healthcare Certification":    "#7c5cfc",
   "Public Sector Curriculum":    "#f7c94f",
   "Layered Security Curriculum": "#5cf0f7",
+  "LinkedIn Learning Engagement":"#e35cf7",
+  "LMS Engagement":              "#8ff75c",
 }};
 function dashColor(d){{ return DASHBOARD_COLORS[d] || "#7b82a0"; }}
 
 function sel(id) {{ return document.getElementById(id); }}
 function cv(v)   {{ return getComputedStyle(document.body).getPropertyValue(v).trim(); }}
 
-// "Analytics Hub" (bare homepage loads) and "Playbook Traffic" (already has its
-// own dedicated dashboard) are excluded from the filter dropdown only — their
-// traffic still counts in every stat, chart, and export on this page.
-const DASHBOARD_FILTER_HIDDEN = new Set(["Analytics Hub", "Playbook Traffic"]);
-const allDashboards = [...new Set([...Object.keys(DASHBOARD_COLORS), ...RAW.map(r=>r.Dashboard)])]
-  .filter(d => !DASHBOARD_FILTER_HIDDEN.has(d)).sort();
+// The "All Dashboards" filter list is deliberately the exact same set of
+// dashboards as the Views by Dashboard chart (and every other stat/export on
+// this page) - kept 1:1 on purpose, per Jason (2026-09-25). Previously
+// "Analytics Hub" and "Playbook Traffic" were hidden from this dropdown only,
+// which caused the two lists to visibly disagree - don't reintroduce that.
+const allDashboards = [...new Set([...Object.keys(DASHBOARD_COLORS), ...RAW.map(r=>r.Dashboard)])].sort();
 const allRegions     = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
 allDashboards.forEach(d => sel('f-dashboard').innerHTML += `<option value="${{d}}">${{d}}</option>`);
 allRegions.forEach(r => sel('f-region').innerHTML += `<option value="${{r}}">${{r}}</option>`);

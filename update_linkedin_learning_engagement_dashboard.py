@@ -1,12 +1,17 @@
 """
-Learning Engagement Dashboard generator.
+LinkedIn Learning Engagement Dashboard generator.
 
-Reads a LinkedIn Learning engagement dataset from learning-engagement-data/ and
-produces learning-engagement.html, following the same house style/architecture as
+Reads a LinkedIn Learning engagement dataset from linkedin-learning-engagement-data/ and
+produces linkedin-learning-engagement.html, following the same house style/architecture as
 every other dashboard in this repo: KM Academy logo, "Data through" header,
 triple-click-to-home nav (on the <h1>), ? info tooltips, light/dark theme
 (shared pb-theme localStorage key), PDF/Excel export dropdown, and a real
 Hide/Show TLG toggle button (not silent exclusion).
+
+RENAMED 2026-09-25 from "Learning Engagement" to "LinkedIn Learning Engagement" (per Jason,
+including this file/script/data-folder/workflow) once a second, separate "LMS Engagement" dashboard
+was built and the two similarly-generic names started causing confusion again - see
+update_lms_engagement_dashboard.py's docstring for that dashboard's own history.
 
 DATA SOURCE STATUS (first build, 2026-09-17): Resmie has not yet delivered the
 real source files (a LinkedIn Learning learner-detail export + an active-
@@ -16,7 +21,7 @@ already used:
     {"total_active": <int>,
      "records": [{"u","c","m","d","a","ct","cn","h","p","sk","mo","dt"}, ...]}
 A stand-in copy of her prototype's own embedded data has been placed at
-learning-engagement-data/learning_engagement_data.json for local testing only —
+linkedin-learning-engagement-data/linkedin_learning_engagement_data.json for local testing only —
 NOT real data, just a way to prove this script produces the same look/output
 her prototype does. If her real deliverable turns out to be raw Excel exports
 instead of this JSON shape, this loader's file-detection/parsing will need to
@@ -36,7 +41,7 @@ import glob
 import datetime
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(SCRIPT_DIR, 'learning-engagement-data')
+DATA_DIR = os.path.join(SCRIPT_DIR, 'linkedin-learning-engagement-data')
 
 MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
           'July', 'August', 'September', 'October', 'November', 'December']
@@ -46,13 +51,13 @@ MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
 TLG_IDS = set([])
 
 
-def load_learning_engagement_data():
-    """Find the current data file in learning-engagement-data/ and return
+def load_linkedin_learning_engagement_data():
+    """Find the current data file in linkedin-learning-engagement-data/ and return
     (records, total_active, date_label)."""
     candidates = sorted(glob.glob(os.path.join(DATA_DIR, '*.json')))
     if not candidates:
         raise FileNotFoundError(
-            f"No data file found in {DATA_DIR}. Drop a learning_engagement_data.json "
+            f"No data file found in {DATA_DIR}. Drop a linkedin_learning_engagement_data.json "
             "(or Resmie's real export, once its format is known/converted) there and rerun."
         )
     path = candidates[-1]
@@ -81,7 +86,7 @@ def generate_html(records, total_active, date_label):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Learning Engagement Dashboard</title>
+<title>LinkedIn Learning Engagement Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -227,7 +232,7 @@ def generate_html(records, total_active, date_label):
 
   <div class="header">
     <div>
-      <h1 id="dash-title">Learning Engagement <span>Dashboard</span></h1>
+      <h1 id="dash-title">LinkedIn Learning Engagement <span>Dashboard</span></h1>
       <div class="header-date">Data through {date_label}</div>
     </div>
     <div class="header-center">
@@ -350,7 +355,7 @@ def generate_html(records, total_active, date_label):
   <div id="info-popover" class="info-popover"></div>
 
   <div id="print-header">
-    <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title">Learning Engagement Report</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title">LinkedIn Learning Engagement Report</div>
     <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
     <div style="font-size:12px;color:#555;margin-bottom:10px;" id="ph-filters"></div>
   </div>
@@ -714,7 +719,7 @@ const TLG_IDS = new Set({tlg_ids_json});
 
     const wb = XLSX.utils.book_new();
     const summaryRows = [
-      ['Learning Engagement Report'],
+      ['LinkedIn Learning Engagement Report'],
       ['Generated: ' + dateStr],
       ['Filters: ' + (parts.length ? parts.join(' | ') : 'No filters active \\u2014 showing all data')],
       [],
@@ -739,7 +744,7 @@ const TLG_IDS = new Set({tlg_ids_json});
       ...deptData.map(o=>[o.dept,o.users]),
     ];
     XLSX.utils.book_append_sheet(wb, makeSheet(summaryRows,[32,26,18]), 'Summary');
-    XLSX.writeFile(wb, 'learning-engagement-report.xlsx');
+    XLSX.writeFile(wb, 'linkedin-learning-engagement-report.xlsx');
   }};
 
   document.getElementById('filterSeg').addEventListener('click', (e)=>{{
@@ -773,11 +778,11 @@ const TLG_IDS = new Set({tlg_ids_json});
 
 
 def main():
-    print("Generating Learning Engagement dashboard...")
-    records, total_active, date_label = load_learning_engagement_data()
+    print("Generating LinkedIn Learning Engagement dashboard...")
+    records, total_active, date_label = load_linkedin_learning_engagement_data()
     print(f"    {len(records)} engagement records, data through {date_label}")
     html = generate_html(records, total_active, date_label)
-    out = os.path.join(SCRIPT_DIR, 'learning-engagement.html')
+    out = os.path.join(SCRIPT_DIR, 'linkedin-learning-engagement.html')
     with open(out, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f"Written to: {out}")

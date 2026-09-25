@@ -232,18 +232,20 @@ const DASHBOARD_COLORS = {
   "Healthcare Certification":    "#7c5cfc",
   "Public Sector Curriculum":    "#f7c94f",
   "Layered Security Curriculum": "#5cf0f7",
+  "LinkedIn Learning Engagement":"#e35cf7",
+  "LMS Engagement":              "#8ff75c",
 };
 function dashColor(d){ return DASHBOARD_COLORS[d] || "#7b82a0"; }
 
 function sel(id) { return document.getElementById(id); }
 function cv(v)   { return getComputedStyle(document.body).getPropertyValue(v).trim(); }
 
-// "Analytics Hub" (bare homepage loads) and "Playbook Traffic" (already has its
-// own dedicated dashboard) are excluded from the filter dropdown only — their
-// traffic still counts in every stat, chart, and export on this page.
-const DASHBOARD_FILTER_HIDDEN = new Set(["Analytics Hub", "Playbook Traffic"]);
-const allDashboards = [...new Set([...Object.keys(DASHBOARD_COLORS), ...RAW.map(r=>r.Dashboard)])]
-  .filter(d => !DASHBOARD_FILTER_HIDDEN.has(d)).sort();
+// The "All Dashboards" filter list is deliberately the exact same set of
+// dashboards as the Views by Dashboard chart (and every other stat/export on
+// this page) - kept 1:1 on purpose, per Jason (2026-09-25). Previously
+// "Analytics Hub" and "Playbook Traffic" were hidden from this dropdown only,
+// which caused the two lists to visibly disagree - don't reintroduce that.
+const allDashboards = [...new Set([...Object.keys(DASHBOARD_COLORS), ...RAW.map(r=>r.Dashboard)])].sort();
 const allRegions     = [...new Set(RAW.map(r=>r.Region).filter(Boolean))].sort();
 allDashboards.forEach(d => sel('f-dashboard').innerHTML += `<option value="${d}">${d}</option>`);
 allRegions.forEach(r => sel('f-region').innerHTML += `<option value="${r}">${r}</option>`);
@@ -394,7 +396,7 @@ function render(){
     <div class="stat"><div class="stat-label">Unique Users<span class="info-btn" onclick="showInfo(event,'unique-users')">?</span></div><div class="stat-value purple">${uniqueUsers}</div><div class="stat-sub">employees &amp; dealers</div></div>
     <div class="stat"><div class="stat-label">Avg Visits / Person<span class="info-btn" onclick="showInfo(event,'avg-visits')">?</span></div><div class="stat-value" style="color:${cv('--teal')}">${avgVisits}</div><div class="stat-sub">views per unique visitor</div></div>
     <div class="stat"><div class="stat-label">Top Dashboard<span class="info-btn" onclick="showInfo(event,'top-dashboard')">?</span></div><div class="stat-value yellow" style="font-size:16px;padding-top:4px">${topDash[0]}</div><div class="stat-sub">${topDash[1].toLocaleString()} views</div></div>
-    <div class="stat"><div class="stat-label">Dashboards Active<span class="info-btn" onclick="showInfo(event,'dashboards-active')">?</span></div><div class="stat-value green">${Object.keys(dashCounts).length}</div><div class="stat-sub">out of 8 total</div></div>
+    <div class="stat"><div class="stat-label">Dashboards Active<span class="info-btn" onclick="showInfo(event,'dashboards-active')">?</span></div><div class="stat-value green">${Object.keys(dashCounts).length}</div><div class="stat-sub">out of 9 total</div></div>
   `;
 
   const dashAll = {...dashCounts};
@@ -569,7 +571,7 @@ const INFO = {
   'unique-users':     'The number of distinct people who visited an internal dashboard in the selected period. Each person is counted once regardless of how many pages they viewed.',
   'avg-visits':       'Total views divided by unique users. Higher scores mean people are returning to these dashboards repeatedly, not just visiting once.',
   'top-dashboard':    'The internal dashboard with the highest total views in the selected period.',
-  'dashboards-active': `The number of internal dashboards that received at least one view in the selected period, out of 8 total tracked.`,
+  'dashboards-active': `The number of internal dashboards that received at least one view in the selected period, out of 9 total tracked.`,
   'chart-dashboard':  'Total views per internal dashboard for the selected period. Hover a bar for the exact count.',
   'chart-region':     'Breakdown of total views by sales region. Hover over a segment to see the exact count for that region.',
   'chart-trend':      'View trends over time. Only the top 5 dashboards by total volume are shown.',
