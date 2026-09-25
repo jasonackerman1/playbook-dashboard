@@ -4,6 +4,45 @@ Last updated: 2026-09-25
 
 ---
 
+## Recent Changes (2026-09-25, later same day) — Rename to LinkedIn Learning Engagement + Dashboard Traffic filter fix
+
+**Renamed `learning-engagement.html` → `linkedin-learning-engagement.html`** ("LinkedIn Learning
+Engagement"), full scope matching the LMS Engagement rename earlier the same day — script
+(`update_linkedin_learning_engagement_dashboard.py`), data folder, workflow, function names,
+homepage card all renamed together. Triggered by Jason noticing the two similarly-generic dashboard
+names ("Learning Engagement" vs. the new "LMS Engagement") were confusing again.
+
+**Dashboard Traffic (`dashboard-traffic.html`) filter/chart parity fix:** the "All Dashboards"
+filter dropdown deliberately hid "Analytics Hub" and "Playbook Traffic" even though their traffic
+counted in the Views by Dashboard chart and every other stat — Jason: the two lists "should be one
+to one." Removed that exclusion entirely. Verified full parity two ways: with "All" time range + TLG
+shown, the chart and dropdown are byte-for-byte identical; under the default view (30D + Hide TLG)
+one dropdown entry ("Dashboard Traffic" — visits to this hidden page itself) legitimately has no
+chart match, confirmed as expected TLG-hiding behavior, not a bug (its only 9 visits are all from
+TLG members and fall outside the last 30 days). Also fixed `DASHBOARD_MAP`/`DASHBOARD_COLORS`,
+which still had the old "Learning Engagement" entry and no entry at all for "LMS Engagement" —
+both added/corrected so this page's own traffic tracking labels every current dashboard correctly.
+
+**Real deploy bug found and fixed the same session:** the newly-renamed
+`update-linkedin-learning-engagement-dashboard.yml` workflow was missing a Node setup step — its
+"Generate homepage" step calls `generate_homepage.py`, which now needs Node for the LMS Engagement
+card's stats (same gap already fixed on the other 4 workflows that call it, just missed here since
+this one was renamed rather than freshly created). Without Node, that card's stats call failed
+silently (caught by its own try/except) and this workflow won the auto-commit race, pushing a live
+homepage with the LMS Engagement card showing placeholder dashes. Fixed the workflow, pushed a
+corrected `index.html` regenerated locally with Node available, and since that push touched neither
+file matched any workflow's trigger paths, followed up with a manual `workflow_dispatch` to force a
+real redeploy — confirmed `build`+`deploy` both `success` and the live homepage showing real numbers
+via direct `curl`, not just a successful push. **Lesson: when a workflow is renamed/copied rather
+than freshly written, don't assume it inherited every step from wherever the pattern originated —
+verify each existing workflow this session touched against the "does it call generate_homepage.py →
+does it have Node" checklist individually.**
+
+Commits: `f28c615` (rename + traffic fix), `dc47e9e` (merge), `1a57b88` (workflow Node fix +
+corrected homepage). All confirmed live.
+
+---
+
 ## Recent Changes (2026-09-24/25) — LMS Engagement Dashboard built from Resmie's real data
 
 Resmie delivered a real, self-contained dashboard (originally `LD-Engagement-Dashboard.html`,
@@ -80,8 +119,8 @@ generated HTML was reverted locally before committing so GitHub Actions regenera
 | Accelerate Leaderboard | `leaderboard.html` | July 27, 2026 | Beta cohort filter live; 37 hires, 26 cohort deals |
 | Layered Security Certification | `cert-layered-security.html` | September 2, 2026 | 502 learners, 92 complete; percent-based stat cards added 2026-09-02 (see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
-| Learning Engagement | `learning-engagement.html` | September 12, 2026 | NEW 2026-09-17; 724 learners on placeholder data — see below |
-| LMS Engagement | `lms-engagement.html` | September 25, 2026 | NEW 2026-09-24/25; real data, 5,568 users/8,066 courses — separate from Learning Engagement above, see below |
+| LinkedIn Learning Engagement | `linkedin-learning-engagement.html` | September 12, 2026 | Renamed 2026-09-25 from "Learning Engagement"; 724 learners on placeholder data — see below |
+| LMS Engagement | `lms-engagement.html` | September 25, 2026 | NEW 2026-09-24/25; real data, 5,568 users/8,066 courses — separate from LinkedIn Learning Engagement above, see below |
 
 ---
 
