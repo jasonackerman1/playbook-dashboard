@@ -1,6 +1,57 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-09-22
+Last updated: 2026-09-25
+
+---
+
+## Recent Changes (2026-09-24/25) — LMS Engagement Dashboard built from Resmie's real data
+
+Resmie delivered a real, self-contained dashboard (originally `LD-Engagement-Dashboard.html`,
+4.1MB with a baked-in dataset) built around real Course Completions + LinkedIn Learning exports —
+a fiscal-year learning-completion summary matching the published FY2025 L&D report
+(Online/Compliance/LinkedIn/Instructor-Led split, BUS vs BCA, year-over-year comparisons, top
+courses). This is a genuinely different analysis than the existing `learning-engagement.html`
+(LinkedIn Learning content-mix/reach, still placeholder data) — **first build briefly replaced
+Learning Engagement in place; Jason caught it same day and had it split back into its own separate
+dashboard.** Shipped under the name "Course Completions" initially, renamed to **"LMS Engagement"**
+2026-09-25 (file/script/data-folder names all match: `lms-engagement.html`,
+`update_lms_engagement_dashboard.py`, `lms-engagement-data/`, etc.).
+
+**Architecture — a new pattern for this repo:** Resmie's file does its own parsing/classification/
+report math in a single JS module that explicitly says "Runs in browser, worker and Node." Rather
+than reimplementing her business rules in Python (compliance keyword list, fiscal-year defs, BCA
+detection, LinkedIn precedence — real risk of drift), `update_lms_engagement_dashboard.py` **shells
+out to Node** (`lms_engagement_build.js`) to run her exact `js/lms-engagement-core.js` against real
+source files in `lms-engagement-data/`, then wraps the result in the house-style shell. Verified
+byte-for-byte against her own processing log (235,358 read → 133,426 kept) and the FY2025 published
+reconciliation table before shipping. This means `generate_homepage.py` now needs Node too (for this
+card's stats) — added Node setup to the 4 other workflows that call it (cert, leaderboard, playbook
+traffic, onboarding).
+
+**Visual pass (2026-09-25):** Jason pushed back hard that the first version "didn't look like our
+dashboards" despite using the same ingredients — root causes were a nested `<main>`-padding bug
+(the filter bar was double-inset vs. the header, so their backgrounds didn't line up) and guessed-at
+CSS instead of pulling exact values from `cert-healthcare.html`/`update_onboarding_dashboard.py`.
+Fixed by removing the centered/max-width "article" layout entirely (every dashboard here is
+full-width, no exceptions) and copying the filter-bar CSS/markup verbatim. All 6 filter controls
+are now `<select>` dropdowns (Jason: "make it fit on one row... I don't want you to change the sizes
+of anything" — solved by converting widget type, not shrinking below house-standard sizing). Added
+real `?` tooltips and an Export ▾ dropdown (PDF prints the on-screen report; Excel writes a 7-sheet
+workbook from the same computed numbers) — Resmie's own filtering/charts/tables/data model were
+never touched, only the chrome around them.
+
+**Known gaps, flagged not silently built around:** no Hide/Show TLG toggle (her data model never
+stores names, only anonymized IDs — structurally impossible, not just unmapped); no custom
+PDF/Excel export matching the other dashboards' per-report-type pattern (plain print + a generic
+7-sheet workbook instead, given the scope already involved). **Open question for Jason, not yet
+answered:** whether the existing `learning-engagement.html` should also be renamed (e.g. to
+"LinkedIn Learning") now that there are two similarly-named dashboards again.
+
+Committed `e2b4f4d`, pushed, deployed. Two auto-commit workflows (Playbook Dashboard, LMS Engagement
+Dashboard) hit the standard "Actions-vs-Actions" race and failed their push step — confirmed via
+direct diff against a fresh local regeneration that both were genuine no-ops (only a build
+timestamp differed, same calendar day), not lost work. Live site confirmed via direct `curl` of
+`lms-engagement.html` and `index.html`, not just a successful push.
 
 ---
 
@@ -30,6 +81,7 @@ generated HTML was reverted locally before committing so GitHub Actions regenera
 | Layered Security Certification | `cert-layered-security.html` | September 2, 2026 | 502 learners, 92 complete; percent-based stat cards added 2026-09-02 (see below) |
 | Internal Dashboard Traffic (hidden) | `dashboard-traffic.html` | August 14, 2026 | 735 views across 7 dashboards; **no homepage card** — triple-click "Analytical Data Hub" to reach it |
 | Learning Engagement | `learning-engagement.html` | September 12, 2026 | NEW 2026-09-17; 724 learners on placeholder data — see below |
+| LMS Engagement | `lms-engagement.html` | September 25, 2026 | NEW 2026-09-24/25; real data, 5,568 users/8,066 courses — separate from Learning Engagement above, see below |
 
 ---
 
