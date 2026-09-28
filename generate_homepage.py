@@ -613,8 +613,8 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
       </div>
     </div>
 
-    <!-- LinkedIn Learning Engagement -->
-    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg')">
+    <!-- LinkedIn Learning Engagement (hidden by default - Konami code reveals it, see script below) -->
+    <div class="card" id="card-secret-1" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg');display:none;opacity:0;transform:scale(.92);transition:opacity .5s ease,transform .5s ease;">
       <div class="card-head">
         <span class="card-icon">&#128218;</span>
         <div>
@@ -639,8 +639,8 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
       </div>
     </div>
 
-    <!-- LMS Engagement -->
-    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg')">
+    <!-- LMS Engagement (hidden by default - Konami code reveals it, see script below) -->
+    <div class="card" id="card-secret-2" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg');display:none;opacity:0;transform:scale(.92);transition:opacity .5s ease,transform .5s ease;">
       <div class="card-head">
         <span class="card-icon">&#128202;</span>
         <div>
@@ -689,6 +689,27 @@ function toggleTheme(){{
     n++;clearTimeout(t);
     if(n>=3){{n=0;window.location.href='dashboard-traffic.html';}}
     else t=setTimeout(function(){{n=0;}},1500);
+  }});
+}})();
+
+/* ── Konami code → reveals the 2 hidden dashboard cards for this page view only ── */
+(function(){{
+  var code=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+  var pos=0;
+  document.addEventListener('keydown',function(e){{
+    pos=(e.code===code[pos])?pos+1:(e.code===code[0]?1:0);
+    if(pos===code.length){{
+      pos=0;
+      ['card-secret-1','card-secret-2'].forEach(function(id,i){{
+        var el=document.getElementById(id);
+        if(!el||el.dataset.revealed)return;
+        el.dataset.revealed='1';
+        el.style.display='';
+        requestAnimationFrame(function(){{
+          setTimeout(function(){{ el.style.opacity='1'; el.style.transform='scale(1)'; }},i*150);
+        }});
+      }});
+    }}
   }});
 }})();
 

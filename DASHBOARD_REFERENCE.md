@@ -65,8 +65,14 @@ the sole source of truth going forward.
 | 6 | Layered Security Certification | `cert-layered-security.html` | `update_layered_security_dashboard.py` | ✅ | real |
 | 7 | Accelerate Onboarding | `onboarding.html` | `update_onboarding_dashboard.py` | ✅ | real |
 | 8 | Accelerate Leaderboard | `leaderboard.html` | `update_leaderboard_dashboard.py` | ✅ | real |
-| 9 | LinkedIn Learning Engagement | `linkedin-learning-engagement.html` | `update_linkedin_learning_engagement_dashboard.py` | ✅ | **placeholder** |
-| 10 | LMS Engagement | `lms-engagement.html` | `update_lms_engagement_dashboard.py` | ✅ | real |
+| 9 | LinkedIn Learning Engagement | `linkedin-learning-engagement.html` | `update_linkedin_learning_engagement_dashboard.py` | 🔒 hidden (Konami code) | **placeholder** |
+| 10 | LMS Engagement | `lms-engagement.html` | `update_lms_engagement_dashboard.py` | 🔒 hidden (Konami code) | real |
+
+**🔒 Hidden cards (added 2026-09-28):** #9 and #10 are deliberately hidden from the homepage grid
+by default. Typing the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) anywhere on the homepage reveals both with
+a fade/scale-in animation — does **not** persist, resets on every page reload. Both dashboards
+remain fully functional and reachable directly by URL or once revealed; only the homepage card
+visibility is affected.
 
 ---
 
@@ -339,6 +345,8 @@ website's homepage to recompute its own live leaderboard section client-side.
 **File / Script:** `linkedin-learning-engagement.html` /
 `update_linkedin_learning_engagement_dashboard.py` (renamed 2026-09-25 from "Learning Engagement")
 
+**Homepage card:** hidden by default as of 2026-09-28 — see the 🔒 note above the index table.
+
 **Purpose:** measures **voluntary** LinkedIn Learning engagement org-wide — what people are
 choosing to learn beyond required curriculum, which content types/topics resonate, and how broadly
 the workforce is reached. A more exploratory, "what's popular" companion to LMS Engagement (#10)'s
@@ -369,6 +377,8 @@ a confirmed ID mapping arrives.
 
 **File / Script:** `lms-engagement.html` / `update_lms_engagement_dashboard.py` (built 2026-09-24/25;
 originally shipped as "Course Completions")
+
+**Homepage card:** hidden by default as of 2026-09-28 — see the 🔒 note above the index table.
 
 **Purpose:** the **official, audit-matching** org-wide learning-completion report — reproduces the
 published FY2025 L&D Learning Completion report exactly (same category/department breakdown, same

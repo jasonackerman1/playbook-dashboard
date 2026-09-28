@@ -4,6 +4,20 @@ Last updated: 2026-09-28
 
 ---
 
+## Recent Changes (2026-09-28, later same day) — Konami code hides/reveals 2 homepage cards
+
+Jason asked to hide the LinkedIn Learning Engagement and LMS Engagement homepage cards, with a fun
+secret way to bring them back. Built as a real **Konami code**
+(↑ ↑ ↓ ↓ ← → ← → B A, typed anywhere on the homepage) — both cards ship with
+`display:none` baked in by `generate_homepage.py`; a `keydown` listener matches the sequence and
+fades/scales them in. **Does not persist** — resets on every reload, per Jason's explicit choice
+(considered but declined: sticking around via localStorage like the theme toggle does). Verified
+in a real browser: hidden by default, exact sequence reveals both with the animation, a broken
+sequence does nothing, reload hides them again, zero console errors, and a screenshot confirmed
+the revealed cards look identical to every other card. Pushed live.
+
+---
+
 ## Recent Changes (2026-09-28) — New master reference doc: `DASHBOARD_REFERENCE.md`
 
 Jason: "we've been building so many dashboards making so many updates we just need to start
