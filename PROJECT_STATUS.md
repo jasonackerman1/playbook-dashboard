@@ -1,6 +1,25 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-09-25
+Last updated: 2026-09-28
+
+---
+
+## Recent Changes (2026-09-28) — New master reference doc: `DASHBOARD_REFERENCE.md`
+
+Jason: "we've been building so many dashboards making so many updates we just need to start
+keeping track of this." Created `DASHBOARD_REFERENCE.md` at the repo root — a stable reference
+(not a changelog) covering, for all 10 dashboards in this repo: purpose, what it measures, and
+every custom formula/business rule baked into it (fiscal-quarter definitions, eligibility windows,
+compliance-detection rules, tier scoring, deadline logic, etc.). Distinct from this file
+(`PROJECT_STATUS.md`, which stays a chronological log of changes) and from the older
+`Dashboard_Documentation.html` (a single-dashboard explainer for Layered Security only, bundled
+into that dashboard's original build commit) — confirmed unreferenced anywhere and deleted the
+same day this file superseded it.
+
+**This is now a permanent 4th step in this project's "save everything" checkpoint** — every time
+Jason triggers a checkpoint here, `DASHBOARD_REFERENCE.md` gets updated alongside project memory,
+this file, and the global CLAUDE.md. See the global CLAUDE.md's "LMS Certification Dashboards"
+section for the durable instruction.
 
 ---
 
