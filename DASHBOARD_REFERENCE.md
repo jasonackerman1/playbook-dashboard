@@ -120,6 +120,13 @@ computed from the traffic data itself).
   loaded data**, not to today's real-world date — so the default view auto-advances every time a
   new file drops, with zero code changes needed.
 
+**Email addresses (added 2026-10-02):** the source Excel file's `Email` column, previously dropped
+on load, is now kept and surfaced in two places only — the Who's Active detail panel header (name ·
+email · visits · region · type · last visit) and the Last Login export (both PDF and Excel). No
+other dashboard in this repo surfaces email this way; `Email` is still dropped in
+`update_dashboard_traffic.py` (the hidden internal Dashboard Traffic twin) and in every other export
+type on this same dashboard (Full Report, Activity Summary, By Person) unless asked for.
+
 **TLG:** toggle-able "Hide TLG" button, defaults to hidden.
 
 ---

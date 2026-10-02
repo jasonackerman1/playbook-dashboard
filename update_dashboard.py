@@ -59,7 +59,7 @@ def get_page(url):
 
 def load_excel(path: Path) -> pd.DataFrame:
     df = pd.read_excel(path)
-    df = df.drop(columns=[c for c in ['Uid','Email','Employee Id','Market','Branch'] if c in df.columns])
+    df = df.drop(columns=[c for c in ['Uid','Employee Id','Market','Branch'] if c in df.columns])
     df['Playbook'] = df['Url'].apply(get_playbook)
     df['Page']     = df['Url'].apply(get_page)
     df['Date']     = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
@@ -73,7 +73,7 @@ def load_excel(path: Path) -> pd.DataFrame:
         'Last Name':       'LastName',
         'Employee/Dealer': 'Type',
     })
-    return df[['FirstName','LastName','Region','Type','Date','Month','Playbook','Page']]
+    return df[['FirstName','LastName','Email','Region','Type','Date','Month','Playbook','Page']]
 
 # ── Collect all monthly + weekly files ────────────────────────────────────────
 monthly_pattern = re.compile(r'^playbook-monthly-(\d{4}-\d{2})\.xlsx$')
@@ -106,6 +106,7 @@ for label, path in files:
 
 combined = pd.concat(frames, ignore_index=True)
 combined['Region'] = combined['Region'].where(combined['Region'].notna(), None)
+combined['Email']  = combined['Email'].where(combined['Email'].notna(), None)
 records = json.loads(combined.to_json(orient='records'))
 
 total_rows = len(records)
@@ -1176,6 +1177,7 @@ function drillSelect(el, name) {{
   el.classList.add('active');
   const visits = filtered.filter(r => `${{r.FirstName}} ${{r.LastName}}` === name);
   const first = visits[0];
+  const email = first?.Email || '—';
   const region = first?.Region || '—';
   const type = first?.Type || '—';
   const typeColor = type==='Employee'?cv('--pill-emp-color'):cv('--pill-dlr-color');
@@ -1195,7 +1197,7 @@ function drillSelect(el, name) {{
   sel('drilldown-right').innerHTML = `
     <div class="drilldown-right-header">
       <strong style="font-size:14px">${{name}}</strong>
-      <span style="color:var(--muted)"> · ${{visits.length}} visit${{visits.length!==1?'s':''}} · ${{region}} · </span>
+      <span style="color:var(--muted)"> · ${{email}} · ${{visits.length}} visit${{visits.length!==1?'s':''}} · ${{region}} · </span>
       <span class="pill" style="background:${{typeBg}};color:${{typeColor}}">${{typeLabel(type)}}</span>
       <span style="color:var(--muted)"> · Last visit: </span><span style="color:${{lastVisitColor}};font-weight:600">${{lastVisit||'—'}}</span>
     </div>
@@ -1549,16 +1551,17 @@ function runExport(type){{
   }} else if(type === 'last-login'){{
     sel('ph-report-type').textContent = 'Last Login — most recent login date per person per playbook';
     psEl.style.display='none'; pcEl.style.display='none';
-    thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Region</th><th>Type</th><th>Playbook</th><th>Last Login</th></tr>';
+    thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Email</th><th>Region</th><th>Type</th><th>Playbook</th><th>Last Login</th></tr>';
     const map={{}};
     filtered.forEach(r=>{{
       const name=(r.FirstName+' '+r.LastName).trim();
       const key=name+'|||'+(r.Playbook||'');
-      if(!map[key]||r.Date>map[key].date) map[key]={{name,region:r.Region||'—',type:typeLabel(r.Type),playbook:r.Playbook||'—',date:r.Date||'—'}};
+      if(!map[key]||r.Date>map[key].date) map[key]={{name,email:r.Email||'—',region:r.Region||'—',type:typeLabel(r.Type),playbook:r.Playbook||'—',date:r.Date||'—'}};
     }});
     tbody.innerHTML = Object.values(map).sort((a,b)=>b.date.localeCompare(a.date)).map((r,i)=>`<tr>
       <td>${{i+1}}</td>
       <td style="font-weight:600">${{r.name}}</td>
+      <td>${{r.email}}</td>
       <td>${{r.region}}</td>
       <td>${{r.type}}</td>
       <td>${{r.playbook}}</td>
@@ -1655,10 +1658,10 @@ function runExportXLSX(type){{
 
   }} else if(type==='last-login'){{
     const map={{}};
-    filtered.forEach(r=>{{ const name=(r.FirstName+' '+r.LastName).trim(); const key=name+'|||'+(r.Playbook||''); if(!map[key]||r.Date>map[key].date) map[key]={{name,region:r.Region||'',type:typeLabel(r.Type),playbook:r.Playbook||'',date:r.Date||''}}; }});
-    const rows=[['Name','Region','Type','Playbook','Last Login'],
-      ...Object.values(map).sort((a,b)=>b.date.localeCompare(a.date)).map(r=>[r.name,r.region,r.type,r.playbook,r.date])];
-    XLSX.utils.book_append_sheet(wb, makeSheet(rows,[28,16,10,30,14]), 'Last Login');
+    filtered.forEach(r=>{{ const name=(r.FirstName+' '+r.LastName).trim(); const key=name+'|||'+(r.Playbook||''); if(!map[key]||r.Date>map[key].date) map[key]={{name,email:r.Email||'',region:r.Region||'',type:typeLabel(r.Type),playbook:r.Playbook||'',date:r.Date||''}}; }});
+    const rows=[['Name','Email','Region','Type','Playbook','Last Login'],
+      ...Object.values(map).sort((a,b)=>b.date.localeCompare(a.date)).map(r=>[r.name,r.email,r.region,r.type,r.playbook,r.date])];
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows,[28,32,16,10,30,14]), 'Last Login');
     dl('last-login', wb);
   }}
 }}

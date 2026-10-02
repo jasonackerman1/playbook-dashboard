@@ -1,6 +1,28 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-09-28
+Last updated: 2026-10-02
+
+---
+
+## Recent Changes (2026-10-02) — Email addresses added to Playbook Traffic's Who's Active panel + Last Login report
+
+Jason asked whether email addresses come through in the Playbook Traffic data, then asked to
+surface them in two specific spots: the Who's Active detail panel's top header line, and the Last
+Login report (both PDF and Excel). Root cause of why email wasn't already there: `update_dashboard.py`'s
+`load_excel()` was unconditionally dropping the `Email` column from the raw source file before
+anything else ran. Fixed by keeping `Email` through the load → combine → JSON-embed pipeline, then
+threading it into exactly the two places asked for:
+- Who's Active header: `Name · email@domain · N visits · Region · [Direct/Dealer] · Last visit: date`
+- Last Login report (PDF print view and Excel export): new `Email` column, populated per person
+
+Deliberately scoped narrow — every other export on this dashboard (Full Report, Activity Summary,
+By Person, Activity Log) still has no email column, and the internal Dashboard Traffic twin
+(`update_dashboard_traffic.py`) still drops `Email` entirely, since neither was asked for. Verified
+with a real headless-Chrome run against the live 12,642-row dataset (not just a code read): the
+Who's Active header rendered the real email, the Last Login PDF print table's new column populated
+correctly, and the Last Login Excel export's workbook was inspected directly (intercepted
+`XLSX.writeFile` rather than trusting a download) and confirmed the same. `playbook.html`
+regenerated locally and pushed.
 
 ---
 
