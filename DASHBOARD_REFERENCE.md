@@ -251,12 +251,14 @@ signal, a hard rule, not a guess), and an OPS FY26 Salesforce export (Closed Won
 **Exclusions:** Solutions Consultants, Commercial Print market, and TLG are all excluded from the
 roster entirely (not just hidden — they're not counted as part of the population at all).
 
-**What it measures:** percent-based In Progress / Not Started / Completion Rate / Certified stat
-cards (the old "Curriculum Complete" card was removed 2026-10-06 — it duplicated Completion Rate
-exactly, same number, different label), a roster table (Learner · Manager · Layered Security % ·
-Overall % · Closed Won) with clickable sortable column headers, a Completion Pipeline chart, a
-Learners by Market chart, a Team Progress Update chart (Reps vs. Managers, grouped bar), and a
-Certifications Over Time chart (Reps vs. Managers, stacked bar by fiscal quarter).
+**What it measures:** stat cards in order Total Enrolled → Not Started → In Progress → Completion
+Rate → Certified, all percent-based except Total Enrolled (the old "Curriculum Complete" card was
+removed 2026-10-06 — it duplicated Completion Rate exactly, same number, different label), a roster
+table (Learner · Manager · Layered Security % · Overall % · Closed Won) with clickable sortable
+column headers, and three charts in order: a Team Progress Update chart (Reps vs. Managers, grouped
+bar), a Learners by Market chart, and a Certifications Over Time chart (Reps vs. Managers, stacked
+bar by fiscal quarter). The old Completion Pipeline chart was removed 2026-10-06 — it duplicated
+information already in the stat row.
 
 **Custom formulas:**
 - **`Complete`** is derived from **actual module count**, never trusted from the LMS's own

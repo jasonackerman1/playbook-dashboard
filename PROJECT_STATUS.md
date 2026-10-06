@@ -4,6 +4,22 @@ Last updated: 2026-10-06
 
 ---
 
+## Recent Changes (2026-10-06, later same day) — Layered Security: stat/chart reorder, Completion Pipeline chart removed
+
+Three quick follow-up asks after the New Hire/Role/charts work below: (1) swap the Not Started and
+In Progress stat cards so Not Started comes first; (2) move the new Team Progress Update chart to
+the first chart position; (3) remove the Completion Pipeline chart entirely, since it duplicated
+information already covered by the stat row. Removed the chart card, its `pipelineChart` Chart.js
+variable, its full render block, three now-unused count variables, and its now-orphaned tooltip text
+together in one pass — same crash-avoidance discipline documented for the earlier Curriculum
+Complete card removal (never leave half of a removed element's wiring behind). Verified via a
+temporary headless-browser session: new stat order, new chart order, `pipelineChart` confirmed
+`undefined`, zero console errors. Also answered a direct question on the New Hire criteria (65-day
+rolling window from hire date vs. the data file's own date) — no code change, logged in project
+memory for next time. Full detail in `layered_security_dashboard.md`.
+
+---
+
 ## Recent Changes (2026-10-05/06) — Layered Security: New Hire/Role filters + 2 new charts + sortable roster headers
 
 Jason asked to carry three things over from the Healthcare dashboard: splitting New Hire vs. Tenured

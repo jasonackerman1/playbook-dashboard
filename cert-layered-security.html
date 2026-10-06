@@ -257,14 +257,14 @@
     <div class="stat-value" id="s-total">&#8212;</div>
   </div>
   <div class="stat">
-    <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
-    <div class="stat-value blue" id="s-inprog">&#8212;</div>
-    <div class="stat-sub" id="s-inprog-sub"></div>
-  </div>
-  <div class="stat">
     <div class="stat-label">Not Started <span class="info-btn" onclick="showInfo(event,'not-started')">?</span></div>
     <div class="stat-value red" id="s-notstarted">&#8212;</div>
     <div class="stat-sub" id="s-notstarted-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
+    <div class="stat-value blue" id="s-inprog">&#8212;</div>
+    <div class="stat-sub" id="s-inprog-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
@@ -281,16 +281,12 @@
 <!-- ── Charts ── -->
 <div class="charts">
   <div class="chart-card">
-    <div class="chart-title">Completion Pipeline <span class="info-btn" onclick="showInfo(event,'pipeline-chart')">?</span></div>
-    <div class="chart-wrap"><canvas id="pipelineChart"></canvas></div>
+    <div class="chart-title">Layered Security Team Progress Update <span class="info-btn" onclick="showInfo(event,'manual-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="manualChart"></canvas></div>
   </div>
   <div class="chart-card">
     <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
     <div class="chart-wrap"><canvas id="marketChart"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-title">Layered Security Team Progress Update <span class="info-btn" onclick="showInfo(event,'manual-chart')">?</span></div>
-    <div class="chart-wrap"><canvas id="manualChart"></canvas></div>
   </div>
   <div class="chart-card">
     <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'trend-chart')">?</span></div>
@@ -355,7 +351,7 @@ let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
 let rosterView = "individual";
-let pipelineChart, marketChart, manualChart, trendChart;
+let marketChart, manualChart, trendChart;
 
 // ── Sales Certification (baked in from the Certification Report at build time) ──
 function isSalesCertified(email){
@@ -434,7 +430,6 @@ var INFO_MSGS = {
   "past-due":        "People who have not finished the curriculum and have passed their required completion date (negative days remaining in the LMS export).",
   "sales-certified": "People confirmed as certified in the Sales Certification report — curriculum completion plus the $5,000 sale, SSE engagement, and case study confirmed externally. Anyone not listed there is treated as not yet certified.",
   "completion-rate": "The percentage of assigned people who have finished all 12 curriculum modules so far. Updates when you apply filters.",
-  "pipeline-chart":  "A quick snapshot of where everyone stands: how many haven't started yet, how many are actively working through the modules, and how many have finished all 12.",
   "market-chart":    "Curriculum progress broken down by sales market. Each bar shows how many people in that market are Complete, In Progress, or Not Started. Hover for exact counts. Updates when you apply filters.",
   "roster":          "The full list of people in the curriculum. Each row shows their manager, Layered Security status, overall completion %, and Closed Won total. Click any row to see a full course-by-course breakdown, plus certification and deal detail, in the panel on the right.",
   "new-hires":       "People within their first 65 days of employment as of the report date. This is a rolling window — once someone passes day 65 from their hire date, they automatically become a \"Tenured Rep,\" no manual update needed. Use the Hire Status filter above to isolate either group.",
@@ -589,36 +584,6 @@ function renderStats(){
 function renderCharts(){
   var labelColor = document.body.classList.contains("light-mode") ? cv("--text") : cv("--muted");
   var gridColor  = cv("--border");
-
-  var pNotStarted = filtered.filter(function(p){ return personStatus(p) === "Not Started"; }).length;
-  var pInProgress = filtered.filter(function(p){ return personStatus(p) === "In Progress"; }).length;
-  var pComplete   = filtered.filter(function(p){ return personStatus(p) === "Complete";    }).length;
-
-  if(pipelineChart) pipelineChart.destroy();
-  pipelineChart = new Chart(sel("pipelineChart"), {
-    type: "bar",
-    data: {
-      labels: ["Not Started", "In Progress", "Complete"],
-      datasets: [{
-        data: [pNotStarted, pInProgress, pComplete],
-        backgroundColor: [cv("--red") + "cc", "#f59e0b" + "cc", cv("--green") + "cc"],
-        borderRadius: 4,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: function(ctx){ return " " + ctx.raw + " people"; } } }
-      },
-      scales: {
-        x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 }, stepSize: 1 } },
-        y: { grid: { display: false }, ticks: { color: labelColor, font: { size: 12 } } }
-      }
-    }
-  });
 
   var mktMap = {};
   filtered.forEach(function(p){
