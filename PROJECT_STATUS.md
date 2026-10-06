@@ -1,6 +1,55 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-10-02
+Last updated: 2026-10-06
+
+---
+
+## Recent Changes (2026-10-05/06) — Layered Security: New Hire/Role filters + 2 new charts + sortable roster headers
+
+Jason asked to carry three things over from the Healthcare dashboard: splitting New Hire vs. Tenured
+Rep, Manager filtering, and (later the same session) the Certifications Over Time chart. Separately
+asked to make the roster table's own column headers clickable to sort.
+
+**New Hire / Role filters:** confirmed the real data already has `HireDate` (all 509 people) and
+`JobTitle` (including real "Director of Sales" titles) before building anything. Ported Healthcare's
+`isNewHire(p)` (rolling 65-day window) and `isManager(p)` (title match) logic exactly, added a
+`_file_date_iso()` Python helper this script didn't have yet so the New Hire window derives from the
+data file's own date, added Hire Status + Role filter dropdowns, a New Hire pill on roster rows and
+the detail panel, and Hire Status in the Full Report / Not Complete exports (Role is filter-only, no
+export column — matches Healthcare's own precedent).
+
+**Layered Security Team Progress Update chart** (new) — same mechanism as Healthcare's own chart
+(Reps vs. Managers, grouped bar, % of each group), simplified to 2 tiers instead of 3 since this
+dashboard has no "finished coursework, one step short of done" state the way Healthcare does.
+
+**Certifications Over Time chart** (new, added later the same session) — stacked bar by fiscal
+quarter, Reps vs. Managers, with a "No certifications yet" empty state. Unlike Healthcare (which has
+a per-person quarter field baked in at build time), this dashboard computes the fiscal quarter
+client-side from the existing Sales Certification date, since full certification here comes from a
+separate data source with no quarter field precomputed. **Confirmed currently empty — 0 people
+certified as of the 10.05.2026 data**, as Jason expected; separately verified the actual bucketing
+logic works correctly (not just the empty state) by synthetically injecting a fake certified Rep and
+Manager into two different fiscal quarters in a live browser session and confirming both landed
+correctly.
+
+**Sortable roster column headers:** removed the old separate "Sort: Name / Status / Completion %"
+button row and made the table's own headers (Learner/Manager/Layered Security/Overall %/Closed Won)
+the click targets, each with its own ▲/▼ arrow. Name/Manager default to A→Z on first click;
+Status/Overall %/Closed Won default to best-first (Complete→Not Started, 100%→0%, highest dollar
+amount→lowest) — a deliberate per-field default direction, not a blanket "always descending first"
+rule, so clicking "Learner" doesn't confusingly show Z→A first.
+
+**Curriculum Complete stat card removed** (Jason caught it mid-checkpoint: it and Completion Rate
+were literally the same number with different labels). Removed the card and both of its populating
+JS lines together (not just one — the documented `sel(id)` crash pattern from 2026-08-10 means
+leaving either half behind silently breaks all subsequent stat rendering), plus the now-orphaned
+tooltip text. 5 stat cards remain: Total Enrolled, In Progress, Not Started, Completion Rate,
+Certified.
+
+Verified all five changes against the real 509-person dataset via a temporary headless-browser
+session (installed/removed per change, never committed) — filters, both new charts, all 5 sortable
+columns, and both export formats. Zero console errors. Full detail in project memory
+`layered_security_dashboard.md`.
 
 ---
 

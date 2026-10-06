@@ -1,6 +1,6 @@
 # Playbook Dashboard Suite — Reference Documentation
 
-Last updated: 2026-09-28
+Last updated: 2026-10-06
 
 This is the **master reference** for every dashboard in this repo — what each one is for, what
 it measures, and the custom formulas/business rules baked into it. It is a *reference*, not a
@@ -251,8 +251,12 @@ signal, a hard rule, not a guess), and an OPS FY26 Salesforce export (Closed Won
 **Exclusions:** Solutions Consultants, Commercial Print market, and TLG are all excluded from the
 roster entirely (not just hidden — they're not counted as part of the population at all).
 
-**What it measures:** percent-based Curriculum Complete / In Progress / Not Started stat cards, a
-roster table (Learner · Manager · Layered Security % · Overall % · Closed Won).
+**What it measures:** percent-based In Progress / Not Started / Completion Rate / Certified stat
+cards (the old "Curriculum Complete" card was removed 2026-10-06 — it duplicated Completion Rate
+exactly, same number, different label), a roster table (Learner · Manager · Layered Security % ·
+Overall % · Closed Won) with clickable sortable column headers, a Completion Pipeline chart, a
+Learners by Market chart, a Team Progress Update chart (Reps vs. Managers, grouped bar), and a
+Certifications Over Time chart (Reps vs. Managers, stacked bar by fiscal quarter).
 
 **Custom formulas:**
 - **`Complete`** is derived from **actual module count**, never trusted from the LMS's own
@@ -261,6 +265,20 @@ roster table (Learner · Manager · Layered Security % · Overall % · Closed Wo
 - **Closed Won:** a deal counts only if Stage = "Closed Won" **and** Amount ≥ $5,000, joined to the
   roster by "Opportunity Owner Email." A Closed Won deal does **not** by itself mark someone
   Certified — Certified comes exclusively from the separate Certification Report file.
+- **New Hire / Role filtering** (added 2026-10-06, ported from Healthcare): `isNewHire(p)` — rolling
+  65-day window from `HireDate`, checked against the data file's own date (`_file_date_iso()`), so it
+  self-maintains. `isManager(p)` — job title contains "director of sales" / "vice president" /
+  "regional account executive." Both drive Hire Status + Role filter dropdowns; Role is filter-only
+  (not an exported column), matching Healthcare's own pattern.
+- **Team Progress Update chart:** Reps vs. Managers among people not yet Complete, split into 2 tiers
+  (≥50% / <50% of modules done) — simpler than Healthcare's 3-tier version since Layered Security has
+  no intermediate "coursework finished but one more step before Complete" state.
+- **Certifications Over Time chart:** fiscal quarter computed **client-side** from the Sales
+  Certification report's completion date (there's no per-person quarter field precomputed in Python
+  for this one, unlike Healthcare). Confirmed empty (0 certified people) as of the 10.05.2026 data —
+  shows a "No certifications yet" message rather than a blank chart until the first real one lands.
+- **Roster sort:** clicking a column header sorts by it. Name/Manager default ascending (A→Z);
+  Layered Security status/Overall %/Closed Won default descending (best-first / highest-first).
 
 **Nav:** triple-click home only (no hamburger menu to/from other dashboards).
 

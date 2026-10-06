@@ -91,6 +91,16 @@ def _file_date_label(fname):
     return base
 
 
+def _file_date_iso(fname):
+    """Same date detection as _file_date_label, but returns 'YYYY-MM-DD' for JS date math."""
+    base = os.path.basename(fname)
+    m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', base)
+    if m:
+        return f"{m.group(3)}-{m.group(1)}-{m.group(2)}"
+    dt = datetime.fromtimestamp(os.path.getmtime(fname))
+    return dt.strftime('%Y-%m-%d')
+
+
 def person_key(email, first, last):
     e = (email or '').strip().lower()
     if e:
@@ -192,9 +202,10 @@ def load_ls_data():
     files = sorted(glob.glob('cert-data/Layered-Security-Curricula-Report-*.xlsx'))
     if not files:
         print("No Layered Security data files found.")
-        return [], "Unknown"
+        return [], "Unknown", ""
 
     date_label = _file_date_label(files[-1])
+    date_iso   = _file_date_iso(files[-1])
     seen = {}  # person_key -> row dict (latest file wins)
 
     for fpath in files:
@@ -325,10 +336,10 @@ def load_ls_data():
         people.append(person)
 
     people.sort(key=lambda p: (p['LastName'], p['FirstName']))
-    return people, date_label
+    return people, date_label, date_iso
 
 
-def generate_html(people, date_label, sales_cert, sales_deals):
+def generate_html(people, date_label, sales_cert, sales_deals, date_iso=''):
     people_json      = json.dumps(people, separators=(',', ':'))
     sales_cert_json  = json.dumps(sales_cert, separators=(',', ':'))
     sales_deals_json = json.dumps(sales_deals, separators=(',', ':'))
@@ -419,7 +430,7 @@ def generate_html(people, date_label, sales_cert, sales_deals):
   .stat-sub{{font-size:11px;color:var(--muted);margin-top:4px;}}
 
   /* ── Charts ── */
-  .charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 28px 16px;}}
+  .charts{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;padding:0 28px 16px;}}
   @media(max-width:700px){{.charts{{grid-template-columns:1fr;}}}}
   @media(max-width:480px){{.chart-wrap{{height:180px;}}}}
   .chart-card{{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}}
@@ -454,6 +465,9 @@ def generate_html(people, date_label, sales_cert, sales_deals):
     color:var(--muted);font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border);
     background:var(--surface2);white-space:nowrap;
   }}
+  .progress-table thead th.sortable-th{{cursor:pointer;user-select:none;}}
+  .progress-table thead th.sortable-th:hover{{color:var(--text);}}
+  .progress-table thead th.sortable-th.active{{color:var(--accent);}}
   .progress-table tbody td{{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}}
   .progress-table tbody tr.progress-row{{cursor:pointer;transition:background .1s;}}
   .progress-table tbody tr.progress-row:hover{{background:var(--surface2);}}
@@ -566,6 +580,18 @@ def generate_html(people, date_label, sales_cert, sales_deals):
   </select>
   <span class="filter-label">Market</span>
   <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
+  <span class="filter-label">Hire Status</span>
+  <select id="f-hirestatus" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="New Hire">New Hires</option>
+    <option value="Tenured Rep">Tenured Reps</option>
+  </select>
+  <span class="filter-label">Role</span>
+  <select id="f-role" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="Manager">Managers</option>
+    <option value="Rep">Reps</option>
+  </select>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
   <span class="result-count" id="result-count"></span>
 </div>
@@ -575,11 +601,6 @@ def generate_html(people, date_label, sales_cert, sales_deals):
   <div class="stat">
     <div class="stat-label">Total Enrolled <span class="info-btn" onclick="showInfo(event,'total-enrolled')">?</span></div>
     <div class="stat-value" id="s-total">&#8212;</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Curriculum Complete <span class="info-btn" onclick="showInfo(event,'complete')">?</span></div>
-    <div class="stat-value green" id="s-complete">&#8212;</div>
-    <div class="stat-sub" id="s-complete-sub"></div>
   </div>
   <div class="stat">
     <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
@@ -613,6 +634,14 @@ def generate_html(people, date_label, sales_cert, sales_deals):
     <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
     <div class="chart-wrap"><canvas id="marketChart"></canvas></div>
   </div>
+  <div class="chart-card">
+    <div class="chart-title">Layered Security Team Progress Update <span class="info-btn" onclick="showInfo(event,'manual-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="manualChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Certifications Over Time <span class="info-btn" onclick="showInfo(event,'trend-chart')">?</span></div>
+    <div class="chart-wrap" style="position:relative;"><canvas id="trendChart"></canvas><div id="trend-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;pointer-events:none;"><span style="font-size:28px;">&#128203;</span><span style="font-size:12px;color:var(--muted);">No certifications yet</span></div></div>
+  </div>
 </div>
 
 <!-- ── Roster ── -->
@@ -626,12 +655,7 @@ def generate_html(people, date_label, sales_cert, sales_deals):
       <span style="font-size:11px;color:var(--muted);margin-right:2px;">View:</span>
       <button class="sort-btn active" id="view-individual" onclick="setRosterView('individual')">Individual</button>
       <button class="sort-btn" id="view-manager" onclick="setRosterView('manager')">By Manager</button>
-      <span id="sort-controls" style="display:flex;align-items:center;gap:6px;margin-left:6px;">
-        <span style="font-size:11px;color:var(--muted);margin-right:2px;">Sort:</span>
-        <button class="sort-btn" data-sort="name" onclick="setSort('name')">Name</button>
-        <button class="sort-btn" data-sort="status" onclick="setSort('status')">Status</button>
-        <button class="sort-btn active" data-sort="pct" onclick="setSort('pct')">Completion % &#9660;</button>
-      </span>
+      <span style="font-size:11px;color:var(--muted);margin-left:6px;">Click a column header to sort</span>
     </div>
     <input type="text" id="f-search" class="roster-search" placeholder="Search by name&hellip;" oninput="applyFilters()" style="width:170px;">
   </div>
@@ -677,7 +701,7 @@ let sortField = "pct";
 let sortDir   = "desc";
 let selectedEmail = null;
 let rosterView = "individual";
-let pipelineChart, marketChart;
+let pipelineChart, marketChart, manualChart, trendChart;
 
 // ── Sales Certification (baked in from the Certification Report at build time) ──
 function isSalesCertified(email){{
@@ -751,7 +775,6 @@ document.addEventListener("click", function(e){{
 // ── Info tooltip ──
 var INFO_MSGS = {{
   "total-enrolled":  "The total number of people currently assigned to the Layered Security curriculum (Direct Sales). This stays fixed regardless of the filters above — use the ‘shown’ count next to Reset to see how many match your current filters.",
-  "complete":        "People who have completed all 12 required modules in the Layered Security curriculum. This reflects curriculum completion only — actual certification also requires $5,000 in qualifying sales, tracked in an external system not shown here.",
   "in-progress":     "People who have started the curriculum and completed at least one module, but haven't finished everything yet.",
   "not-started":     "People who are assigned to the curriculum but haven't completed any modules yet.",
   "past-due":        "People who have not finished the curriculum and have passed their required completion date (negative days remaining in the LMS export).",
@@ -760,6 +783,9 @@ var INFO_MSGS = {{
   "pipeline-chart":  "A quick snapshot of where everyone stands: how many haven't started yet, how many are actively working through the modules, and how many have finished all 12.",
   "market-chart":    "Curriculum progress broken down by sales market. Each bar shows how many people in that market are Complete, In Progress, or Not Started. Hover for exact counts. Updates when you apply filters.",
   "roster":          "The full list of people in the curriculum. Each row shows their manager, Layered Security status, overall completion %, and Closed Won total. Click any row to see a full course-by-course breakdown, plus certification and deal detail, in the panel on the right.",
+  "new-hires":       "People within their first 65 days of employment as of the report date. This is a rolling window — once someone passes day 65 from their hire date, they automatically become a \\"Tenured Rep,\\" no manual update needed. Use the Hire Status filter above to isolate either group.",
+  "manual-chart":    "Shows where everyone still working through the curriculum stands, split by Reps and Managers: what share of each group is 50% or more through the modules, and what share is still below 50%. Bars show percent of each group (Reps and Managers are counted separately, so groups of different sizes compare fairly) &mdash; hover for the underlying headcount.",
+  "trend-chart":     "How many people have been confirmed as fully Certified Layered Security Specialists (curriculum, Closed Won sale, SSE engagement, and case study all complete), by the fiscal quarter their certification was recorded, split by Reps vs. Managers. This will stay empty until the first person completes all four requirements.",
   "export":          "Download a report based on whoever is currently shown. Apply filters first to scope the report. Full Report includes everyone with all module progress columns. Not Complete is a contact list for follow-up, sorted by manager. Manager Summary shows each manager's team size and completion counts."
 }};
 function showInfo(e, key){{
@@ -792,6 +818,28 @@ function personStatus(p){{
 function isPastDue(p){{
   return personStatus(p) !== "Complete" && typeof p.DaysRemaining === "number" && p.DaysRemaining < 0;
 }}
+
+// ── New Hire designation ─────────────────────────────────────────────────
+// A person is a "New Hire" for their first 65 days of employment (a rolling
+// window from their hire date, checked against the report date below), and
+// automatically becomes a "Tenured Rep" on day 65 and beyond.
+var NEW_HIRE_WINDOW_DAYS = 65;
+var REPORT_DATE = "{date_iso}";
+function isNewHire(p){{
+  if(!p.HireDate) return false;
+  var hire = new Date(p.HireDate + "T00:00:00");
+  var today = new Date(REPORT_DATE + "T00:00:00");
+  var daysSinceHire = Math.round((today - hire) / 86400000);
+  return daysSinceHire >= 0 && daysSinceHire < NEW_HIRE_WINDOW_DAYS;
+}}
+function hireStatusLabel(p){{
+  if(!p.HireDate) return "Unknown";
+  return isNewHire(p) ? "New Hire" : "Tenured Rep";
+}}
+function isManager(p){{
+  var t = (p.JobTitle || "").toLowerCase();
+  return t.indexOf("director of sales") !== -1 || t.indexOf("vice president") !== -1 || t.indexOf("regional account executive") !== -1;
+}}
 function fmtDate(d){{
   if(!d) return "-";
   var pts = d.split("-"), months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -808,6 +856,8 @@ function fmtDate(d){{
 function resetFilters(){{
   sel("f-market").value = "";
   sel("f-status").value = "";
+  sel("f-hirestatus").value = "";
+  sel("f-role").value = "";
   sel("f-search").value = "";
   applyFilters();
 }}
@@ -817,26 +867,23 @@ function setRosterView(v){{
   rosterView = v;
   sel("view-individual").classList.toggle("active", v === "individual");
   sel("view-manager").classList.toggle("active", v === "manager");
-  sel("sort-controls").style.display = v === "individual" ? "flex" : "none";
   selectedEmail = null;
   sel("roster-right").innerHTML = '<div class="no-data">Select a person to view details</div>';
   renderRoster();
 }}
 
 // ── Sort ──
+// Name/Manager default to A-Z on first click (alphabetical reads naturally
+// ascending); Layered Security/Overall %/Closed Won default to best-first
+// (Complete above In Progress above Not Started; 100% down to 0%; highest
+// dollar amount down to lowest) since that's the useful "who's ahead" view.
 function setSort(field){{
   if(sortField === field){{
     sortDir = sortDir === "desc" ? "asc" : "desc";
   }} else {{
     sortField = field;
-    sortDir   = "desc";
+    sortDir   = (field === "name" || field === "manager") ? "asc" : "desc";
   }}
-  document.querySelectorAll(".sort-btn").forEach(function(btn){{
-    var active = btn.dataset.sort === sortField;
-    btn.classList.toggle("active", active);
-    var arrow = active ? (sortDir === "desc" ? " ↓" : " ↑") : "";
-    btn.textContent = btn.textContent.replace(/ [↑↓]$/, "") + arrow;
-  }});
   renderRoster();
 }}
 
@@ -844,16 +891,22 @@ function setSort(field){{
 function applyFilters(){{
   var market = sel("f-market").value;
   var status = sel("f-status").value;
+  var hireStatus = sel("f-hirestatus").value;
+  var role   = sel("f-role").value;
   var q      = (sel("f-search").value || "").toLowerCase();
   filtered = PEOPLE.filter(function(p){{
     if(market && p.Market !== market) return false;
     if(status && personStatus(p) !== status) return false;
+    if(hireStatus && hireStatusLabel(p) !== hireStatus) return false;
+    if(role && (isManager(p) ? "Manager" : "Rep") !== role) return false;
     if(q && !(p.FirstName + " " + p.LastName).toLowerCase().includes(q)) return false;
     return true;
   }});
   sel("result-count").textContent = filtered.length + " shown";
   renderStats();
   renderCharts();
+  renderManualChart();
+  renderTrendChart();
   renderRoster();
 }}
 
@@ -864,12 +917,9 @@ function renderStats(){{
   var inprog  = filtered.filter(function(p){{ return personStatus(p) === "In Progress"; }}).length;
   var nostart = filtered.filter(function(p){{ return personStatus(p) === "Not Started"; }}).length;
   var rate    = total > 0 ? Math.round(cert / total * 100) : 0;
-  var certPct    = total > 0 ? Math.round(cert / total * 100) : 0;
   var inprogPct  = total > 0 ? Math.round(inprog / total * 100) : 0;
   var nostartPct = total > 0 ? Math.round(nostart / total * 100) : 0;
   sel("s-total").textContent      = PEOPLE.length;
-  sel("s-complete").textContent   = certPct + "%";
-  sel("s-complete-sub").textContent = total > 0 ? (cert + " of " + total) : "";
   sel("s-inprog").textContent     = inprogPct + "%";
   sel("s-inprog-sub").textContent = total > 0 ? (inprog + " of " + total) : "";
   sel("s-notstarted").textContent = nostartPct + "%";
@@ -964,6 +1014,122 @@ function renderCharts(){{
   }});
 }}
 
+// ── renderManualChart (Reps vs Managers, among not-yet-Complete people) ───
+function renderManualChart(){{
+  var isLight    = document.body.classList.contains("light-mode");
+  var labelColor = isLight ? cv("--text") : cv("--muted");
+  var gridColor  = cv("--border");
+
+  var notComplete = filtered.filter(function(p){{ return personStatus(p) !== "Complete"; }});
+  var reps = notComplete.filter(function(p){{ return !isManager(p); }});
+  var mgrs = notComplete.filter(isManager);
+
+  function tiers(list){{
+    return [
+      list.filter(function(p){{ return p.overallPct >= 50; }}).length,
+      list.filter(function(p){{ return p.overallPct < 50;  }}).length
+    ];
+  }}
+  function toPct(counts, total){{
+    return counts.map(function(c){{ return total > 0 ? Math.round(c / total * 100) : 0; }});
+  }}
+  var repsCounts = tiers(reps);
+  var mgrsCounts = tiers(mgrs);
+  var repsTotal  = reps.length;
+  var mgrsTotal  = mgrs.length;
+  var repsPct    = toPct(repsCounts, repsTotal);
+  var mgrsPct    = toPct(mgrsCounts, mgrsTotal);
+
+  var labels = ["\\u226550% Complete", "<50% Complete"];
+
+  if(manualChart) manualChart.destroy();
+  manualChart = new Chart(sel("manualChart"), {{
+    type: "bar",
+    data: {{
+      labels: labels,
+      datasets: [
+        {{ label: "Reps",     data: repsPct, counts: repsCounts, total: repsTotal, backgroundColor: "#8b5cf6bb", borderRadius: 3, borderSkipped: false }},
+        {{ label: "Managers", data: mgrsPct, counts: mgrsCounts, total: mgrsTotal, backgroundColor: cv("--accent") + "bb", borderRadius: 3, borderSkipped: false }}
+      ]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      scales: {{
+        x: {{ ticks: {{ color: labelColor, font: {{ size: 11 }} }}, grid: {{ display: false }} }},
+        y: {{ beginAtZero: true, max: 100, ticks: {{ color: labelColor, font: {{ size: 11 }}, callback: function(v){{ return v + "%"; }} }}, grid: {{ color: gridColor }} }}
+      }},
+      plugins: {{
+        legend: {{ display: true, position: "bottom", labels: {{ color: labelColor, font: {{ size: 11 }}, padding: 14, boxWidth: 12 }} }},
+        tooltip: {{ callbacks: {{ label: function(ctx){{
+          var count = ctx.dataset.counts[ctx.dataIndex];
+          var total = ctx.dataset.total;
+          return " " + ctx.dataset.label + ": " + ctx.raw + "% (" + count + " of " + total + ")";
+        }} }} }}
+      }}
+    }}
+  }});
+}}
+
+// ── renderTrendChart (certifications over time, by fiscal quarter, Reps vs Managers) ──
+function fiscalQtrFromDate(d){{
+  if(!d) return null;
+  var pts = d.split("-"), yr = +pts[0], mo = +pts[1];
+  var fy = mo >= 4 ? yr + 1 : yr, q = mo >= 10 ? 3 : mo >= 7 ? 2 : mo >= 4 ? 1 : 4;
+  return "FY" + String(fy).slice(2) + " Q" + q;
+}}
+function renderTrendChart(){{
+  var isLight    = document.body.classList.contains("light-mode");
+  var labelColor = isLight ? cv("--text") : cv("--muted");
+  var gridColor  = cv("--border");
+
+  var qtrMapReps = {{}}, qtrMapMgrs = {{}};
+  filtered.forEach(function(p){{
+    if(!isSalesCertified(p.Email)) return;
+    var qtr = fiscalQtrFromDate(salesCertDate(p.Email));
+    if(!qtr) return;
+    var map = isManager(p) ? qtrMapMgrs : qtrMapReps;
+    map[qtr] = (map[qtr] || 0) + 1;
+  }});
+  function parseQtr(s){{ var m = s.match(/FY(\d+)\s+Q(\d)/); return m ? +m[1] * 10 + +m[2] : 0; }}
+  var trendLabels = Object.keys(Object.assign({{}}, qtrMapReps, qtrMapMgrs)).sort(function(a,b){{ return parseQtr(a) - parseQtr(b); }});
+  var trendDataReps = trendLabels.map(function(q){{ return qtrMapReps[q] || 0; }});
+  var trendDataMgrs = trendLabels.map(function(q){{ return qtrMapMgrs[q] || 0; }});
+  var trendEmpty = sel("trend-empty");
+  if(trendEmpty) trendEmpty.style.display = trendLabels.length === 0 ? "flex" : "none";
+
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(sel("trendChart"), {{
+    type: "bar",
+    data: {{
+      labels: trendLabels,
+      datasets: [
+        {{ label: "Reps",     data: trendDataReps, backgroundColor: "#8b5cf6bb", borderRadius: 3, borderSkipped: false, stack: "certs" }},
+        {{ label: "Managers", data: trendDataMgrs, backgroundColor: cv("--accent") + "bb", borderRadius: 3, borderSkipped: false, stack: "certs" }}
+      ]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      plugins: {{
+        legend: {{ display: true, position: "bottom", labels: {{ color: labelColor, font: {{ size: 11 }}, padding: 12, boxWidth: 12 }} }},
+        tooltip: {{
+          mode: "index",
+          callbacks: {{
+            label: function(ctx){{ return " " + ctx.dataset.label + ": " + ctx.raw; }},
+            afterBody: function(items){{
+              var total = items.reduce(function(s, i){{ return s + i.raw; }}, 0);
+              return ["─────────", "Total: " + total];
+            }}
+          }}
+        }}
+      }},
+      scales: {{
+        x: {{ stacked: true, grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 10 }}, maxRotation: 45 }} }},
+        y: {{ stacked: true, grid: {{ color: gridColor }}, ticks: {{ color: labelColor, font: {{ size: 11 }}, stepSize: 1 }} }}
+      }}
+    }}
+  }});
+}}
+
 // ── buildPersonRow ──
 function buildPersonRow(p){{
   var fullName  = p.FirstName + " " + p.LastName;
@@ -972,13 +1138,14 @@ function buildPersonRow(p){{
   var badgeCls  = status === "Complete" ? "complete" : status === "In Progress" ? "in-progress" : "not-complete";
   var badgeTxt  = status === "Complete" ? "&#10003; Complete" : status === "In Progress" ? "In Progress" : "Not Started";
   var overdueTag = isPastDue(p) ? '<span class="pill red" style="margin-left:6px;">PAST DUE</span>' : "";
+  var newHireTag = isNewHire(p) ? '<span class="pill" style="color:var(--accent3);background:var(--accent3)22;border:1px solid var(--accent3)44;margin-left:6px;">New Hire</span>' : "";
   var certTag   = isSalesCertified(p.Email) ? '<span class="pill gold" style="margin-top:4px;display:inline-block;">Certified Layered Security Specialist</span>' : "";
   var amt       = closedWonAmount(p.Email);
   var dealsHtml = amt > 0
     ? '<span class="deals-cell">' + fmtMoney(amt) + "</span>" + (closedWonCount(p.Email) > 1 ? ' <span style="font-size:10px;color:var(--muted)">(' + closedWonCount(p.Email) + ")</span>" : "")
     : '<span class="deals-cell empty">&mdash;</span>';
   var h = '<tr class="progress-row" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
-  h += '<td><span class="p-name">' + escHtml(fullName) + overdueTag + '</span><span class="p-sub">' + escHtml(p.JobTitle || "") + "</span>" + certTag + "</td>";
+  h += '<td><span class="p-name">' + escHtml(fullName) + overdueTag + newHireTag + '</span><span class="p-sub">' + escHtml(p.JobTitle || "") + "</span>" + certTag + "</td>";
   h += "<td>" + escHtml(p.Manager || "-") + "</td>";
   h += '<td><span class="badge-status ' + badgeCls + '">' + badgeTxt + "</span></td>";
   h += '<td><span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span></td>";
@@ -988,9 +1155,15 @@ function buildPersonRow(p){{
 }}
 
 // ── renderRoster ──
+function sortableTh(field, label){{
+  var active = sortField === field;
+  var arrow  = active ? (sortDir === "desc" ? " &#9660;" : " &#9650;") : "";
+  return '<th class="sortable-th' + (active ? " active" : "") + '" onclick="setSort(\\'' + field + '\\')">' + label + arrow + "</th>";
+}}
 function renderRoster(){{
   var html = '<table class="progress-table"><thead><tr>' +
-    "<th>Learner</th><th>Manager</th><th>Layered Security</th><th>Overall %</th><th>Closed Won</th>" +
+    sortableTh("name", "Learner") + sortableTh("manager", "Manager") + sortableTh("status", "Layered Security") +
+    sortableTh("pct", "Overall %") + sortableTh("closedwon", "Closed Won") +
     "</tr></thead><tbody>";
 
   if(rosterView === "manager"){{
@@ -1012,18 +1185,27 @@ function renderRoster(){{
     }});
   }} else {{
     var d = sortDir === "desc" ? -1 : 1;
+    var nameTie = function(a, b){{ return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName); }};
     var sorted = filtered.slice().sort(function(a, b){{
       if(sortField === "name"){{
-        return d * (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+        return d * nameTie(a, b);
+      }} else if(sortField === "manager"){{
+        var diffMgr = (a.Manager || "").localeCompare(b.Manager || "");
+        if(diffMgr !== 0) return d * diffMgr;
+        return nameTie(a, b);
       }} else if(sortField === "status"){{
         var order = {{ "Complete": 2, "In Progress": 1, "Not Started": 0 }};
         var diff = (order[personStatus(a)] || 0) - (order[personStatus(b)] || 0);
         if(diff !== 0) return d * diff;
-        return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+        return nameTie(a, b);
+      }} else if(sortField === "closedwon"){{
+        var diffCW = closedWonAmount(a.Email) - closedWonAmount(b.Email);
+        if(diffCW !== 0) return d * diffCW;
+        return nameTie(a, b);
       }} else {{
         var diff2 = a.overallPct - b.overallPct;
         if(diff2 !== 0) return d * diff2;
-        return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+        return nameTie(a, b);
       }}
     }});
     sorted.forEach(function(p){{ html += buildPersonRow(p); }});
@@ -1099,7 +1281,7 @@ function showDetail(email){{
   detailHtml += '<div class="detail-grid">';
   detailHtml += '<div><div class="detail-label">Job Title</div><div class="detail-value">' + escHtml(p.JobTitle || "-") + "</div></div>";
   detailHtml += '<div><div class="detail-label">Market</div><div class="detail-value">' + escHtml(p.Market || "-") + "</div></div>";
-  detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + (isNewHire(p) ? ' <span class="pill" style="color:var(--accent3);background:var(--accent3)22;border:1px solid var(--accent3)44;">New Hire</span>' : "") + "</div></div>";
   detailHtml += '<div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:' + escHtml(p.Email) + '" style="color:var(--accent);text-decoration:none">' + escHtml(p.Email || "-") + "</a></div></div>";
   detailHtml += '<div><div class="detail-label">Assigned</div><div class="detail-value">' + fmtDate(p.AssignDate) + "</div></div>";
   detailHtml += '<div><div class="detail-label">Closed Won</div><div class="detail-value" style="color:var(--accent2)">' +
@@ -1133,8 +1315,10 @@ function setupPrintHeader(title, subtitle){{
   sel("ph-date").textContent   = subtitle;
   var market = sel("f-market").value || "All Markets";
   var status = sel("f-status").options[sel("f-status").selectedIndex].text;
+  var hireStatus = sel("f-hirestatus").options[sel("f-hirestatus").selectedIndex].text;
+  var role = sel("f-role").options[sel("f-role").selectedIndex].text;
   var search = sel("f-search").value;
-  var parts  = ["Status: " + status, "Market: " + market];
+  var parts  = ["Status: " + status, "Market: " + market, "Hire Status: " + hireStatus, "Role: " + role];
   if(search) parts.push("Search: " + search);
   sel("ph-filters").textContent = parts.join("  |  ");
 }}
@@ -1155,9 +1339,9 @@ function runExport(type){{
     var inprog = filtered.filter(function(p){{ return personStatus(p) === "In Progress"; }}).length;
     var rate   = total > 0 ? Math.round(cert / total * 100) : 0;
     sel("print-stats").innerHTML = pBox(total,"Total Enrolled") + pBox(cert,"Complete") + pBox(inprog,"In Progress") + pBox(rate+"%","Completion Rate");
-    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Status","Layered Security %","Completion Date","Closed Won","Manager"]);
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Hire Status","Status","Layered Security %","Completion Date","Closed Won","Manager"]);
     sel("print-roster-body").innerHTML = filtered.map(function(p,i){{
-      return tds([i+1,"<b>"+escHtml(p.FirstName+" "+p.LastName)+"</b>",escHtml(p.Market||"-"),escHtml(p.JobTitle||"-"),
+      return tds([i+1,"<b>"+escHtml(p.FirstName+" "+p.LastName)+"</b>",escHtml(p.Market||"-"),escHtml(p.JobTitle||"-"),hireStatusLabel(p),
         personStatus(p), p.ls.pct+"%", p.CompleteDate?fmtDate(p.CompleteDate):"-", closedWonAmount(p.Email) > 0 ? fmtMoney(closedWonAmount(p.Email)) : "-", escHtml(p.Manager||"-")]);
     }}).join("");
     sel("ph-desc").style.display = "none";
@@ -1167,10 +1351,10 @@ function runExport(type){{
     var notCert = filtered.filter(function(p){{ return personStatus(p) !== "Complete"; }});
     setupPrintHeader("Not Complete: Layered Security", "Generated: " + now + "  |  " + notCert.length + " Employees");
     sel("print-stats").innerHTML = "";
-    sel("print-roster-head").innerHTML = thRow(["#","Name","Email","Market","Layered Security %","Manager","Manager Email"]);
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Email","Market","Hire Status","Layered Security %","Manager","Manager Email"]);
     sel("print-roster-body").innerHTML = notCert.length
       ? notCert.slice().sort(function(a,b){{ return (a.Manager||"").localeCompare(b.Manager||"")||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName); }})
-          .map(function(p,i){{ return tds([i+1,"<b>"+escHtml(p.FirstName+" "+p.LastName)+"</b>",escHtml(p.Email||"-"),escHtml(p.Market||"-"),p.ls.pct+"%",escHtml(p.Manager||"-"),escHtml(p.MgrEmail||"-")]); }}).join("")
+          .map(function(p,i){{ return tds([i+1,"<b>"+escHtml(p.FirstName+" "+p.LastName)+"</b>",escHtml(p.Email||"-"),escHtml(p.Market||"-"),hireStatusLabel(p),p.ls.pct+"%",escHtml(p.Manager||"-"),escHtml(p.MgrEmail||"-")]); }}).join("")
       : '<tr><td colspan="7" style="color:#999;font-style:italic;padding:10px">All enrolled people have completed the curriculum.</td></tr>';
     sel("ph-desc").textContent = "Employees who have not yet completed the Layered Security curriculum, sorted by manager.";
     sel("ph-desc").style.display = "block";
@@ -1229,21 +1413,21 @@ function runExportXLSX(type){{
       ["Completion Rate",rate+"%"],
     ];
     XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),"Summary");
-    var rRows=[["Name","Market","Job Title","Status","Layered Security %","Overall %","Cert Date","Closed Won $","Manager"]];
+    var rRows=[["Name","Market","Job Title","Hire Status","Status","Layered Security %","Overall %","Cert Date","Closed Won $","Manager"]];
     filtered.forEach(function(p){{
-      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",personStatus(p),p.ls.pct+"%",p.overallPct+"%",p.CompleteDate||"-",closedWonAmount(p.Email),p.Manager||"-"]);
+      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",hireStatusLabel(p),personStatus(p),p.ls.pct+"%",p.overallPct+"%",p.CompleteDate||"-",closedWonAmount(p.Email),p.Manager||"-"]);
     }});
-    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,16,12,14,12,28]),"Roster");
+    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,16,12,14,12,28]),"Roster");
     dlXLSX("ls-full-report",wb);
   }} else if(type==="not-complete"){{
     var notCert=filtered.filter(function(p){{ return personStatus(p)!=="Complete"; }}).slice().sort(function(a,b){{
       return (a.Manager||"").localeCompare(b.Manager||"")||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
     }});
-    var rows=[["Name","Email","Market","Layered Security %","Manager","Manager Email"]];
+    var rows=[["Name","Email","Market","Hire Status","Layered Security %","Manager","Manager Email"]];
     notCert.forEach(function(p){{
-      rows.push([p.FirstName+" "+p.LastName,p.Email||"-",p.Market||"-",p.ls.pct+"%",p.Manager||"-",p.MgrEmail||"-"]);
+      rows.push([p.FirstName+" "+p.LastName,p.Email||"-",p.Market||"-",hireStatusLabel(p),p.ls.pct+"%",p.Manager||"-",p.MgrEmail||"-"]);
     }});
-    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,18,16,28,32]),"Not Complete");
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,18,14,16,28,32]),"Not Complete");
     dlXLSX("ls-not-complete",wb);
   }} else if(type==="manager-summary"){{
     var mgrMap={{}};
@@ -1273,12 +1457,12 @@ if(firstRow) showDetail(firstRow.dataset.email);
 
 
 def main():
-    people, date_label = load_ls_data()
+    people, date_label, date_iso = load_ls_data()
     if not people:
         return
     sales_cert  = load_sales_cert()
     sales_deals = load_sales_deals()
-    html = generate_html(people, date_label, sales_cert, sales_deals)
+    html = generate_html(people, date_label, sales_cert, sales_deals, date_iso)
     with open('cert-layered-security.html', 'w', encoding='utf-8') as f:
         f.write(html)
     complete_n = sum(1 for p in people if p['Complete'] == 'Yes')
