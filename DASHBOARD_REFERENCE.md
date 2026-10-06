@@ -312,14 +312,33 @@ including average Days to First Sale.
 - **Overdue status** is per-curriculum, using the LMS's own "Item Required Date" where the LMS
   provides one, falling back to a `35 − days elapsed` window when it doesn't. "Coming Soon" courses
   count toward completion totals but can **never** trigger Overdue, regardless of any date.
+  **"Coming Soon" detection is purely dynamic** — any course whose LMS `Item Title` literally
+  contains the text "coming soon" (case-insensitive), nothing hardcoded — so the exact set of
+  exempted courses shrinks on its own as each one launches for real; always re-check the live data
+  file rather than citing a prior count from memory. Once a course's title drops "(Coming Soon)," it
+  becomes a fully normal course overnight, including becoming Overdue-eligible — e.g. "Introducing
+  All Covered" and "How to Prepare for Effective Account Reviews" both launched for real and, as of
+  the 10.05.2026 data, now show a large number of learners Overdue on them (46 and 34 respectively)
+  since their LMS-assigned required dates have already passed for many not-yet-complete learners.
+- **Overdue computed live, not from a frozen "report date":** `TODAY = new Date()` in the JS uses
+  the *visitor's* real clock at page-load time — unlike the cert dashboards, which anchor rolling
+  windows (e.g. New Hire) to the data file's own date. Overdue status here will keep advancing every
+  day even between data refreshes.
 - **Days to Close** = hire date → the rep's earliest Closed Won deal's close date (deliberately not
   Salesforce's own "Age" field, which measures from opportunity-created-date instead of hire date —
   a truer onboarding-speed metric for this specific cohort).
 - **Canadian learners** run a parallel curriculum set (`_BCA`-suffixed IDs) with 3 different courses
   swapped in (CASL, TRUEBLUE, KMPriceHUB+FINTRAC replace 3 US-only courses); everything else is
   identical.
-- **Group/Test-Group filter** uses a hardcoded name list, **not** a date field — the LMS resets the
-  program-start date on every data pull, so a date-based filter would silently break.
+- **Group/Early Access Cohort filter** uses a hardcoded name list (the original 27-person June 4
+  launch cohort), **not** a date field — the LMS resets the program-start date on every data pull, so
+  a date-based filter would silently break. **The button's default-state label is easy to
+  misread:** "Show Early Access Cohort" (gray, default) means the cohort is currently **excluded**
+  from every stat/chart/row. Clicking it does **not** add the cohort back into the full mix — it's a
+  full swap to an **isolation view showing only that cohort**, hiding everyone else (label flips to
+  "Hide Early Access Cohort" to return to the normal excluded-by-default view). Of the original 27
+  names, only 23 still match a person in the current data (4 have rolled off) — that's why Total
+  Enrolled reads 23, not 27, when the cohort-only view is active.
 
 **TLG:** always hidden — no toggle button exists on this dashboard (a deliberate, permanent
 exclusion, unlike the toggle-able pattern elsewhere).

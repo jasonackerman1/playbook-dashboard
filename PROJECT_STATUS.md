@@ -4,6 +4,36 @@ Last updated: 2026-10-06
 
 ---
 
+## Recent Changes (2026-10-06, Q&A session, no code changes) — Accelerate Onboarding: Coming Soon, Overdue, and Early Access Cohort behavior clarified
+
+Three questions from Jason about the Accelerate Onboarding dashboard, each answered by checking the
+real current data/code rather than from memory:
+
+1. **Which courses count as "Coming Soon"?** Checked the live 10.05.2026 data directly — only
+   **"Selling with Konica Minolta Premier Finance (KMPF)"** currently matches. Project memory had a
+   stale 5-course list from 2026-08-11 (Account Reviews, FINTRAC, AllCovered/IT Weapons, Commission
+   Confidence, KMPF Leasing Fundamentals) — corrected, since 4 of those 5 have since launched for
+   real. Detection is purely dynamic (title contains "coming soon," no hardcoded list), so this
+   count will keep changing — always re-check the live file rather than citing a prior answer.
+2. **How are All Covered and Account Reviews positioned now that they've launched?** Fully normal —
+   no more Coming Soon exemption, so they now carry real LMS-assigned required dates and are fully
+   Overdue-eligible. Checked the real numbers: **46 of 55 incomplete learners are already past due**
+   on Account Reviews, **34 of 37 on All Covered** — both are actively driving real Overdue status on
+   their curricula (Call Prep Essentials, Core Portfolio) right now. Flagged that many of these due
+   dates predate a learner's own assign date, same open question as before — worth confirming with
+   Resmie whether that's intentional.
+3. **What does the "Show Early Access Cohort" button actually do?** Confirmed from the code: it's a
+   full swap, not an add-back. Default state excludes the 27-person June 4 cohort entirely; clicking
+   it switches to an isolation view showing **only** that cohort (hiding everyone else) — not merging
+   them back into the full population. Explains why Total Enrolled reads 23, not 27, when active (4
+   of the 27 original names no longer match anyone in the current data).
+
+No dashboard code changed — `DASHBOARD_REFERENCE.md` updated to describe the Coming Soon mechanism
+and the cohort toggle's actual swap behavior precisely, so this doesn't need re-deriving next time.
+Full detail in project memory `onboarding_dashboard.md`.
+
+---
+
 ## Recent Changes (2026-10-06, later same day) — Layered Security: stat/chart reorder, Completion Pipeline chart removed
 
 Three quick follow-up asks after the New Hire/Role/charts work below: (1) swap the Not Started and
