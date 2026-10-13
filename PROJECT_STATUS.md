@@ -1,6 +1,19 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-10-06
+Last updated: 2026-10-13
+
+---
+
+## Recent Changes (2026-10-13) — Layered Security: Manager Email added to Full Report export
+
+Jason noticed the Full Report export (PDF and Excel) showed each person's Manager name but not the
+manager's email address, even though `MgrEmail` has been part of every person record since this
+dashboard's original build and already appears in the separate "Not Complete" export. Added a
+`Manager Email` column right after `Manager` to both formats of the Full Report. No other export
+type was touched — Not Complete already had it, and Manager Summary is manager-level rather than
+person-level, so it doesn't apply there. Verified against the real 512-person dataset via headless
+browser: both PDF and Excel confirmed showing a real manager email for a real person, zero console
+errors. Full detail in project memory `layered_security_dashboard.md`.
 
 ---
 

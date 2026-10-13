@@ -958,10 +958,10 @@ function runExport(type){
     var inprog = filtered.filter(function(p){ return personStatus(p) === "In Progress"; }).length;
     var rate   = total > 0 ? Math.round(cert / total * 100) : 0;
     sel("print-stats").innerHTML = pBox(total,"Total Enrolled") + pBox(cert,"Complete") + pBox(inprog,"In Progress") + pBox(rate+"%","Completion Rate");
-    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Hire Status","Status","Layered Security %","Completion Date","Closed Won","Manager"]);
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Hire Status","Status","Layered Security %","Completion Date","Closed Won","Manager","Manager Email"]);
     sel("print-roster-body").innerHTML = filtered.map(function(p,i){
       return tds([i+1,"<b>"+escHtml(p.FirstName+" "+p.LastName)+"</b>",escHtml(p.Market||"-"),escHtml(p.JobTitle||"-"),hireStatusLabel(p),
-        personStatus(p), p.ls.pct+"%", p.CompleteDate?fmtDate(p.CompleteDate):"-", closedWonAmount(p.Email) > 0 ? fmtMoney(closedWonAmount(p.Email)) : "-", escHtml(p.Manager||"-")]);
+        personStatus(p), p.ls.pct+"%", p.CompleteDate?fmtDate(p.CompleteDate):"-", closedWonAmount(p.Email) > 0 ? fmtMoney(closedWonAmount(p.Email)) : "-", escHtml(p.Manager||"-"), escHtml(p.MgrEmail||"-")]);
     }).join("");
     sel("ph-desc").style.display = "none";
     document.body.classList.remove("print-no-summary");
@@ -1032,11 +1032,11 @@ function runExportXLSX(type){
       ["Completion Rate",rate+"%"],
     ];
     XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),"Summary");
-    var rRows=[["Name","Market","Job Title","Hire Status","Status","Layered Security %","Overall %","Cert Date","Closed Won $","Manager"]];
+    var rRows=[["Name","Market","Job Title","Hire Status","Status","Layered Security %","Overall %","Cert Date","Closed Won $","Manager","Manager Email"]];
     filtered.forEach(function(p){
-      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",hireStatusLabel(p),personStatus(p),p.ls.pct+"%",p.overallPct+"%",p.CompleteDate||"-",closedWonAmount(p.Email),p.Manager||"-"]);
+      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",hireStatusLabel(p),personStatus(p),p.ls.pct+"%",p.overallPct+"%",p.CompleteDate||"-",closedWonAmount(p.Email),p.Manager||"-",p.MgrEmail||"-"]);
     });
-    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,16,12,14,12,28]),"Roster");
+    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,16,12,14,12,28,32]),"Roster");
     dlXLSX("ls-full-report",wb);
   } else if(type==="not-complete"){
     var notCert=filtered.filter(function(p){ return personStatus(p)!=="Complete"; }).slice().sort(function(a,b){

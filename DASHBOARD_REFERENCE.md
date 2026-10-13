@@ -1,6 +1,6 @@
 # Playbook Dashboard Suite — Reference Documentation
 
-Last updated: 2026-10-06
+Last updated: 2026-10-13
 
 This is the **master reference** for every dashboard in this repo — what each one is for, what
 it measures, and the custom formulas/business rules baked into it. It is a *reference*, not a
@@ -272,6 +272,10 @@ information already in the stat row.
   self-maintains. `isManager(p)` — job title contains "director of sales" / "vice president" /
   "regional account executive." Both drive Hire Status + Role filter dropdowns; Role is filter-only
   (not an exported column), matching Healthcare's own pattern.
+- **Full Report export** (PDF + Excel) includes Manager Email alongside Manager (added 2026-10-13) —
+  `MgrEmail` has been part of every person record since this dashboard's original build, just wasn't
+  surfaced in this one export type until Jason flagged it missing (it already appeared in the
+  separate Not Complete export).
 - **Team Progress Update chart:** Reps vs. Managers among people not yet Complete, split into 2 tiers
   (≥50% / <50% of modules done) — simpler than Healthcare's 3-tier version since Layered Security has
   no intermediate "coursework finished but one more step before Complete" state.
