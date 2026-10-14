@@ -1,6 +1,6 @@
 # Playbook Dashboard Suite — Reference Documentation
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
 
 This is the **master reference** for every dashboard in this repo — what each one is for, what
 it measures, and the custom formulas/business rules baked into it. It is a *reference*, not a
@@ -68,11 +68,15 @@ the sole source of truth going forward.
 | 9 | LinkedIn Learning Engagement | `linkedin-learning-engagement.html` | `update_linkedin_learning_engagement_dashboard.py` | 🔒 hidden (Konami code) | **placeholder** |
 | 10 | LMS Engagement | `lms-engagement.html` | `update_lms_engagement_dashboard.py` | 🔒 hidden (Konami code) | real |
 
-**🔒 Hidden cards (added 2026-09-28):** #9 and #10 are deliberately hidden from the homepage grid
-by default. Typing the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) anywhere on the homepage reveals both with
-a fade/scale-in animation — does **not** persist, resets on every page reload. Both dashboards
-remain fully functional and reachable directly by URL or once revealed; only the homepage card
-visibility is affected.
+**🔒 Hidden cards (added 2026-09-28, reveal upgraded 2026-10-14):** #9 and #10 are deliberately
+hidden from the homepage grid by default. Typing the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) anywhere on
+the homepage reveals both — does **not** persist, resets on every page reload. Nothing is shown
+before or while typing wrong keys (so the code's existence/length is never given away); each
+correct key pops one large ghosted glyph dead-center on screen that fades out before the next one
+appears. Completing the full sequence fires a bigger payoff: a quick page shake, a brand-blue
+full-screen flash, a "🔓 Secret Unlocked" toast, and the two cards bursting in with an overshoot
+scale instead of a plain fade. Both dashboards remain fully functional and reachable directly by
+URL or once revealed; only the homepage card visibility is affected.
 
 ---
 
@@ -94,6 +98,14 @@ and animated count-up stat numbers.
 **Hidden nav:** triple-clicking the "Analytical Data Hub" title goes to the hidden Internal
 Dashboard Traffic dashboard (#3) instead of doing nothing, the reverse of every other dashboard's
 triple-click-home pattern.
+
+**Real bug fixed 2026-10-14 — Layered Security card was showing all dashes:** `load_ls_data()` in
+`update_layered_security_dashboard.py` returns a 3-tuple (`people, date_label, date_iso`) as of the
+2026-10-05/06 New Hire/Role filter work, but `ls_cert_stats()` in `generate_homepage.py` was still
+unpacking only 2 values — threw a silently-caught `ValueError` on every regeneration, so the card
+fell back to "no data" (every stat showing `—`). Confirmed this had been live-broken for every
+visitor, not just a local symptom. Fixed the unpack to match the real 3-tuple; card now shows real
+numbers again (300 complete / 186 in progress / 25 not started as of the current data file).
 
 ---
 

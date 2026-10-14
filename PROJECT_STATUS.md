@@ -1,6 +1,39 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
+
+---
+
+## Recent Changes (2026-10-14) — Homepage Konami reveal upgraded + a real Layered Security card bug fixed
+
+Two pieces of work on `generate_homepage.py`, both verified via headless Chrome before pushing.
+
+**Konami code reveal, reworked across a few rounds of feedback:** the existing hidden-cards Easter
+egg (↑ ↑ ↓ ↓ ← → ← → B A) got real on-screen feedback for the first time. First pass added a
+progress HUD row; Jason caught that showing an empty 10-slot row in advance gives the secret away
+before it's even typed, and asked instead for each correct key to pop one large ghosted glyph dead
+center on screen, one at a time, then disappear — with nothing shown at all until the first correct
+key lands, and no visual tell on a wrong key. Completing the full sequence now fires a bigger
+payoff than the old plain fade-in: a quick page shake, a full-screen brand-blue flash, a "🔓 Secret
+Unlocked" toast, and the two hidden cards bursting in with an overshoot scale.
+
+Two real bugs surfaced and were fixed along the way, not just style changes: (1) arrow keys were
+scrolling the page while entering the code, since there's no focused input anywhere on the homepage
+to absorb them — fixed with `e.preventDefault()` on the 4 arrow keys; (2) the glyph/flash/toast
+were never actually rendering as `position:fixed` — a pre-existing particle-network rule,
+`body>*:not(#particles-bg){position:relative;z-index:1;}`, uses a `:not(#id)` selector which
+carries ID-level CSS specificity and was silently overriding `position:fixed` on every new overlay
+element appended directly to `<body>`. Confirmed via `getComputedStyle` before/after; fixed by
+adding the three new elements to that rule's exclusion list. Full detail (including the lesson
+about `:not(#id)` as a specificity trap) in project memory `homepage_cards.md`.
+
+**Real bug fixed — Layered Security homepage card was showing all dashes, live for every visitor:**
+`load_ls_data()` returns a 3-tuple (`people, date_label, date_iso`) as of the 2026-10-05/06 New
+Hire/Role filter work, but `generate_homepage.py`'s `ls_cert_stats()` still unpacked only 2 values —
+threw a silently-caught `ValueError` on every regeneration since, so the card always fell back to
+"no data." Confirmed via a direct `curl` of the live site this wasn't just a local symptom. Fixed
+the unpack to match the real 3-tuple; card now shows real numbers again. Full detail in project
+memory `homepage_cards.md`.
 
 ---
 

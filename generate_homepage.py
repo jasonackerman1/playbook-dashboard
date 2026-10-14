@@ -178,7 +178,7 @@ def ls_cert_stats():
         orig = os.getcwd()
         try:
             os.chdir(str(SCRIPT_DIR))
-            people, date_label = load_ls_data()
+            people, date_label, _date_iso = load_ls_data()
         finally:
             os.chdir(orig)
         total     = len(people)
@@ -409,7 +409,7 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
 
   /* ── Visual effects ──────────────────────────────────────────── */
   #particles-bg{{position:fixed;inset:0;z-index:0;pointer-events:none;}}
-  body>*:not(#particles-bg){{position:relative;z-index:1;}}
+  body>*:not(#particles-bg):not(.konami-glyph):not(#konami-flash):not(#konami-toast){{position:relative;z-index:1;}}
   .header{{position:relative;overflow:hidden;}}
   .header>*:not(.aurora-wrap){{position:relative;z-index:1;}}
   .aurora-wrap{{position:absolute;inset:0;overflow:hidden;pointer-events:none;}}
@@ -421,6 +421,34 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
   .light-mode .aurora-2{{width:340px;height:180px;background:rgba(139,92,246,.3);top:-45px;left:32%;}}
   .light-mode .aurora-3{{width:380px;height:190px;background:rgba(20,184,166,.28);top:-60px;left:38%;}}
   @keyframes aurora-drift{{0%{{transform:translate(0,0) scale(1);}}100%{{transform:translate(30px,22px) scale(1.22);}}}}
+
+  /* ── Konami code: ghosted centered glyph (one at a time, no pre-shown code) + reveal ── */
+  .konami-glyph{{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.5);z-index:9998;width:150px;height:150px;border-radius:50%;background:rgba(10,14,28,.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;font-size:76px;font-weight:900;color:#fff;box-shadow:0 0 50px rgba(74,124,247,.55),0 16px 44px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .25s cubic-bezier(.34,1.56,.64,1);}}
+  .konami-glyph.show{{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+
+  body.konami-shake{{animation:konami-shake .4s linear;}}
+  @keyframes konami-shake{{
+    0%,100%{{transform:translate(0,0);}}
+    10%{{transform:translate(-9px,-5px) rotate(-.6deg);}}
+    20%{{transform:translate(9px,5px) rotate(.6deg);}}
+    30%{{transform:translate(-8px,4px);}}
+    40%{{transform:translate(8px,-4px);}}
+    50%{{transform:translate(-6px,3px);}}
+    60%{{transform:translate(6px,-3px);}}
+    70%{{transform:translate(-4px,2px);}}
+    80%{{transform:translate(4px,-2px);}}
+    90%{{transform:translate(-2px,1px);}}
+  }}
+
+  #konami-flash{{position:fixed;inset:0;z-index:10000;pointer-events:none;background:radial-gradient(circle,rgba(74,124,247,.95),rgba(74,124,247,.35) 60%,transparent 100%);opacity:0;}}
+  #konami-flash.active{{animation:konami-flash-fade .6s ease-out forwards;}}
+  @keyframes konami-flash-fade{{0%{{opacity:1;}}100%{{opacity:0;}}}}
+
+  #konami-toast{{position:fixed;top:72px;left:50%;transform:translate(-50%,-10px);z-index:10001;background:linear-gradient(135deg,#4a7cf7,#8b5cf6);color:#fff;font-weight:700;font-size:14px;padding:10px 22px;border-radius:99px;box-shadow:0 8px 24px rgba(74,124,247,.45);opacity:0;pointer-events:none;transition:opacity .35s ease,transform .35s ease;}}
+  #konami-toast.show{{opacity:1;transform:translate(-50%,0);}}
+
+  .card.card-burst{{animation:card-burst-in .6s cubic-bezier(.34,1.56,.64,1) forwards;}}
+  @keyframes card-burst-in{{0%{{opacity:0;transform:scale(.7) rotate(-2deg);}}60%{{opacity:1;transform:scale(1.08) rotate(1deg);}}100%{{opacity:1;transform:scale(1) rotate(0);}}}}
 </style>
 </head>
 <body>
@@ -692,23 +720,68 @@ function toggleTheme(){{
   }});
 }})();
 
-/* ── Konami code → reveals the 2 hidden dashboard cards for this page view only ── */
+/* ── Konami code → one ghosted glyph flashes center-screen per correct key (nothing shown in advance), then a full reveal when complete ── */
 (function(){{
-  var code=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+  var seqKeys=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+  var seqGlyphs=['&#8593;','&#8593;','&#8595;','&#8595;','&#8592;','&#8594;','&#8592;','&#8594;','B','A'];
   var pos=0;
+
+  function showGlyph(g){{
+    var el=document.createElement('div');
+    el.className='konami-glyph';
+    el.innerHTML=g;
+    document.body.appendChild(el);
+    requestAnimationFrame(function(){{ el.classList.add('show'); }});
+    setTimeout(function(){{ el.classList.remove('show'); }},500);
+    setTimeout(function(){{ el.remove(); }},800);
+  }}
+
+  function reveal(){{
+    document.body.classList.add('konami-shake');
+    setTimeout(function(){{ document.body.classList.remove('konami-shake'); }},400);
+
+    var flash=document.createElement('div');
+    flash.id='konami-flash';
+    document.body.appendChild(flash);
+    requestAnimationFrame(function(){{ flash.classList.add('active'); }});
+    setTimeout(function(){{ flash.remove(); }},700);
+
+    var toast=document.createElement('div');
+    toast.id='konami-toast';
+    toast.innerHTML='&#128275; Secret Unlocked';
+    document.body.appendChild(toast);
+    requestAnimationFrame(function(){{ toast.classList.add('show'); }});
+    setTimeout(function(){{ toast.classList.remove('show'); }},2000);
+    setTimeout(function(){{ toast.remove(); }},2400);
+
+    ['card-secret-1','card-secret-2'].forEach(function(id,i){{
+      var el=document.getElementById(id);
+      if(!el||el.dataset.revealed)return;
+      el.dataset.revealed='1';
+      el.style.display='';
+      setTimeout(function(){{
+        el.style.opacity='';
+        el.style.transform='';
+        el.classList.add('card-burst');
+      }},150+i*180);
+    }});
+  }}
+
+  var arrowKeys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
   document.addEventListener('keydown',function(e){{
-    pos=(e.code===code[pos])?pos+1:(e.code===code[0]?1:0);
-    if(pos===code.length){{
-      pos=0;
-      ['card-secret-1','card-secret-2'].forEach(function(id,i){{
-        var el=document.getElementById(id);
-        if(!el||el.dataset.revealed)return;
-        el.dataset.revealed='1';
-        el.style.display='';
-        requestAnimationFrame(function(){{
-          setTimeout(function(){{ el.style.opacity='1'; el.style.transform='scale(1)'; }},i*150);
-        }});
-      }});
+    if(arrowKeys.indexOf(e.code)!==-1) e.preventDefault();
+    if(e.code===seqKeys[pos]){{
+      showGlyph(seqGlyphs[pos]);
+      pos++;
+      if(pos===seqKeys.length){{
+        pos=0;
+        reveal();
+      }}
+      return;
+    }}
+    pos=(e.code===seqKeys[0])?1:0;
+    if(pos===1){{
+      showGlyph(seqGlyphs[0]);
     }}
   }});
 }})();
