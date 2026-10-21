@@ -1,6 +1,41 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-10-14
+Last updated: 2026-10-21
+
+---
+
+## Recent Changes (2026-10-21) — Accelerate Onboarding: new Certification Journey tab + Manager/Individual toggle
+
+Resmie sent `onboarding_7.html` (a hand-built prototype) + a change-log docx describing the real
+4-stage certification journey: Onboarding Curriculum → Advanced Boot Camp → Social Selling Workshop
+→ Capstone Workshop → Certified. Ported it into `update_onboarding_dashboard.py` as a second tab
+alongside Onboarding, byte-for-byte verified against her prototype (only cosmetic Unicode-literal
+vs. JS-escape-sequence differences remain). Confirmed her baseline matched the live `onboarding.html`
+exactly before porting — a clean, surgical +604-line diff.
+
+**New tab adds:** 6 stat cards, 2 charts (Certified by Market, Attendance by Market), a filterable/
+sortable/searchable tracker table, a 5-step detail modal with a certified/not-certified banner, PDF +
+Excel export, and a new Hire Status filter (All/New Hires/Tenured, 65-day rolling cutoff) shared
+across both tabs. `#cert` in the URL opens the tab directly on a fresh page load.
+
+**⚠️ Data is a TEMPORARY placeholder** (`onboarding-data/_cert_journey_placeholder.json`, 48 of 84
+learners, frozen to Oct 21, 2026) — Jason explicitly chose to ship this as a test build while waiting
+on Resmie's real `Accelerate_Journey_*.xlsx` report. The Python loader is a clearly-commented
+`try/except` block ready to be swapped for a real one.
+
+**Real bug found and fixed during the port:** the "View full onboarding detail" button's apostrophe-
+escaping lost a level of backslash when first typed into the Python f-string (Python's own string
+literal rules collapse `\'`→`'` and `\\`→`\` inside a non-raw f-string, separate from this project's
+usual `{`/`}` doubling convention). Caught via a byte-level `od -c` comparison, not a visual diff —
+fixed and reverified byte-identical to Resmie's original.
+
+**Same-day follow-up:** added the Individual/By Manager toggle to the new Certification Journey
+tracker table, mirroring the Onboarding tab's existing pattern exactly — reused the same
+`toggleMgrGroup()` function and CSS classes with zero duplication, and kept the table's in-view
+search fully decoupled from exports (exports always use the real Milestone filter, never whatever's
+typed in the table's own search box), matching how the Onboarding tab's own search already works.
+
+Full detail in project memory `onboarding_dashboard.md`.
 
 ---
 

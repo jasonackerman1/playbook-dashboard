@@ -452,6 +452,20 @@ def generate_html(records, sales_map=None):
     header_date_label = _lms_label
     total       = len(people)
 
+    # ── Certification Journey (TEMPORARY placeholder, added 2026-10-21) ──
+    # Hand-ported from Resmie's onboarding_7.html prototype, a static snapshot dated 2026-10-21
+    # (see Change_Log_onboarding_6_to_onboarding_7.docx). Replace this loader with a real one
+    # reading onboarding-data/Accelerate_Journey_*.xlsx once Resmie sends the actual report —
+    # she said it's coming within a day of this build. Until then the tab shows frozen Oct 21 data.
+    try:
+        with open(os.path.join('onboarding-data', '_cert_journey_placeholder.json'), encoding='utf-8') as _cj_f:
+            cert_journey = json.load(_cj_f)
+    except Exception:
+        cert_journey = {}
+    cert_meta         = {'completionSource': 'LMS Accelerate Journey report', 'completionThrough': '2026-10-21'}
+    cert_journey_json = json.dumps(cert_journey, separators=(',', ':'))
+    cert_meta_json    = json.dumps(cert_meta, separators=(',', ':'))
+
     curric_ids   = json.dumps([c[0] for c in CURRICULA])
     curric_names = json.dumps({c[0]: c[1] for c in CURRICULA})
 
@@ -730,6 +744,34 @@ def generate_html(records, sales_map=None):
   #print-roster-wrap table{{width:100%;border-collapse:collapse;font-size:11px;}}
   #print-roster-wrap th{{background:#eee;padding:6px 8px;text-align:left;border:1px solid #ccc;font-size:10px;}}
   #print-roster-wrap td{{padding:5px 8px;border:1px solid #ddd;}}
+
+  /* ── Tabs ── */
+  .tabs{{display:flex;gap:2px;padding:0 28px;border-bottom:1px solid var(--border);background:var(--surface);}}
+  .tab-btn{{padding:11px 18px;font-size:13px;font-weight:600;color:var(--muted);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;transition:color .15s,border-color .15s;}}
+  .tab-btn:hover{{color:var(--text);}}
+  .tab-btn.active{{color:var(--text);border-bottom-color:var(--accent);}}
+
+  /* ── Certification Journey tab ── */
+  .cj-chip{{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:5px;white-space:nowrap;line-height:1.4;}}
+  .cj-chip.done{{background:#15803d;color:#fff;}}
+  .cj-chip.warn{{background:#b45309;color:#fff;}}
+  .cj-chip.none{{background:var(--surface2);color:var(--muted);font-weight:600;}}
+  .cj-chip.reg{{background:#1d4ed8;color:#fff;}}
+  .cj-sub{{display:block;font-size:10px;color:var(--muted);margin-top:2px;font-weight:400;}}
+  td.cj-c, th.cj-c{{text-align:center;}}
+  .cj-stepper{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px;}}
+  .cj-step{{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}}
+  .cj-step.done{{border-color:#15803d;background:var(--green-subtle);}}
+  .cj-step.active{{border-color:#1d4ed8;}}
+  .cj-step.warn{{border-color:#b45309;background:var(--amber-subtle);}}
+  .cj-step.reg{{border-color:#1d4ed8;}}
+  .cj-step.reg .cj-num{{background:#1d4ed8;}}
+  .cj-num{{width:26px;height:26px;border-radius:50%;background:#6b7280;color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;margin-bottom:6px;}}
+  .cj-step.done .cj-num{{background:#15803d;}}
+  .cj-step.active .cj-num{{background:#1d4ed8;}}
+  .cj-step.warn .cj-num{{background:#b45309;}}
+  .cj-step-label{{font-size:12px;font-weight:700;}}
+  .cj-step-status{{font-size:11px;color:var(--muted);margin-top:2px;}}
 </style>
 </head>
 <body>
@@ -757,10 +799,17 @@ def generate_html(records, sales_map=None):
         <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
         <div class="export-parent">Overdue Only<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('overdue')">PDF</button><button class="export-item" onclick="runExportXLSX('overdue')">Excel</button></div></div>
         <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
+        <div class="export-parent">Certification Journey<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runCertExport()">PDF</button><button class="export-item" onclick="runCertExportXLSX()">Excel</button></div></div>
       </div>
     </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
     <button class="btn-theme" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
   </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs print-hide">
+  <button class="tab-btn active" data-tab="onboarding" onclick="switchTab('onboarding')">Onboarding</button>
+  <button class="tab-btn" data-tab="cert" onclick="switchTab('cert')">Certification Journey</button>
 </div>
 
 <!-- Filters -->
@@ -773,13 +822,19 @@ def generate_html(records, sales_map=None):
   </div>
   <span class="filter-label">Market</span>
   <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
-  <span class="filter-label">Status</span>
+  <span class="filter-label">Hire Status</span>
+  <div class="btn-group" id="tenure-btns">
+    <button class="active" onclick="setTenure('all',this)">All</button>
+    <button onclick="setTenure('new',this)" title="Hired within the last 65 days">New Hires</button>
+    <button onclick="setTenure('tenured',this)" title="Hired more than 65 days ago">Tenured</button>
+  </div>
+  <span id="f-status-wrap" style="display:contents"><span class="filter-label">Status</span>
   <select id="f-status" onchange="applyFilters()">
     <option value="">All</option>
     <option value="Completed">Completed</option>
     <option value="On Track">On Track</option>
     <option value="Overdue">Overdue</option>
-  </select>
+  </select></span>
   <span class="filter-label">Group</span>
   <button class="btn-reset" id="test-group-toggle" onclick="toggleTestGroup(this)">Show Early Access Cohort</button>
   <button class="btn-reset" onclick="resetFilters()">Reset</button>
@@ -787,6 +842,7 @@ def generate_html(records, sales_map=None):
   <span class="result-count" id="result-count"></span>
 </div>
 
+<div id="tab-onboarding">
 <!-- Stat cards -->
 <div class="stats">
   <div class="stat">
@@ -878,6 +934,113 @@ def generate_html(records, sales_map=None):
   </div>
 </div>
 
+</div><!-- /tab-onboarding -->
+
+<!-- ═══════════ Certification Journey tab ═══════════ -->
+<div id="tab-cert" style="display:none">
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Total Enrolled <span class="info-btn" onclick="showInfo(event,'cert-total')">?</span></div>
+      <div class="stat-value blue" id="cj-total">&#8212;</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Onboarding Complete <span class="info-btn" onclick="showInfo(event,'cert-onboarding')">?</span></div>
+      <div class="stat-value" id="cj-onb">&#8212;</div>
+      <div class="stat-sub" id="cj-onb-sub"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Advanced Boot Camp <span class="info-btn" onclick="showInfo(event,'cert-bootcamp')">?</span></div>
+      <div class="stat-value" id="cj-boot">&#8212;</div>
+      <div class="stat-sub" id="cj-boot-sub"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Social Selling <span class="info-btn" onclick="showInfo(event,'cert-social')">?</span></div>
+      <div class="stat-value" id="cj-soc">&#8212;</div>
+      <div class="stat-sub" id="cj-soc-sub"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Capstone Workshop <span class="info-btn" onclick="showInfo(event,'cert-capstone')">?</span></div>
+      <div class="stat-value" id="cj-cap">&#8212;</div>
+      <div class="stat-sub" id="cj-cap-sub"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'cert-certified')">?</span></div>
+      <div class="stat-value green" id="cj-cert">&#8212;</div>
+      <div class="stat-sub" id="cj-cert-sub"></div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-card">
+      <div class="chart-title">Certified by Market <span class="info-btn" onclick="showInfo(event,'cert-market-certified')">?</span></div>
+      <div class="chart-wrap"><canvas id="certMarketCertChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Attendance by Market <span class="info-btn" onclick="showInfo(event,'cert-market-attendance')">?</span></div>
+      <div class="chart-wrap"><canvas id="certMarketAttChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Certification Journey Tracker <span class="info-btn" onclick="showInfo(event,'cert-table')">?</span></div>
+        <div class="section-hint">Click any row to see each milestone in detail <span id="cert-asof"></span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="sort-btn active" id="cert-view-individual" onclick="setCertTableView('individual')">Individual</button>
+          <button class="sort-btn" id="cert-view-manager" onclick="setCertTableView('manager')">By Manager</button>
+          <span class="info-btn" onclick="showInfo(event,'cert-view-toggle')" style="margin-left:2px;">?</span>
+        </div>
+        <span class="filter-label">Milestone</span>
+        <select id="cert-ms" onchange="renderCertTable()">
+          <option value="">All</option>
+          <optgroup label="Advanced Boot Camp">
+            <option value="bootCamp:done">Attended</option>
+            <option value="bootCamp:reg">Registered</option>
+            <option value="bootCamp:none">Not registered</option>
+          </optgroup>
+          <optgroup label="Social Selling Workshop">
+            <option value="social:done">Attended</option>
+            <option value="social:reg">Registered</option>
+            <option value="social:none">Not registered</option>
+          </optgroup>
+          <optgroup label="Capstone Workshop">
+            <option value="capstone:done">Attended</option>
+            <option value="capstone:reg">Registered</option>
+            <option value="capstone:none">Not registered</option>
+          </optgroup>
+          <optgroup label="Certified">
+            <option value="certification:done">Yes</option>
+            <option value="certification:none">No</option>
+          </optgroup>
+        </select>
+        <span class="filter-label">Sort</span>
+        <select id="cert-sort" onchange="renderCertTable()">
+          <option value="name">Name A&rarr;Z</option>
+          <option value="ms-desc">Most Milestones</option>
+          <option value="ms-asc">Fewest Milestones</option>
+          <option value="onb-desc">Onboarding % High&rarr;Low</option>
+        </select>
+        <input type="text" id="cert-search" oninput="renderCertTable()" placeholder="Search name or manager..." style="font-size:12px;padding:4px 10px;width:200px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;">
+      </div>
+    </div>
+    <div class="legend">
+      <span class="leg"><span class="leg-dot" style="background:#15803d"></span>Completed</span>
+      <span class="leg"><span class="leg-dot" style="background:#1d4ed8"></span>Registered (assigned, not yet attended)</span>
+      <span class="leg"><span class="leg-dot" style="background:#6b7280"></span>Not registered</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead id="cert-head"></thead>
+        <tbody id="cert-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- /tab-certification -->
+
 <!-- User detail modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalBg(event)">
   <div class="modal-card" id="modal-card">
@@ -897,6 +1060,21 @@ def generate_html(records, sales_map=None):
 const PEOPLE = {people_json};
 const SALES_MAP = {sales_map_json};
 const COHORT_TOTAL = {cohort_total};
+/* Certification Journey records. Keyed by email (any capitalisation).
+   Anyone not listed has not completed that milestone. Shape:
+   {{ "name@kmbs.konicaminolta.us": {{
+       bootCamp:      {{ attended: true, date: "YYYY-MM-DD",           // completion report
+                        registered: true, registeredDate: "YYYY-MM-DD" }},   // assigned in the LMS, not yet completed
+                        // (sessionDate: "YYYY-MM-DD" may be added when a registration report has session dates)
+       socialSelling: {{ attended: true, date: "YYYY-MM-DD",
+                        registered: true, sessionDate: "YYYY-MM-DD" }},
+       capstone:      {{ attended: true, date: "YYYY-MM-DD",           // Accelerate: Capstone Presentation Certification Workshop
+                        registered: true, registeredDate: "YYYY-MM-DD" }},
+       certification: {{ completed: true, date: "YYYY-MM-DD" }}   // "Accelerate Certification" LMS course
+   }} }}                                                                            */
+const CERT_JOURNEY = {cert_journey_json};
+/* Source of the completion records above. */
+const CERT_META = {cert_meta_json};
 const COURSE_PAGE = {course_page_json};
 const PAGE_ORDER = {page_order_json};
 const CURRIC_IDS = {curric_ids};
@@ -974,6 +1152,7 @@ function populateMarketDropdown() {{
     if (testGroupFilter === 'only' && !TEST_GROUP_NAMES.has(p.name)) return false;
     if (locationFilter === 'us' && p.isCanada) return false;
     if (locationFilter === 'ca' && !p.isCanada) return false;
+    if (!passesTenure(p)) return false;
     return true;
   }});
   const markets = [...new Set(visible.map(p => p.market))].sort();
@@ -1245,6 +1424,7 @@ function toggleTheme() {{
   document.getElementById('btn-theme').innerHTML = light ? '&#9790; Dark' : '&#9728; Light';
   localStorage.setItem('pb-theme', light ? 'light' : 'dark');
   renderCharts();
+  if (typeof renderCertCharts === 'function' && certTabActive) renderCertCharts();
 }}
 (function() {{
   const t = localStorage.getItem('pb-theme');
@@ -1357,6 +1537,8 @@ function resetFilters() {{
   locationFilter = 'all';
   document.querySelectorAll('#location-btns button').forEach((b,i) => b.classList.toggle('active', i===0));
   filterTableRows();
+  if (typeof resetTenure === 'function') resetTenure();
+  if (typeof resetCertControls === 'function') resetCertControls();
   applyFilters();
 }}
 
@@ -1372,6 +1554,7 @@ function applyFilters() {{
     if (testGroupFilter === 'only' && !TEST_GROUP_NAMES.has(p.name)) return false;
     if (locationFilter === 'us' && p.isCanada) return false;
     if (locationFilter === 'ca' && !p.isCanada) return false;
+    if (!passesTenure(p)) return false;
     if (mkt && p.market !== mkt) return false;
     const st = computeStatus(p);
     if (status && st !== status) return false;
@@ -1392,10 +1575,12 @@ function applyFilters() {{
   }}
   else {{ filtered.sort((a,b) => a.name.localeCompare(b.name)); tableSort = {{col:'name', dir:'asc'}}; }}
 
+  certBase = PEOPLE.filter(p => passesBaseFilters(p, mkt));
   renderStats();
   renderTable();
   renderCharts();
   document.getElementById('result-count').textContent = filtered.length + ' shown';
+  renderCert();
 }}
 
 /* ── Stats ── */
@@ -2120,6 +2305,492 @@ function runExport(type) {{
   window.print();
 }}
 
+/* ═══════════════ Accelerate Certification Journey tab ═══════════════ */
+let certBase = [];
+let certTabActive = false;
+let certTableView = 'individual';   // 'individual' | 'manager' — same pattern as the Onboarding tab's tableView
+let certMarketCertChartObj = null, certMarketAttChartObj = null;
+
+/* The four requirements, in journey order. */
+const CERT_STEPS = [
+  {{key:'onboarding',   label:'Onboarding',     full:'Accelerate Onboarding curriculum (100%)'}},
+  {{key:'bootCamp',     label:'Boot Camp',      full:'Accelerate Advanced Boot Camp'}},
+  {{key:'social',       label:'Social Selling', full:'Social Selling Workshop: Building Your LinkedIn Brand & Driving Engagement'}},
+  {{key:'capstone',      label:'Capstone Workshop', full:'Accelerate: Capstone Presentation Certification Workshop'}},
+  {{key:'certification', label:'Certification', full:'Accelerate Certification course'}},
+];
+
+/* ── Tenure filter (shared by both tabs) ──
+   New hire = hired within the last 65 days (hire date to today, inclusive); Tenured = more than 65 days. */
+const NEW_HIRE_DAYS = 65;
+let tenureFilter = 'all';   // 'all' | 'new' | 'tenured'
+function daysSinceHire(p) {{
+  if (!p.hireDate) return null;
+  const d = new Date(p.hireDate + 'T00:00:00');
+  if (isNaN(d)) return null;
+  return Math.round((TODAY - d) / 86400000);   // round, not floor: stays correct across daylight-saving changes
+}}
+function isNewHire(p) {{ const n = daysSinceHire(p); return n !== null && n <= NEW_HIRE_DAYS; }}
+function passesTenure(p) {{
+  if (tenureFilter === 'all') return true;
+  const n = daysSinceHire(p);
+  if (n === null) return false;                 // no hire date on file: only shown under "All"
+  return tenureFilter === 'new' ? n <= NEW_HIRE_DAYS : n > NEW_HIRE_DAYS;
+}}
+function setTenure(val, btn) {{
+  tenureFilter = val;
+  document.querySelectorAll('#tenure-btns button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}}
+function resetTenure() {{
+  tenureFilter = 'all';
+  document.querySelectorAll('#tenure-btns button').forEach((b, i) => b.classList.toggle('active', i === 0));
+}}
+
+/* Same filters as the Onboarding tab, minus Status (which is onboarding-specific). */
+function passesBaseFilters(p, mkt) {{
+  if (hideTLG && TLG_SET.has(p.name.toLowerCase())) return false;
+  if (testGroupFilter === 'hide' && TEST_GROUP_NAMES.has(p.name)) return false;
+  if (testGroupFilter === 'only' && !TEST_GROUP_NAMES.has(p.name)) return false;
+  if (locationFilter === 'us' && p.isCanada) return false;
+  if (locationFilter === 'ca' && !p.isCanada) return false;
+  if (!passesTenure(p)) return false;
+  if (mkt && p.market !== mkt) return false;
+  return true;
+}}
+
+/* Onboarding counts as complete when the LMS marks the whole curriculum done (100%).
+   NOTE: two Sales Skills courses (the KMPF ones) are still "(Coming Soon)" and can't be
+   completed yet, so until they launch nobody reaches 100% -- the same reason the
+   Onboarding tab currently shows 0% Completed. Change this one rule to count someone
+   as done once every currently-available course is finished. */
+function certOnboardingDone(p) {{ return !!p.overallDone || p.overallPct >= 100; }}
+
+/* Case-insensitive lookup: report emails are often mixed-case (e.g. ARedondo@...). */
+let _certIdx = null, _certIdxN = -1;
+function certRec(p) {{
+  const keys = Object.keys(CERT_JOURNEY);
+  if (!_certIdx || _certIdxN !== keys.length) {{
+    _certIdx = {{}};
+    keys.forEach(k => {{ _certIdx[k.toLowerCase()] = CERT_JOURNEY[k]; }});
+    _certIdxN = keys.length;
+  }}
+  return _certIdx[(p.email || '').toLowerCase()] || {{}};
+}}
+
+function certSteps(p) {{
+  const r = certRec(p);
+  const bc = r.bootCamp || {{}}, ss = r.socialSelling || {{}}, cp = r.capstone || {{}}, cr = r.certification || {{}};
+  return {{
+    onboarding:    {{done: certOnboardingDone(p), pct: p.overallPct}},
+    bootCamp:      {{done: !!bc.attended, date: bc.date || '', reg: !!bc.registered, sessionDate: bc.sessionDate || '', regDate: bc.registeredDate || ''}},
+    social:        {{done: !!ss.attended, date: ss.date || '', reg: !!ss.registered, sessionDate: ss.sessionDate || '', regDate: ss.registeredDate || ''}},
+    capstone:      {{done: !!cp.attended, date: cp.date || '', reg: !!cp.registered, sessionDate: cp.sessionDate || '', regDate: cp.registeredDate || ''}},
+    /* Certified = the Accelerate Certification course has a completion date. */
+    certification: {{done: !!(cr.completed || cr.date), date: cr.date || ''}},
+  }};
+}}
+
+/* Registration. A milestone is in one of four states for each person:
+   done (completed) > reg (registered, not yet completed) > none. Certification only has done / none. */
+const CERT_REC_KEY = {{bootCamp: 'bootCamp', social: 'socialSelling', capstone: 'capstone'}};
+const CERT_CLASS_KEYS = ['bootCamp', 'social', 'capstone'];
+function certMsState(p, key) {{
+  const d = certSteps(p)[key];
+  if (d.done) return 'done';
+  if (d.reg) return 'reg';
+  return 'none';
+}}
+/* Shown date for a registered class: the session date if we have one, otherwise the LMS assignment date. */
+function certRegLabel(d) {{
+  if (d.sessionDate) return fmtDate(d.sessionDate);
+  if (d.regDate) return 'Assigned ' + fmtDate(d.regDate);
+  return '';
+}}
+function certMilestones(p) {{
+  const s = certSteps(p);
+  return CERT_STEPS.filter(st => s[st.key].done).length;
+}}
+/* Certified = the "Accelerate Certification" course has a completion date in the LMS. */
+function isCertified(p) {{ return certSteps(p).certification.done; }}
+/* Next step = first milestone not yet complete, in journey order. Certified people have none. */
+function certNextStep(p) {{
+  if (isCertified(p)) return null;
+  const s = certSteps(p);
+  return CERT_STEPS.find(st => !s[st.key].done) || null;
+}}
+
+function switchTab(which) {{
+  certTabActive = (which === 'cert');
+  document.getElementById('tab-onboarding').style.display = certTabActive ? 'none' : '';
+  document.getElementById('tab-cert').style.display = certTabActive ? '' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === which));
+  document.getElementById('f-status-wrap').style.display = certTabActive ? 'none' : 'contents';
+  if (certTabActive) {{
+    renderCert();
+  }} else {{
+    renderCharts();
+    document.getElementById('result-count').textContent = filtered.length + ' shown';
+  }}
+}}
+
+function resetCertControls() {{
+  ['cert-ms', 'cert-search'].forEach(id => {{ const el = document.getElementById(id); if (el) el.value = ''; }});
+  const b = document.getElementById('cert-sort');
+  if (b) b.value = 'name';
+}}
+
+function setCertTableView(v) {{
+  certTableView = v;
+  document.getElementById('cert-view-individual').classList.toggle('active', v === 'individual');
+  document.getElementById('cert-view-manager').classList.toggle('active', v === 'manager');
+  const searchEl = document.getElementById('cert-search');
+  searchEl.placeholder = v === 'manager' ? 'Search manager...' : 'Search name or manager...';
+  searchEl.value = '';
+  renderCertTable();
+}}
+
+function renderCert() {{
+  const asof = document.getElementById('cert-asof');
+  if (asof && typeof CERT_META !== 'undefined') asof.textContent = '· Completions from the ' + CERT_META.completionSource + ', through ' + fmtDate(CERT_META.completionThrough);
+  renderCertStats();
+  renderCertTable();
+  if (certTabActive) {{
+    renderCertCharts();
+    document.getElementById('result-count').textContent = certBase.length + ' shown';
+  }}
+}}
+
+function renderCertStats() {{
+  const total = certBase.length;
+  const pctOf = n => total ? Math.round(n / total * 100) + '%' : '—';
+  const onb  = certBase.filter(p => certSteps(p).onboarding.done).length;
+  const boot = certBase.filter(p => certSteps(p).bootCamp.done).length;
+  const soc  = certBase.filter(p => certSteps(p).social.done).length;
+  const cap  = certBase.filter(p => certSteps(p).capstone.done).length;
+  const cert = certBase.filter(isCertified).length;
+  const avg  = total ? Math.round(certBase.reduce((s, p) => s + p.overallPct, 0) / total) : 0;
+  const regN = key => certBase.filter(p => certMsState(p, key) === 'reg').length;
+  const regTxt = key => ' · ' + regN(key) + ' registered';
+  const set = (id, v) => {{ document.getElementById(id).textContent = v; }};
+  set('cj-total', total);
+  set('cj-onb', pctOf(onb));      set('cj-onb-sub', onb + ' of ' + total + ' · avg ' + avg + '% complete');
+  set('cj-boot', pctOf(boot));    set('cj-boot-sub', boot + ' of ' + total + ' attended' + regTxt('bootCamp'));
+  set('cj-soc', pctOf(soc));      set('cj-soc-sub', soc + ' of ' + total + ' attended' + regTxt('social'));
+  set('cj-cap', pctOf(cap));      set('cj-cap-sub', cap + ' of ' + total + ' attended' + regTxt('capstone'));
+  set('cj-cert', pctOf(cert));    set('cj-cert-sub', cert + ' of ' + total + ' · completed Accelerate Certification');
+}}
+
+/* ── Table ── */
+function certChip(done, text, sub) {{
+  return '<span class="cj-chip ' + (done ? 'done' : 'none') + '">' + text + '</span>' +
+    (sub ? '<span class="cj-sub">' + sub + '</span>' : '');
+}}
+/* One table cell for a Boot Camp / Social Selling milestone. */
+function certMsCell(p, key) {{
+  const d = certSteps(p)[key];
+  const st = certMsState(p, key);
+  const sub = t => t ? '<span class="cj-sub">' + t + '</span>' : '';
+  if (st === 'done') return '<span class="cj-chip done">✓ Attended</span>' + sub(d.date ? fmtDate(d.date) : '');
+  if (st === 'reg')  return '<span class="cj-chip reg">Registered</span>' + sub(certRegLabel(d));
+  return '<span class="cj-chip none">Not registered</span>';
+}}
+/* Certified column: plain Yes / No. */
+function certCertifiedCell(p) {{
+  return isCertified(p) ? '<span class="cj-chip done">Yes</span>' : '<span class="cj-chip none">No</span>';
+}}
+function certFilteredRows(opts) {{
+  opts = opts || {{}};
+  const applySearch = opts.applySearch !== false;
+  const ms    = document.getElementById('cert-ms').value;
+  const sort  = document.getElementById('cert-sort').value;
+  const q     = document.getElementById('cert-search').value.trim().toLowerCase();
+  let rows = certBase.filter(p => {{
+    if (applySearch && q && !(p.name.toLowerCase().includes(q) || (p.manager || '').toLowerCase().includes(q))) return false;
+    if (ms) {{ const parts = ms.split(':'); if (certMsState(p, parts[0]) !== parts[1]) return false; }}
+    return true;
+  }});
+  if (sort === 'ms-desc')       rows.sort((a, b) => (isCertified(b) - isCertified(a)) || certMilestones(b) - certMilestones(a) || b.overallPct - a.overallPct || a.name.localeCompare(b.name));
+  else if (sort === 'ms-asc')   rows.sort((a, b) => (isCertified(a) - isCertified(b)) || certMilestones(a) - certMilestones(b) || a.overallPct - b.overallPct || a.name.localeCompare(b.name));
+  else if (sort === 'onb-desc') rows.sort((a, b) => b.overallPct - a.overallPct || a.name.localeCompare(b.name));
+  else                          rows.sort((a, b) => a.name.localeCompare(b.name));
+  return rows;
+}}
+function certVisibleRows() {{ return certFilteredRows(); }}
+
+function certPersonRow(p) {{
+  const onb = '<span class="pct-pill" style="' + overallPillStyle(p) + '">' + p.overallPct + '%</span>';
+  return '<tr data-email="' + escHtml(p.email) + '" onclick="openCertModal(this.dataset.email)">' +
+    '<td style="font-weight:600;white-space:nowrap">' + escHtml(p.name) + '<span class="cj-sub">' + escHtml(p.market) + '</span></td>' +
+    '<td style="font-size:12px;color:var(--muted);white-space:nowrap">' + escHtml(p.manager || '—') + '</td>' +
+    '<td class="cj-c">' + onb + '</td>' +
+    '<td class="cj-c">' + certMsCell(p, 'bootCamp') + '</td>' +
+    '<td class="cj-c">' + certMsCell(p, 'social') + '</td>' +
+    '<td class="cj-c">' + certMsCell(p, 'capstone') + '</td>' +
+    '<td class="cj-c">' + certCertifiedCell(p) + '</td></tr>';
+}}
+
+function renderCertTable() {{
+  document.getElementById('cert-head').innerHTML = '<tr>' +
+    '<th>Learner</th><th>Manager</th>' +
+    '<th class="cj-c">Onboarding</th><th class="cj-c">Boot Camp</th><th class="cj-c">Social Selling</th><th class="cj-c" title="Accelerate: Capstone Presentation Certification Workshop">Capstone Workshop</th><th class="cj-c">Certified</th></tr>';
+  const body = document.getElementById('cert-body');
+
+  if (certTableView === 'manager') {{
+    const rows = certFilteredRows({{applySearch: false}});
+    if (!rows.length) {{
+      body.innerHTML = '<tr style="cursor:default"><td colspan="7" style="text-align:center;color:var(--muted);padding:28px;">No learners match the current filters.</td></tr>';
+      return;
+    }}
+    const q = document.getElementById('cert-search').value.trim().toLowerCase();
+    const groups = {{}};
+    rows.forEach(p => {{
+      const mgr = p.manager || '(No Manager)';
+      if (!groups[mgr]) groups[mgr] = [];
+      groups[mgr].push(p);
+    }});
+    const mgrNames = Object.keys(groups).sort().filter(mgr => !q || mgr.toLowerCase().includes(q));
+    if (!mgrNames.length) {{
+      body.innerHTML = '<tr style="cursor:default"><td colspan="7" style="text-align:center;color:var(--muted);padding:28px;">No managers match the current filters.</td></tr>';
+      return;
+    }}
+    let html = '';
+    mgrNames.forEach(mgr => {{
+      const team = groups[mgr];
+      const cert = team.filter(isCertified).length;
+      const certStr = cert > 0 ? ' &nbsp;·&nbsp; <span style="color:var(--green);font-weight:600">' + cert + ' certified</span>' : '';
+      html += '<tr class="mgr-group-hdr-row" data-manager="' + escHtml(mgr.toLowerCase()) + '"><td colspan="7">' +
+        '<div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">' +
+        '<span style="font-weight:700;font-size:13px;">' + escHtml(mgr) + '</span>' +
+        '<span style="font-size:11px;color:var(--muted);">' + team.length + ' learner' + (team.length !== 1 ? 's' : '') + certStr + ' &nbsp;<span class="mgr-chevron">&#9660;</span></span>' +
+        '</div></td></tr>';
+      team.forEach(p => {{ html += certPersonRow(p); }});
+    }});
+    body.innerHTML = html;
+  }} else {{
+    const rows = certVisibleRows();
+    if (!rows.length) {{
+      body.innerHTML = '<tr style="cursor:default"><td colspan="7" style="text-align:center;color:var(--muted);padding:28px;">No learners match the current filters.</td></tr>';
+      return;
+    }}
+    body.innerHTML = rows.map(certPersonRow).join('');
+  }}
+}}
+
+/* ── Market charts ── */
+function renderCertCharts() {{
+  const markets = [...new Set(certBase.map(p => p.market))].sort();
+  const pc = (n, t) => t ? Math.round(n / t * 100) : 0;
+  const stats = markets.map(m => {{
+    const mp = certBase.filter(p => p.market === m);
+    const t = mp.length;
+    return {{
+      t,
+      cert: mp.filter(isCertified).length,
+      boot: mp.filter(p => certSteps(p).bootCamp.done).length,
+      soc:  mp.filter(p => certSteps(p).social.done).length,
+      cap:  mp.filter(p => certSteps(p).capstone.done).length,
+    }};
+  }});
+  // three bars per market on the attendance chart, so size both charts for that and keep the cards level
+  const h = Math.max(260, markets.length * 62) + 'px';
+  document.getElementById('certMarketCertChart').closest('.chart-wrap').style.height = h;
+  document.getElementById('certMarketAttChart').closest('.chart-wrap').style.height = h;
+
+  const grid = cv('border'), muted = cv('muted');
+  const axisX = {{min: 0, max: 100, grid: {{color: grid}}, ticks: {{color: muted, font: {{size: 11}}, callback: v => v + '%'}}, border: {{color: 'transparent'}}}};
+  const axisY = {{grid: {{display: false}}, ticks: {{color: muted, font: {{size: 11}}, autoSkip: false}}, border: {{color: 'transparent'}}}};
+  const legend = {{display: true, position: 'bottom', labels: {{color: muted, font: {{size: 11}}, boxWidth: 12, padding: 12}}}};
+  const total = i => stats[i].t;
+
+  // 1) Certified by market (stacked to 100%: Certified / Not certified)
+  const green = cv('green'), grey = '#6b7280';
+  const c1 = document.getElementById('certMarketCertChart').getContext('2d');
+  if (certMarketCertChartObj) certMarketCertChartObj.destroy();
+  certMarketCertChartObj = new Chart(c1, {{
+    type: 'bar',
+    data: {{labels: markets, datasets: [
+      {{label: 'Certified', data: stats.map(s => pc(s.cert, s.t)), backgroundColor: green + 'cc', borderColor: green, borderWidth: 1, maxBarThickness: 26}},
+      {{label: 'Not certified', data: stats.map(s => 100 - pc(s.cert, s.t)), backgroundColor: grey + '99', borderColor: grey, borderWidth: 1, maxBarThickness: 26}},
+    ]}},
+    options: {{
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {{legend, tooltip: {{callbacks: {{
+        label: c => {{
+          const s = stats[c.dataIndex];
+          const n = c.datasetIndex === 0 ? s.cert : s.t - s.cert;
+          return '  ' + c.dataset.label + ': ' + c.parsed.x + '% (' + n + ')';
+        }},
+        afterBody: items => ['  Total in this market: ' + total(items[0].dataIndex)]
+      }}}}}},
+      scales: {{x: Object.assign({{stacked: true}}, axisX), y: Object.assign({{stacked: true}}, axisY)}}
+    }}
+  }});
+
+  // 2) Attendance by market (grouped: Boot Camp / Social Selling attended)
+  const blue = cv('accent'), teal = cv('teal'), purple = cv('accent2');
+  const c2 = document.getElementById('certMarketAttChart').getContext('2d');
+  if (certMarketAttChartObj) certMarketAttChartObj.destroy();
+  certMarketAttChartObj = new Chart(c2, {{
+    type: 'bar',
+    data: {{labels: markets, datasets: [
+      {{label: 'Advanced Boot Camp attended', data: stats.map(s => pc(s.boot, s.t)), backgroundColor: blue + 'cc', borderColor: blue, borderWidth: 1, maxBarThickness: 14}},
+      {{label: 'Social Selling Workshop attended', data: stats.map(s => pc(s.soc, s.t)), backgroundColor: teal + 'cc', borderColor: teal, borderWidth: 1, maxBarThickness: 14}},
+      {{label: 'Capstone Workshop attended', data: stats.map(s => pc(s.cap, s.t)), backgroundColor: purple + 'cc', borderColor: purple, borderWidth: 1, maxBarThickness: 14}},
+    ]}},
+    options: {{
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {{legend, tooltip: {{callbacks: {{
+        label: c => {{
+          const s = stats[c.dataIndex];
+          const n = [s.boot, s.soc, s.cap][c.datasetIndex];
+          return '  ' + c.dataset.label + ': ' + c.parsed.x + '% (' + n + ' of ' + s.t + ')';
+        }}
+      }}}}}},
+      scales: {{x: axisX, y: axisY}}
+    }}
+  }});
+}}
+
+/* ── Detail modal (journey view) ── */
+function openCertModal(email) {{
+  const p = PEOPLE.find(x => x.email === email);
+  if (!p) return;
+  const s = certSteps(p);
+  const n = certMilestones(p);
+  const next = certNextStep(p);
+  const sessionTxt = d => {{ const t = certRegLabel(d); return t ? ' · ' + t : ''; }};
+
+  function step(i, st) {{
+    const d = s[st.key];
+    let cls = '', status = 'Not yet';
+    if (st.key === 'onboarding') {{
+      if (d.done) {{ cls = 'done'; status = '100% complete'; }}
+      else if (d.pct > 0) {{ cls = 'active'; status = d.pct + '% complete'; }}
+    }} else if (st.key === 'certification') {{
+      if (d.done) {{ cls = 'done'; status = 'Certified' + (d.date ? ' · ' + fmtDate(d.date) : ''); }}
+    }} else {{
+      const ms = certMsState(p, st.key);
+      if (ms === 'done')      {{ cls = 'done'; status = 'Attended' + (d.date ? ' · ' + fmtDate(d.date) : ''); }}
+      else if (ms === 'reg')  {{ cls = 'reg'; status = 'Registered' + sessionTxt(d); }}
+      else                    {{ status = 'Not registered'; }}
+    }}
+    return '<div class="cj-step ' + cls + '"><div class="cj-num">' + (cls === 'done' ? '✓' : (i + 1)) + '</div>' +
+      '<div class="cj-step-label">' + escHtml(st.label) + '</div><div class="cj-step-status">' + escHtml(status) + '</div></div>';
+  }}
+
+  function classRow(label, key) {{
+    const d = s[key];
+    const ms = certMsState(p, key);
+    let status, detail = '';
+    if (ms === 'done')     {{ status = 'Attended'; detail = d.date ? fmtDate(d.date) : ''; }}
+    else if (ms === 'reg') {{ status = 'Registered'; detail = d.sessionDate ? 'Session ' + fmtDate(d.sessionDate) : (d.regDate ? 'Assigned ' + fmtDate(d.regDate) : ''); }}
+    else                   {{ status = 'Not registered'; }}
+    return [label, status, detail];
+  }}
+
+  const detailRows = [
+    ['Accelerate Onboarding curriculum', s.onboarding.done ? 'Complete' : s.onboarding.pct + '% complete', ''],
+    classRow('Accelerate Advanced Boot Camp', 'bootCamp'),
+    classRow('Social Selling Workshop: Building Your LinkedIn Brand & Driving Engagement', 'social'),
+    classRow('Accelerate: Capstone Presentation Certification Workshop', 'capstone'),
+    ['Accelerate Certification course', s.certification.done ? 'Complete' : 'Not yet', s.certification.date ? fmtDate(s.certification.date) : ''],
+  ].map(x => '<tr><td>' + escHtml(x[0]) + '</td><td class="c">' + escHtml(x[1]) + '</td><td class="c">' + (x[2] ? escHtml(x[2]) : '—') + '</td></tr>').join('');
+
+  const curricPills = CURRIC_IDS.map(cid => {{
+    const c = p.curricula[cid];
+    if (!c) return '';
+    return '<div class="metric-box"><div class="mb-label">' + escHtml(CURRIC_NAMES[cid] || c.title) + '</div>' +
+      '<div class="mb-value"><span class="pct-pill" style="' + curricPillStyle(c, null) + ';font-size:12px">' + c.pct + '%</span></div>' +
+      '<div class="mb-sub">' + c.done + ' of ' + c.total + ' items</div></div>';
+  }}).join('');
+
+  const classLabel = {{bootCamp: 'Boot Camp', social: 'Social Selling', capstone: 'Capstone Workshop'}};
+  const upcoming = CERT_CLASS_KEYS.filter(k => certMsState(p, k) === 'reg')
+    .map(k => classLabel[k] + (certRegLabel(s[k]) ? ' (' + certRegLabel(s[k]) + ')' : ''));
+  const regNote = upcoming.length ? ' · Registered: ' + upcoming.join(', ') : '';
+  const banner = isCertified(p)
+    ? '<div class="rc-riskbar risk-green"><span class="rc-risklabel">★ Certified</span><span class="rc-riskaction">Accelerate Certification completed' + (s.certification.date ? ' ' + escHtml(fmtDate(s.certification.date)) : '') + '.</span></div>'
+    : '<div class="rc-riskbar risk-amber"><span class="rc-risklabel">Not certified yet</span><span class="rc-riskaction">Next step: <b>' + escHtml((next || CERT_STEPS[CERT_STEPS.length - 1]).full) + '</b>' + escHtml(regNote) + '</span></div>';
+
+  document.getElementById('modal-content').innerHTML =
+    '<div class="modal-header"><div class="modal-name">' + escHtml(p.name) + '</div>' +
+      '<div class="modal-meta"><span>' + escHtml(p.jobTitle || '') + '</span><span>' + escHtml(p.market) + '</span>' +
+      (p.manager ? '<span>Manager: ' + escHtml(p.manager) + '</span>' : '') + '</div></div>' +
+    '<div class="modal-body">' + banner +
+      '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Certification Journey</div>' +
+      '<div class="cj-stepper">' + CERT_STEPS.map((st, i) => step(i, st)).join('') + '</div>' +
+      '<table class="sched-table"><thead><tr><th>Milestone</th><th class="c">Status</th><th class="c">Date / Detail</th></tr></thead><tbody>' + detailRows + '</tbody></table>' +
+      '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Onboarding Curriculum</div>' +
+      '<div class="metric-grid">' + curricPills + '</div>' +
+      '<button class="btn-reset" onclick="openModal(\\'' + p.email.replace(/'/g, "\\\\'") + '\\')">View full onboarding detail &rarr;</button>' +
+    '</div>';
+  document.getElementById('modal-overlay').classList.add('open');
+}}
+
+/* ── Exports ── */
+function certExportRow(p) {{
+  const s = certSteps(p);
+  const txt = key => {{ const ms = certMsState(p, key); return ms === 'done' ? 'Attended' : ms === 'reg' ? 'Registered' : 'Not registered'; }};
+  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.sessionDate || d.regDate || '') : (d.date || ''); }};
+  return [
+    p.name, p.email, p.market, p.manager || '',
+    p.overallPct + '%',
+    txt('bootCamp'), dt('bootCamp'),
+    txt('social'),   dt('social'),
+    txt('capstone'), dt('capstone'),
+    certMilestones(p) + '/' + CERT_STEPS.length,
+    isCertified(p) ? 'Yes' : 'No',
+    s.certification.date || ''
+  ];
+}}
+const CERT_EXPORT_HEAD = ['Name','Email','Market','Manager','Onboarding %','Boot Camp','Boot Camp Date / Assigned','Social Selling','Social Selling Date / Assigned','Capstone Workshop','Capstone Date / Assigned','Milestones','Certified','Certification Date'];
+
+function runCertExportXLSX() {{
+  document.getElementById('export-menu').classList.remove('open');
+  const rows = [CERT_EXPORT_HEAD].concat(certVisibleRows().map(certExportRow));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [28,32,18,26,13,13,15,14,18,16,18,11,10,17].map(w => ({{wch: w}}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Certification Journey');
+  XLSX.writeFile(wb, 'accelerate-certification-journey.xlsx');
+}}
+
+function runCertExport() {{
+  document.getElementById('export-menu').classList.remove('open');
+  const rows = certVisibleRows();
+  const now = new Date().toLocaleDateString('en-US', {{month: 'long', day: 'numeric', year: 'numeric'}});
+  document.getElementById('ph-report-type').textContent = 'Certification Journey';
+  document.getElementById('ph-sub').textContent = rows.length + ' learners · ' + now + ' · Certified = Accelerate Certification course completed';
+  const head = ['Name','Market','Manager','Onboarding %','Boot Camp','Social Selling','Capstone Workshop','Milestones','Certified','Certified On'];
+  const body = rows.map(p => {{
+    const r = certExportRow(p);
+    return '<tr><td>' + escHtml(r[0]) + '</td><td>' + escHtml(r[2]) + '</td><td>' + escHtml(r[3]) + '</td><td>' + r[4] + '</td>' +
+      '<td>' + r[5] + '</td><td>' + r[7] + '</td><td>' + r[9] + '</td><td>' + r[11] + '</td><td>' + r[12] + '</td><td>' + (r[13] || '') + '</td></tr>';
+  }}).join('');
+  document.getElementById('print-roster-wrap').innerHTML =
+    '<table><thead><tr>' + head.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + body + '</tbody></table>';
+  window.print();
+}}
+
+/* ── Info popovers ── */
+/* Add the Tenure filter to the shared filter help text. */
+INFO['filters-info'] = INFO['filters-info'].replace('Use Reset to clear everything.',
+  'Hire Status: New Hires shows reps hired within the last 65 days; Tenured shows reps hired more than 65 days ago (applies on both tabs). Use Reset to clear everything.');
+Object.assign(INFO, {{
+  "cert-total": "Everyone currently shown on this tab. The Location, Hire Status, Market and Group filters apply here too; the Status filter is specific to the Onboarding tab and is hidden on this one.",
+  "cert-onboarding": "People who have completed 100% of the Accelerate Onboarding curriculum. This is live from the LMS data. The sub-line shows the average completion percentage for everyone shown.",
+  "cert-bootcamp": "People who completed the Accelerate Advanced Skills Bootcamp. The sub-line also shows how many are Registered, meaning assigned the class in the LMS but not yet completed.",
+  "cert-social": "People who completed the Social Selling Workshop: Building Your LinkedIn Brand & Driving Engagement. The sub-line also shows how many are Registered, meaning assigned the workshop in the LMS but not yet completed.",
+  "cert-certified": "People who have completed the Accelerate Certification course in the LMS. Anyone with a completion date for that course is marked Certified, regardless of the other milestones.",
+  "cert-market-certified": "Each market's learners split into Certified (completed the Accelerate Certification course) and Not certified. Hover a bar for exact counts and the market's total. Follows the Location, Market and Group filters.",
+  "cert-market-attendance": "For each market, the share of its learners who attended the Advanced Boot Camp, the Social Selling Workshop and the Capstone Workshop. Registered learners aren't counted as attended until the class is completed. Hover a bar for exact counts.",
+  "cert-capstone": "People who attended the Accelerate: Capstone Presentation Certification Workshop. The sub-line also shows how many are Registered, meaning assigned the workshop in the LMS but not yet completed.",
+  "cert-table": "One row per learner. Boot Camp, Social Selling and Capstone Workshop (Accelerate: Capstone Presentation Certification Workshop) each show Attended (with the completion date), Registered (assigned in the LMS and not yet completed, with the assignment date), or Not registered. Certified reads Yes once the Accelerate Certification course has a completion date, otherwise No. Use the Milestone filter to find, for example, everyone not yet registered for Boot Camp, or everyone who is Certified.",
+  "cert-view-toggle": "Individual view shows one row per learner. By Manager groups learners under their manager so you can see how each team is tracking against the Certification Journey. The search box updates automatically — in Individual view it searches by learner name or manager, in By Manager view it filters to matching manager groups only.",
+}});
+
 /* ── Init ── */
 function init() {{
   // Populate market dropdown (based on currently visible group, not full roster)
@@ -2181,6 +2852,7 @@ function runExportXLSX(type){{
 }}
 
 init();
+if (location.hash === '#cert') switchTab('cert');
 (function(){{
   var n=0,t;
   var h=document.querySelector('.header h1');

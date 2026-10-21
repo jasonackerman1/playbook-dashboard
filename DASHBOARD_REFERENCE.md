@@ -1,6 +1,6 @@
 # Playbook Dashboard Suite — Reference Documentation
 
-Last updated: 2026-10-14
+Last updated: 2026-10-21
 
 This is the **master reference** for every dashboard in this repo — what each one is for, what
 it measures, and the custom formulas/business rules baked into it. It is a *reference*, not a
@@ -358,6 +358,42 @@ including average Days to First Sale.
 
 **TLG:** always hidden — no toggle button exists on this dashboard (a deliberate, permanent
 exclusion, unlike the toggle-able pattern elsewhere).
+
+**Certification Journey tab — added 2026-10-21.** A second tab alongside Onboarding (switch via the
+tab bar, or open `onboarding.html#cert` directly), tracking the real 4-stage certification path:
+Onboarding Curriculum (100%) → Advanced Boot Camp → Social Selling Workshop → Capstone Workshop →
+Certified. The original Onboarding tab's Overall %/pacing math is untouched — this is purely an
+additional, higher-level view of the later stages the main tab never modeled.
+
+- 6 stat cards, 2 charts (Certified by Market; Attendance by Market), a tracker table (Learner,
+  Manager, Onboarding %, Boot Camp, Social Selling, Capstone Workshop, Certified), a Milestone filter,
+  a Sort dropdown, a name/manager search, and a 5-step detail modal with a certified/not-certified
+  banner.
+- **A new Hire Status filter** (All / New Hires / Tenured, 65-day rolling cutoff from hire date) is
+  shared across BOTH tabs — sits in the filter bar right after Market; the Onboarding-only Status
+  filter hides itself automatically whenever the Certification tab is active.
+- **Manager/Individual toggle on the tracker** (added same day) — mirrors the Onboarding tab's own
+  Progress Report toggle exactly, including reusing its `toggleMgrGroup()` function verbatim. In
+  Individual view the table is flat; in By Manager view it groups by manager with a collapsible
+  header showing team size + certified count, and the search box narrows to matching manager groups
+  instead of searching learner names. Exports always stay scoped to the real Milestone filter,
+  regardless of the table's own view mode or search box.
+- Each milestone maps to a real LMS course: Boot Camp = `ACCEL_ST`; Social Selling =
+  `SSOL_BYBADE` ("Building Your LinkedIn Brand & Driving Engagement" — explicitly NOT the separate
+  online "Prospecting: Social Selling – LinkedIn" course); Capstone = matched by "capstone" in the
+  item title; Certified = `ACCEL_CERT` having a completion date. `INCOMPLETE_VILT` counts as
+  Registered, never Attended; a completed class always beats an older assignment.
+- **⚠️ Data is a TEMPORARY placeholder, not a live loader.** Ported from Resmie's hand-built
+  `onboarding_7.html` prototype — her exact static snapshot (48 of 84 learners, frozen to Oct 21,
+  2026) is saved as `onboarding-data/_cert_journey_placeholder.json` and loaded via a clearly
+  commented `try/except` block in `generate_html()`. Jason explicitly chose to ship this as a test
+  build while Resmie's real `Accelerate_Journey_*.xlsx` report is in transit — replace that one block
+  with a real loader once it arrives.
+- Known current-data caveats, all flagged on the dashboard itself (not bugs): Capstone Workshop has
+  no data source yet, so it always reads Not registered; the default view hides the Early Access
+  Cohort (which holds all 6 currently-certified learners), so Certified reads 0% by default; 3 of the
+  9 people who've actually completed Accelerate Certification aren't in the 84-person onboarding
+  roster and can't appear in the tracker.
 
 **Nav:** bi-directional hamburger menu linking to Playbook Traffic, Healthcare Certification,
 Public Sector Certification.

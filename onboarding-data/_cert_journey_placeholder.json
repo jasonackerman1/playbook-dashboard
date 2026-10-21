@@ -1,0 +1,426 @@
+{
+  "alford.wood@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-06-11"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-06-26"
+    }
+  },
+  "apetretta@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "aredondo@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "asimons@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-13"
+    }
+  },
+  "bkadlubowski@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-07"
+    }
+  },
+  "cbeck@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "ccariello@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "cfranklin@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-21"
+    }
+  },
+  "cmelton@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-06-11"
+    },
+    "certification": {
+      "completed": true,
+      "date": "2026-07-31"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-06-26"
+    }
+  },
+  "cmoscoso@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "crodezno@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-05"
+    }
+  },
+  "cschnettgoecke@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "daniel.taylor@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "denise.moore@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "dmacdonald@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "dmcdonough@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-06-11"
+    },
+    "certification": {
+      "completed": true,
+      "date": "2026-09-25"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-06-26"
+    }
+  },
+  "dsherrod@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-21"
+    }
+  },
+  "gchristofferson@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "igraff@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-05"
+    }
+  },
+  "jmallory@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-21"
+    }
+  },
+  "jpeterson@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "jpoplawski@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-05-14"
+    },
+    "certification": {
+      "completed": true,
+      "date": "2026-07-07"
+    }
+  },
+  "jsandoval@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-21"
+    }
+  },
+  "jtweddle@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-09-21"
+    }
+  },
+  "kcarrington@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-07-16"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-07-30"
+    }
+  },
+  "kkojouri@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "kristine.brown@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "ksorrentino@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "kwhitaker@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "lslane@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "mbarker@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-14"
+    }
+  },
+  "mpreston@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-12"
+    }
+  },
+  "mray@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "parmstrong@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-09"
+    }
+  },
+  "pmeagher@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-07-16"
+    },
+    "certification": {
+      "completed": true,
+      "date": "2026-09-30"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-07-30"
+    }
+  },
+  "ppompeo@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-08-17"
+    }
+  },
+  "rallen@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-06-11"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-06-26"
+    }
+  },
+  "rmorales@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-05"
+    }
+  },
+  "rpacsi@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-09-10"
+    }
+  },
+  "sbenton@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-09-17"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-09-24"
+    }
+  },
+  "scortina@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-21"
+    }
+  },
+  "sgeberemeskele@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-10-21"
+    }
+  },
+  "skrawczak@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-07-16"
+    },
+    "certification": {
+      "completed": true,
+      "date": "2026-09-29"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-07-30"
+    }
+  },
+  "slarson@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-07-16"
+    },
+    "certification": {
+      "completed": true,
+      "date": "2026-09-11"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-07-30"
+    }
+  },
+  "smartin@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-10-15"
+    },
+    "socialSelling": {
+      "registered": true,
+      "registeredDate": "2026-10-20"
+    }
+  },
+  "taylor.hill@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-06-11"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-06-26"
+    }
+  },
+  "vthompson@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "registered": true,
+      "registeredDate": "2026-09-21"
+    }
+  },
+  "wbirkett@kmbs.konicaminolta.us": {
+    "bootCamp": {
+      "attended": true,
+      "date": "2026-06-11"
+    },
+    "socialSelling": {
+      "attended": true,
+      "date": "2026-06-26"
+    }
+  }
+}
