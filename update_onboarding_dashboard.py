@@ -242,7 +242,7 @@ def _cert_stage_for_row(course_id, title):
     return _cert_stage_for_title(title)
 
 
-def _apply_cert_journey_rows(ws, journey, warn_unknown):
+def _apply_cert_journey_rows(ws, journey, warn_unknown, person_info=None):
     """Walk one combined Cert Journey worksheet — one row per person per Boot Camp/Social
     Selling/Capstone/Certification course item, same column shape as the rest of the LMS
     exports (Email Address, Course ID, Course Title, Assignment Date, Completion Date,
@@ -253,6 +253,12 @@ def _apply_cert_journey_rows(ws, journey, warn_unknown):
     means assigned but not yet attended — the Assignment Date (when present) is kept so the UI
     can show when they were assigned, same spirit as the rest of the dashboard.
 
+    If `person_info` is passed, also captures each person's identifying fields (name, job title,
+    hire date, market, manager) the first time their email is seen with a real cert-journey stage —
+    this file covers people who may have already rolled off the active Onboarding curriculum
+    roster (Accelerate-Curriculum-Report), so this is how the Certification Journey tab can still
+    show them even though they're not in PEOPLE.
+
     Returns the count of rows matched, or None if the sheet is missing an expected column."""
     header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
     email_col      = _find_col(header, 'email')
@@ -261,6 +267,15 @@ def _apply_cert_journey_rows(ws, journey, warn_unknown):
     assign_col     = _find_col(header, 'assignment date')
     completion_col = _find_col(header, 'completion date')
     status_col     = _find_col(header, 'completion status')
+    first_col      = _find_col(header, 'first name', exclude='manager')
+    last_col       = _find_col(header, 'last name', exclude='manager')
+    jobtitle_col   = _find_col(header, 'job title', exclude='manager')
+    hiredate_col   = _find_col(header, 'hire date')
+    market_col     = _find_col(header, 'market')
+    mgrfirst_col   = _find_col(header, 'manager first')
+    mgrlast_col    = _find_col(header, 'manager last')
+    mgremail_col   = _find_col(header, 'manager email')
+    mgrtitle_col   = _find_col(header, 'manager job title') or _find_col(header, 'manager title')
     if email_col is None or status_col is None or completion_col is None:
         return None
 
@@ -280,6 +295,32 @@ def _apply_cert_journey_rows(ws, journey, warn_unknown):
         status = str(row[status_col] or '').strip().upper()
         completion_date = _date(row[completion_col]) if completion_col is not None else None
         rec = journey.setdefault(email, {})
+        if person_info is not None and email not in person_info:
+            first = str(row[first_col] or '').strip() if first_col is not None else ''
+            last  = str(row[last_col]  or '').strip() if last_col  is not None else ''
+            if first or last:
+                person_info[email] = {
+                    'email':       email,
+                    'key':         pkey(first, last),
+                    'name':        f"{first} {last}".strip(),
+                    'first':       first,
+                    'last':        last,
+                    'jobTitle':    str(row[jobtitle_col] or '') if jobtitle_col is not None else '',
+                    'market':      str(row[market_col] or '') if market_col is not None else '',
+                    'isCanada':    False,
+                    'manager':     f"{row[mgrfirst_col] or ''} {row[mgrlast_col] or ''}".strip() if mgrfirst_col is not None and mgrlast_col is not None else '',
+                    'mgrEmail':    str(row[mgremail_col] or '') if mgremail_col is not None else '',
+                    'mgrTitle':    str(row[mgrtitle_col] or '') if mgrtitle_col is not None else '',
+                    'hireDate':    _date(row[hiredate_col]) if hiredate_col is not None else None,
+                    'assignDate':  _date(row[hiredate_col]) if hiredate_col is not None else None,
+                    'daysRem':     None,
+                    # Not in the active Onboarding curriculum roster at all (already past it,
+                    # given they have real Cert Journey stages) — treat onboarding as done.
+                    'overallDone': True,
+                    'overallPct':  100,
+                    'curricula':   {},
+                    'playbook':    [],
+                }
         if stage == 'certification':
             if status.startswith('COMPLETE') and completion_date:
                 rec[stage] = {'completed': True, 'date': completion_date}
@@ -312,19 +353,22 @@ def load_cert_journey():
     in a person's certification if the Cert Journey file doesn't already have it — it's expected
     to be fully redundant with the Cert Journey file's own ACCEL_CERT rows.
 
-    Returns (journey, meta) where journey is {email_lower: {bootCamp/socialSelling/capstone/
-    certification: {...}}} — the exact shape certSteps() in the generated JS expects.
+    Returns (journey, meta, person_info) where journey is {email_lower: {bootCamp/socialSelling/
+    capstone/certification: {...}}} — the exact shape certSteps() in the generated JS expects —
+    and person_info is {email_lower: {...full PEOPLE-record-shaped dict...}} for anyone in journey
+    who isn't necessarily in the active Onboarding curriculum roster (PEOPLE).
     """
     import glob
 
     journey = {}
     meta = {}
+    person_info = {}
 
     cj_files = sorted(glob.glob(CERT_JOURNEY_FILE_GLOB), key=extract_date)
     if cj_files:
         fpath = cj_files[-1]
         wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
-        n = _apply_cert_journey_rows(wb.active, journey, warn_unknown=True)
+        n = _apply_cert_journey_rows(wb.active, journey, warn_unknown=True, person_info=person_info)
         wb.close()
         if n is None:
             print(f"WARNING: {os.path.basename(fpath)} missing an expected column (Email/Completion Date/Completion Status) — Certification Journey skipped")
@@ -341,9 +385,18 @@ def load_cert_journey():
         wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
         ws = wb.active
         header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
-        email_col = _find_col(header, 'email')
-        title_col = _find_col(header, 'course title')
-        date_col  = _find_col(header, 'completion date')
+        email_col    = _find_col(header, 'email')
+        title_col    = _find_col(header, 'course title')
+        date_col     = _find_col(header, 'completion date')
+        first_col    = _find_col(header, 'first name', exclude='manager')
+        last_col     = _find_col(header, 'last name', exclude='manager')
+        jobtitle_col = _find_col(header, 'job title', exclude='manager')
+        hiredate_col = _find_col(header, 'hire date')
+        market_col   = _find_col(header, 'market')
+        mgrfirst_col = _find_col(header, 'manager first')
+        mgrlast_col  = _find_col(header, 'manager last')
+        mgremail_col = _find_col(header, 'manager email')
+        mgrtitle_col = _find_col(header, 'manager job title') or _find_col(header, 'manager title')
         if email_col is None or date_col is None:
             print(f"WARNING: {os.path.basename(fpath)} missing an expected column (Email/Completion Date) — secondary Certified cross-check skipped")
         else:
@@ -364,13 +417,37 @@ def load_cert_journey():
                 if 'certification' not in rec:
                     rec['certification'] = {'completed': True, 'date': d}
                     newly_filled += 1
+                if email not in person_info:
+                    first = str(row[first_col] or '').strip() if first_col is not None else ''
+                    last  = str(row[last_col]  or '').strip() if last_col  is not None else ''
+                    if first or last:
+                        person_info[email] = {
+                            'email':       email,
+                            'key':         pkey(first, last),
+                            'name':        f"{first} {last}".strip(),
+                            'first':       first,
+                            'last':        last,
+                            'jobTitle':    str(row[jobtitle_col] or '') if jobtitle_col is not None else '',
+                            'market':      str(row[market_col] or '') if market_col is not None else '',
+                            'isCanada':    False,
+                            'manager':     f"{row[mgrfirst_col] or ''} {row[mgrlast_col] or ''}".strip() if mgrfirst_col is not None and mgrlast_col is not None else '',
+                            'mgrEmail':    str(row[mgremail_col] or '') if mgremail_col is not None else '',
+                            'mgrTitle':    str(row[mgrtitle_col] or '') if mgrtitle_col is not None else '',
+                            'hireDate':    _date(row[hiredate_col]) if hiredate_col is not None else None,
+                            'assignDate':  _date(row[hiredate_col]) if hiredate_col is not None else None,
+                            'daysRem':     None,
+                            'overallDone': True,
+                            'overallPct':  100,
+                            'curricula':   {},
+                            'playbook':    [],
+                        }
             print(f"Certification Report cross-check ({os.path.basename(fpath)}): {certified_count} people certified, {newly_filled} not already in Cert Journey")
         wb.close()
         if 'completionSource' not in meta:
             meta['completionSource']  = 'LMS Accelerate Certification report'
             meta['completionThrough'] = extract_date(fpath)
 
-    return journey, meta
+    return journey, meta, person_info
 
 
 
@@ -627,7 +704,7 @@ def generate_html(records, sales_map=None):
     # Certified status+date from Accelerate-Certification-Report-*.xlsx — see load_cert_journey().
     # Falls back to the frozen 2026-10-21 placeholder only if neither real file is present at all
     # (e.g. a dev checkout without onboarding-data/).
-    cert_journey, cert_meta = load_cert_journey()
+    cert_journey, cert_meta, cert_person_info = load_cert_journey()
     if not cert_journey and not cert_meta:
         try:
             with open(os.path.join('onboarding-data', '_cert_journey_placeholder.json'), encoding='utf-8') as _cj_f:
@@ -636,8 +713,23 @@ def generate_html(records, sales_map=None):
             cert_journey = {}
         cert_meta = {'completionSource': 'LMS Accelerate Journey report', 'completionThrough': '2026-10-21',
                      'registrationSource': 'LMS registration report', 'registrationThrough': '2026-10-22'}
+        cert_person_info = {}
     cert_journey_json = json.dumps(cert_journey, separators=(',', ':'))
     cert_meta_json    = json.dumps(cert_meta, separators=(',', ':'))
+
+    # Certification Journey roster = Onboarding PEOPLE + anyone else from the Cert Journey data
+    # who isn't in the active 84-person Onboarding roster (they've already progressed past it —
+    # Resmie's file shows them with real Boot Camp/Social Selling/Capstone/Certified stages, but
+    # they'd otherwise be completely invisible on this tab since certBase used to only ever draw
+    # from PEOPLE). Found 2026-10-26: Jason noticed real certified people weren't showing up.
+    _existing_cert_emails = {p['email'] for p in people}
+    cert_people = list(people)
+    for _email, _info in cert_person_info.items():
+        if _email in _existing_cert_emails or pkey(_info['first'], _info['last']) in TLG:
+            continue
+        cert_people.append(_info)
+    cert_people.sort(key=lambda p: p['name'].lower())
+    cert_people_json = json.dumps(cert_people, default=str)
 
     curric_ids   = json.dumps([c[0] for c in CURRICULA])
     curric_names = json.dumps({c[0]: c[1] for c in CURRICULA})
@@ -1247,6 +1339,13 @@ const COHORT_TOTAL = {cohort_total};
 const CERT_JOURNEY = {cert_journey_json};
 /* Source of the completion records above. */
 const CERT_META = {cert_meta_json};
+/* Certification Journey tab's own roster: PEOPLE (active Onboarding cohort) plus anyone else
+   found in the Cert Journey data who isn't in PEOPLE — e.g. already-certified alumni who've
+   rolled off the active Onboarding curriculum roster entirely. Shape matches PEOPLE exactly;
+   extras just have overallDone/overallPct stubbed to true/100 and empty curricula (no onboarding
+   curriculum data exists for them — they've already moved past that). Only this tab's code
+   (certBase, openCertModal, cert-aware populateMarketDropdown) should ever read this array. */
+const CERT_PEOPLE = {cert_people_json};
 const COURSE_PAGE = {course_page_json};
 const PAGE_ORDER = {page_order_json};
 const CURRIC_IDS = {curric_ids};
@@ -1318,7 +1417,8 @@ function populateMarketDropdown() {{
   const current = sel.value;
 
   // Markets available given the current cohort + location filters (ignore market filter itself)
-  const visible = PEOPLE.filter(p => {{
+  // Uses CERT_PEOPLE (the wider roster) when the Certification tab is active, same as certBase.
+  const visible = (certTabActive ? CERT_PEOPLE : PEOPLE).filter(p => {{
     if (hideTLG && TLG_SET.has(p.name.toLowerCase())) return false;
     if (testGroupFilter === 'hide' && TEST_GROUP_NAMES.has(p.name)) return false;
     if (testGroupFilter === 'only' && !TEST_GROUP_NAMES.has(p.name)) return false;
@@ -1747,7 +1847,7 @@ function applyFilters() {{
   }}
   else {{ filtered.sort((a,b) => a.name.localeCompare(b.name)); tableSort = {{col:'name', dir:'asc'}}; }}
 
-  certBase = PEOPLE.filter(p => passesBaseFilters(p, mkt));
+  certBase = CERT_PEOPLE.filter(p => passesBaseFilters(p, mkt));
   renderStats();
   renderTable();
   renderCharts();
@@ -2826,7 +2926,7 @@ function renderCertCharts() {{
 
 /* ── Detail modal (journey view) ── */
 function openCertModal(email) {{
-  const p = PEOPLE.find(x => x.email === email);
+  const p = CERT_PEOPLE.find(x => x.email === email);
   if (!p) return;
   const s = certSteps(p);
   const n = certMilestones(p);
@@ -2869,6 +2969,9 @@ function openCertModal(email) {{
     ['Accelerate Certification course', s.certification.done ? 'Complete' : 'Not yet', s.certification.date ? fmtDate(s.certification.date) : ''],
   ].map(x => '<tr><td>' + escHtml(x[0]) + '</td><td class="c">' + escHtml(x[1]) + '</td><td class="c">' + (x[2] ? escHtml(x[2]) : '—') + '</td></tr>').join('');
 
+  // Not everyone shown on this tab is in the Onboarding curriculum roster (PEOPLE) — some are
+  // already-certified alumni who've rolled off it entirely, with no curriculum data to show.
+  const inOnboardingRoster = PEOPLE.some(x => x.email === p.email);
   const curricPills = CURRIC_IDS.map(cid => {{
     const c = p.curricula[cid];
     if (!c) return '';
@@ -2893,9 +2996,11 @@ function openCertModal(email) {{
       '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Certification Journey</div>' +
       '<div class="cj-stepper">' + CERT_STEPS.map((st, i) => step(i, st)).join('') + '</div>' +
       '<table class="sched-table"><thead><tr><th>Milestone</th><th class="c">Status</th><th class="c">Date / Detail</th></tr></thead><tbody>' + detailRows + '</tbody></table>' +
-      '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Onboarding Curriculum</div>' +
-      '<div class="metric-grid">' + curricPills + '</div>' +
-      '<button class="btn-reset" onclick="openModal(\\'' + p.email.replace(/'/g, "\\\\'") + '\\')">View full onboarding detail &rarr;</button>' +
+      (inOnboardingRoster
+        ? '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Onboarding Curriculum</div>' +
+          '<div class="metric-grid">' + curricPills + '</div>' +
+          '<button class="btn-reset" onclick="openModal(\\'' + p.email.replace(/'/g, "\\\\'") + '\\')">View full onboarding detail &rarr;</button>'
+        : '<div class="section-hint">Already past the active Onboarding curriculum tracking — no further detail available there.</div>') +
     '</div>';
   document.getElementById('modal-overlay').classList.add('open');
 }}

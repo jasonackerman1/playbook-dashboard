@@ -4,7 +4,42 @@ Last updated: 2026-10-26
 
 ---
 
-## Recent Changes (2026-10-26) — Certification Journey tab: placeholder retired, real data wired in (3 rounds)
+## Recent Changes (2026-10-26, Round 4) — Certification Journey tab: roster widened, 3 invisible certified people fixed
+
+Jason, after Round 3 below: "you still missing stuff like certified." Investigated rather than
+re-asserting the earlier "0% is expected" explanation — that turned out to be incomplete. Two real
+things were going on:
+
+1. **3 of the 9 certified people (Brian Stolz, Jeremy Kruse, Andrew Haynes) were invisible on every
+   filter combination** — not a filter-visibility problem, they genuinely weren't in the tab's
+   roster at all, since `certBase` only ever drew from `PEOPLE` (the 84-person active Onboarding
+   cohort), and these 3 have already finished and rolled off that list entirely.
+2. **The other 6 certified people ARE in `PEOPLE`, but all 6 happen to be in the "Early Access
+   Cohort"** (the original launch group — makes sense, they had the most time to finish), **which
+   this dashboard hides by default.** Confirmed this mechanism itself works fine — toggling "Show
+   Early Access Cohort" correctly reveals all 6 as Certified.
+
+**Fixed the first, unambiguous gap:** built a separate, wider roster just for the Certification
+Journey tab (`CERT_PEOPLE`) — the 84-person `PEOPLE` plus anyone else found in the Cert Journey/
+Certification Report files who isn't already in it, using those files' own identifying columns
+(name, job title, hire date, market, manager) to build full records. Re-pointed every cert-tab
+reference that used to read `PEOPLE` (`certBase`, `openCertModal`, the shared market dropdown) at
+`CERT_PEOPLE` instead; a real dead-button risk was caught and fixed along the way (the "View full
+onboarding detail" link silently no-ops for anyone not in `PEOPLE` — now shows a plain explanatory
+message instead for the newly-added people).
+
+Verified headless: default roster went from 63 → 137 people, Certified from "0 of 63" to "3 of
+137" (the newly-added people); the Early Access toggle still correctly reveals the other 6; zero
+console errors.
+
+**Left open, flagged rather than decided silently:** should this tab default to showing the Early
+Access Cohort (so all 9 show with zero clicks), diverging from the Onboarding tab's own default?
+Not a pure bug fix — `testGroupFilter` is one shared variable across both tabs' filter bar, so
+this is a real design call. Full detail in project memory `onboarding_dashboard.md`.
+
+---
+
+## Recent Changes (2026-10-26, Round 1-3) — Certification Journey tab: placeholder retired, real data wired in
 
 The tab built 2026-10-21 shipped with a frozen placeholder (`_cert_journey_placeholder.json`) that
 the script never actually read a real file for — Jason noticed it wasn't updating when he dropped

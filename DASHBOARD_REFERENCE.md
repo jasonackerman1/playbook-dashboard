@@ -392,11 +392,23 @@ additional, higher-level view of the later stages the main tab never modeled.
   is still read as a defensive cross-check but is fully redundant with this file's own `ACCEL_CERT`
   rows. `onboarding-data/_cert_journey_placeholder.json` (the original Oct 21 test snapshot) is no
   longer read except as a last-resort fallback if both real files are ever absent.
-- Known current-data characteristics, confirmed real rather than bugs: the default filtered view
-  correctly shows 0% Certified, since the 9 people who've actually certified have all rolled off
-  the 84-person "current cohort" tracked in the latest Curriculum Report and don't overlap with who
-  the tab shows by default; already-certified alumni's historical Boot Camp/Social Selling/Capstone
-  dates ARE now visible when their email appears in the Cert Journey file's own history.
+- **This tab's roster is `CERT_PEOPLE`, NOT the Onboarding tab's `PEOPLE` (added 2026-10-26, Round
+  4).** `PEOPLE` only ever holds the 84-person *active* Onboarding cohort — anyone who's already
+  finished the whole journey has typically rolled off that list entirely, which made some real
+  certified people invisible on every filter setting until this fix. `CERT_PEOPLE` = `PEOPLE` plus
+  anyone else found in the Cert Journey/Certification Report files, with identifying fields
+  (name, job title, hire date, market, manager) pulled straight from those files, `overallDone`/
+  `overallPct` stubbed to true/100 and `curricula: {}` since they have no active Onboarding
+  curriculum data. `certBase`, `openCertModal`, and the shared market dropdown (when this tab is
+  active) all read `CERT_PEOPLE`; the Onboarding tab's own `openModal` is untouched, still `PEOPLE`
+  only. A person only in `CERT_PEOPLE` sees a plain explanatory message in place of the "View full
+  onboarding detail" button, which would otherwise silently do nothing for them.
+- **Early Access Cohort is still hidden by default on this tab too** (shared `testGroupFilter`
+  state with the Onboarding tab) — as of 2026-10-26's real data, all 6 of the certified people who
+  ARE in the active 84-person cohort happen to be in that original launch cohort, so they stay
+  hidden until "Show Early Access Cohort" is toggled. Confirmed working correctly, not a bug — but
+  flagged to Jason as an open design question (not yet decided): should this tab default to showing
+  everyone, since hiding that cohort here hides most of the tab's own headline stat?
 
 **Nav:** bi-directional hamburger menu linking to Playbook Traffic, Healthcare Certification,
 Public Sector Certification.
