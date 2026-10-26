@@ -462,7 +462,8 @@ def generate_html(records, sales_map=None):
             cert_journey = json.load(_cj_f)
     except Exception:
         cert_journey = {}
-    cert_meta         = {'completionSource': 'LMS Accelerate Journey report', 'completionThrough': '2026-10-21'}
+    cert_meta         = {'completionSource': 'LMS Accelerate Journey report', 'completionThrough': '2026-10-21',
+                         'registrationSource': 'LMS registration report', 'registrationThrough': '2026-10-22'}
     cert_journey_json = json.dumps(cert_journey, separators=(',', ':'))
     cert_meta_json    = json.dumps(cert_meta, separators=(',', ':'))
 
@@ -1029,7 +1030,7 @@ def generate_html(records, sales_map=None):
     </div>
     <div class="legend">
       <span class="leg"><span class="leg-dot" style="background:#15803d"></span>Completed</span>
-      <span class="leg"><span class="leg-dot" style="background:#1d4ed8"></span>Registered (assigned, not yet attended)</span>
+      <span class="leg"><span class="leg-dot" style="background:#1d4ed8"></span>Registered (booked into a session)</span>
       <span class="leg"><span class="leg-dot" style="background:#6b7280"></span>Not registered</span>
     </div>
     <div class="table-wrap">
@@ -1064,14 +1065,17 @@ const COHORT_TOTAL = {cohort_total};
    Anyone not listed has not completed that milestone. Shape:
    {{ "name@kmbs.konicaminolta.us": {{
        bootCamp:      {{ attended: true, date: "YYYY-MM-DD",           // completion report
-                        registered: true, registeredDate: "YYYY-MM-DD" }},   // assigned in the LMS, not yet completed
-                        // (sessionDate: "YYYY-MM-DD" may be added when a registration report has session dates)
+                        registered: true, sessionDate: "YYYY-MM-DD", sessionEnd: "YYYY-MM-DD",   // registration report: the session booked
+                        classId: "1376018", enrolledDate: "YYYY-MM-DD" }},
        socialSelling: {{ attended: true, date: "YYYY-MM-DD",
-                        registered: true, sessionDate: "YYYY-MM-DD" }},
+                        registered: true, sessionDate: "YYYY-MM-DD", sessionEnd: "YYYY-MM-DD" }},
        capstone:      {{ attended: true, date: "YYYY-MM-DD",           // Accelerate: Capstone Presentation Certification Workshop
-                        registered: true, registeredDate: "YYYY-MM-DD" }},
+                        registered: true, sessionDate: "YYYY-MM-DD", sessionEnd: "YYYY-MM-DD" }},
        certification: {{ completed: true, date: "YYYY-MM-DD" }}   // "Accelerate Certification" LMS course
-   }} }}                                                                            */
+   }} }}
+   Being assigned a class in the LMS (enrolledDate) without a booked session does NOT count as
+   Registered — only a real sessionDate from the registration report does. (Fixed 2026-10-23 per
+   Resmie: the original build mistakenly treated LMS assignment as registration.)               */
 const CERT_JOURNEY = {cert_journey_json};
 /* Source of the completion records above. */
 const CERT_META = {cert_meta_json};
@@ -2384,9 +2388,9 @@ function certSteps(p) {{
   const bc = r.bootCamp || {{}}, ss = r.socialSelling || {{}}, cp = r.capstone || {{}}, cr = r.certification || {{}};
   return {{
     onboarding:    {{done: certOnboardingDone(p), pct: p.overallPct}},
-    bootCamp:      {{done: !!bc.attended, date: bc.date || '', reg: !!bc.registered, sessionDate: bc.sessionDate || '', regDate: bc.registeredDate || ''}},
-    social:        {{done: !!ss.attended, date: ss.date || '', reg: !!ss.registered, sessionDate: ss.sessionDate || '', regDate: ss.registeredDate || ''}},
-    capstone:      {{done: !!cp.attended, date: cp.date || '', reg: !!cp.registered, sessionDate: cp.sessionDate || '', regDate: cp.registeredDate || ''}},
+    bootCamp:      {{done: !!bc.attended, date: bc.date || '', reg: !!bc.registered, sessionDate: bc.sessionDate || '', sessionEnd: bc.sessionEnd || '', enrolled: bc.enrolledDate || ''}},
+    social:        {{done: !!ss.attended, date: ss.date || '', reg: !!ss.registered, sessionDate: ss.sessionDate || '', sessionEnd: ss.sessionEnd || '', enrolled: ss.enrolledDate || ''}},
+    capstone:      {{done: !!cp.attended, date: cp.date || '', reg: !!cp.registered, sessionDate: cp.sessionDate || '', sessionEnd: cp.sessionEnd || '', enrolled: cp.enrolledDate || ''}},
     /* Certified = the Accelerate Certification course has a completion date. */
     certification: {{done: !!(cr.completed || cr.date), date: cr.date || ''}},
   }};
@@ -2402,11 +2406,18 @@ function certMsState(p, key) {{
   if (d.reg) return 'reg';
   return 'none';
 }}
-/* Shown date for a registered class: the session date if we have one, otherwise the LMS assignment date. */
+/* A session's dates: one day ("Oct 22, 2026"), a range in one month ("Nov 17–19, 2026"), or across months. */
+function fmtRange(a, b) {{
+  if (!a) return '';
+  if (!b || b === a) return fmtDate(a);
+  const da = new Date(a + 'T00:00:00'), db = new Date(b + 'T00:00:00');
+  if (da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth())
+    return da.toLocaleDateString('en-US', {{month: 'short'}}) + ' ' + da.getDate() + '–' + db.getDate() + ', ' + da.getFullYear();
+  return fmtDate(a) + ' – ' + fmtDate(b);
+}}
+/* Shown under "Registered": the session the learner is booked into. */
 function certRegLabel(d) {{
-  if (d.sessionDate) return fmtDate(d.sessionDate);
-  if (d.regDate) return 'Assigned ' + fmtDate(d.regDate);
-  return '';
+  return d.sessionDate ? 'Session ' + fmtRange(d.sessionDate, d.sessionEnd) : '';
 }}
 function certMilestones(p) {{
   const s = certSteps(p);
@@ -2453,7 +2464,8 @@ function setCertTableView(v) {{
 
 function renderCert() {{
   const asof = document.getElementById('cert-asof');
-  if (asof && typeof CERT_META !== 'undefined') asof.textContent = '· Completions from the ' + CERT_META.completionSource + ', through ' + fmtDate(CERT_META.completionThrough);
+  if (asof && typeof CERT_META !== 'undefined') asof.textContent = '· Completions from the ' + CERT_META.completionSource + ', through ' + fmtDate(CERT_META.completionThrough) +
+      (CERT_META.registrationSource ? ' · Registrations from the ' + CERT_META.registrationSource + ', through ' + fmtDate(CERT_META.registrationThrough) : '');
   renderCertStats();
   renderCertTable();
   if (certTabActive) {{
@@ -2685,7 +2697,7 @@ function openCertModal(email) {{
     const ms = certMsState(p, key);
     let status, detail = '';
     if (ms === 'done')     {{ status = 'Attended'; detail = d.date ? fmtDate(d.date) : ''; }}
-    else if (ms === 'reg') {{ status = 'Registered'; detail = d.sessionDate ? 'Session ' + fmtDate(d.sessionDate) : (d.regDate ? 'Assigned ' + fmtDate(d.regDate) : ''); }}
+    else if (ms === 'reg') {{ status = 'Registered'; detail = certRegLabel(d) + (d.enrolled ? ' · enrolled ' + fmtDate(d.enrolled) : ''); }}
     else                   {{ status = 'Not registered'; }}
     return [label, status, detail];
   }}
@@ -2733,7 +2745,7 @@ function openCertModal(email) {{
 function certExportRow(p) {{
   const s = certSteps(p);
   const txt = key => {{ const ms = certMsState(p, key); return ms === 'done' ? 'Attended' : ms === 'reg' ? 'Registered' : 'Not registered'; }};
-  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.sessionDate || d.regDate || '') : (d.date || ''); }};
+  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.sessionDate ? (d.sessionEnd && d.sessionEnd !== d.sessionDate ? d.sessionDate + ' to ' + d.sessionEnd : d.sessionDate) : '') : (d.date || ''); }};
   return [
     p.name, p.email, p.market, p.manager || '',
     p.overallPct + '%',
@@ -2745,7 +2757,7 @@ function certExportRow(p) {{
     s.certification.date || ''
   ];
 }}
-const CERT_EXPORT_HEAD = ['Name','Email','Market','Manager','Onboarding %','Boot Camp','Boot Camp Date / Assigned','Social Selling','Social Selling Date / Assigned','Capstone Workshop','Capstone Date / Assigned','Milestones','Certified','Certification Date'];
+const CERT_EXPORT_HEAD = ['Name','Email','Market','Manager','Onboarding %','Boot Camp','Boot Camp Date / Session','Social Selling','Social Selling Date / Session','Capstone Workshop','Capstone Date / Session','Milestones','Certified','Certification Date'];
 
 function runCertExportXLSX() {{
   document.getElementById('export-menu').classList.remove('open');
@@ -2781,13 +2793,13 @@ INFO['filters-info'] = INFO['filters-info'].replace('Use Reset to clear everythi
 Object.assign(INFO, {{
   "cert-total": "Everyone currently shown on this tab. The Location, Hire Status, Market and Group filters apply here too; the Status filter is specific to the Onboarding tab and is hidden on this one.",
   "cert-onboarding": "People who have completed 100% of the Accelerate Onboarding curriculum. This is live from the LMS data. The sub-line shows the average completion percentage for everyone shown.",
-  "cert-bootcamp": "People who completed the Accelerate Advanced Skills Bootcamp. The sub-line also shows how many are Registered, meaning assigned the class in the LMS but not yet completed.",
-  "cert-social": "People who completed the Social Selling Workshop: Building Your LinkedIn Brand & Driving Engagement. The sub-line also shows how many are Registered, meaning assigned the workshop in the LMS but not yet completed.",
+  "cert-bootcamp": "People who completed the Accelerate Advanced Skills Bootcamp. The sub-line also shows how many are Registered, meaning booked into an upcoming session in the registration report.",
+  "cert-social": "People who completed the Social Selling Workshop: Building Your LinkedIn Brand & Driving Engagement. The sub-line also shows how many are Registered, meaning booked into a session in the registration report.",
   "cert-certified": "People who have completed the Accelerate Certification course in the LMS. Anyone with a completion date for that course is marked Certified, regardless of the other milestones.",
   "cert-market-certified": "Each market's learners split into Certified (completed the Accelerate Certification course) and Not certified. Hover a bar for exact counts and the market's total. Follows the Location, Market and Group filters.",
   "cert-market-attendance": "For each market, the share of its learners who attended the Advanced Boot Camp, the Social Selling Workshop and the Capstone Workshop. Registered learners aren't counted as attended until the class is completed. Hover a bar for exact counts.",
-  "cert-capstone": "People who attended the Accelerate: Capstone Presentation Certification Workshop. The sub-line also shows how many are Registered, meaning assigned the workshop in the LMS but not yet completed.",
-  "cert-table": "One row per learner. Boot Camp, Social Selling and Capstone Workshop (Accelerate: Capstone Presentation Certification Workshop) each show Attended (with the completion date), Registered (assigned in the LMS and not yet completed, with the assignment date), or Not registered. Certified reads Yes once the Accelerate Certification course has a completion date, otherwise No. Use the Milestone filter to find, for example, everyone not yet registered for Boot Camp, or everyone who is Certified.",
+  "cert-capstone": "People who attended the Accelerate: Capstone Presentation Certification Workshop. The sub-line also shows how many are Registered, meaning booked into a session in the registration report.",
+  "cert-table": "One row per learner. Boot Camp, Social Selling and Capstone Workshop each show Attended (with the completion date), Registered (booked into a session, with the session dates), or Not registered. Being assigned a class in the LMS without a booked session does not count as registered. Certified reads Yes once the Accelerate Certification course has a completion date, otherwise No. Use the Milestone filter to find, for example, everyone not yet registered for Boot Camp, or everyone who is Certified.",
   "cert-view-toggle": "Individual view shows one row per learner. By Manager groups learners under their manager so you can see how each team is tracking against the Certification Journey. The search box updates automatically — in Individual view it searches by learner name or manager, in By Manager view it filters to matching manager groups only.",
 }});
 

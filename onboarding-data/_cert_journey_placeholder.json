@@ -31,14 +31,20 @@
   },
   "asimons@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-10-13",
       "registered": true,
-      "registeredDate": "2026-10-13"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "bkadlubowski@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-10-07",
       "registered": true,
-      "registeredDate": "2026-10-07"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "cbeck@kmbs.konicaminolta.us": {
@@ -53,14 +59,20 @@
   },
   "ccariello@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "cfranklin@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1378130",
+      "enrolledDate": "2026-10-21",
       "registered": true,
-      "registeredDate": "2026-10-21"
+      "sessionDate": "2027-01-12",
+      "sessionEnd": "2027-01-14"
     }
   },
   "cmelton@kmbs.konicaminolta.us": {
@@ -83,14 +95,20 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "crodezno@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-10-05",
       "registered": true,
-      "registeredDate": "2026-10-05"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "cschnettgoecke@kmbs.konicaminolta.us": {
@@ -99,8 +117,11 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "daniel.taylor@kmbs.konicaminolta.us": {
@@ -109,8 +130,11 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "denise.moore@kmbs.konicaminolta.us": {
@@ -119,8 +143,11 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "dmacdonald@kmbs.konicaminolta.us": {
@@ -129,8 +156,11 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "dmcdonough@kmbs.konicaminolta.us": {
@@ -149,8 +179,11 @@
   },
   "dsherrod@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1378130",
+      "enrolledDate": "2026-10-21",
       "registered": true,
-      "registeredDate": "2026-10-21"
+      "sessionDate": "2027-01-12",
+      "sessionEnd": "2027-01-14"
     }
   },
   "gchristofferson@kmbs.konicaminolta.us": {
@@ -159,20 +192,29 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "igraff@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-10-05",
       "registered": true,
-      "registeredDate": "2026-10-05"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "jmallory@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1378130",
+      "enrolledDate": "2026-10-21",
       "registered": true,
-      "registeredDate": "2026-10-21"
+      "sessionDate": "2027-01-12",
+      "sessionEnd": "2027-01-14"
     }
   },
   "jpeterson@kmbs.konicaminolta.us": {
@@ -197,14 +239,20 @@
   },
   "jsandoval@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1378130",
+      "enrolledDate": "2026-10-21",
       "registered": true,
-      "registeredDate": "2026-10-21"
+      "sessionDate": "2027-01-12",
+      "sessionEnd": "2027-01-14"
     }
   },
   "jtweddle@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-09-21",
       "registered": true,
-      "registeredDate": "2026-09-21"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "kcarrington@kmbs.konicaminolta.us": {
@@ -233,8 +281,11 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "ksorrentino@kmbs.konicaminolta.us": {
@@ -253,8 +304,11 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "lslane@kmbs.konicaminolta.us": {
@@ -269,14 +323,20 @@
   },
   "mbarker@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-10-14",
       "registered": true,
-      "registeredDate": "2026-10-14"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "mpreston@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-10-12",
       "registered": true,
-      "registeredDate": "2026-10-12"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "mray@kmbs.konicaminolta.us": {
@@ -291,8 +351,11 @@
   },
   "parmstrong@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1378130",
+      "enrolledDate": "2026-10-09",
       "registered": true,
-      "registeredDate": "2026-10-09"
+      "sessionDate": "2027-01-12",
+      "sessionEnd": "2027-01-14"
     }
   },
   "pmeagher@kmbs.konicaminolta.us": {
@@ -309,12 +372,6 @@
       "date": "2026-07-30"
     }
   },
-  "ppompeo@kmbs.konicaminolta.us": {
-    "bootCamp": {
-      "registered": true,
-      "registeredDate": "2026-08-17"
-    }
-  },
   "rallen@kmbs.konicaminolta.us": {
     "bootCamp": {
       "attended": true,
@@ -327,14 +384,20 @@
   },
   "rmorales@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-10-05",
       "registered": true,
-      "registeredDate": "2026-10-05"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "rpacsi@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-09-10",
       "registered": true,
-      "registeredDate": "2026-09-10"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "sbenton@kmbs.konicaminolta.us": {
@@ -349,14 +412,20 @@
   },
   "scortina@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1378130",
+      "enrolledDate": "2026-10-21",
       "registered": true,
-      "registeredDate": "2026-10-21"
+      "sessionDate": "2027-01-12",
+      "sessionEnd": "2027-01-14"
     }
   },
   "sgeberemeskele@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1378130",
+      "enrolledDate": "2026-10-21",
       "registered": true,
-      "registeredDate": "2026-10-21"
+      "sessionDate": "2027-01-12",
+      "sessionEnd": "2027-01-14"
     }
   },
   "skrawczak@kmbs.konicaminolta.us": {
@@ -393,8 +462,11 @@
       "date": "2026-10-15"
     },
     "socialSelling": {
+      "classId": "1380009",
+      "enrolledDate": "2026-10-20",
       "registered": true,
-      "registeredDate": "2026-10-20"
+      "sessionDate": "2026-10-22",
+      "sessionEnd": "2026-10-22"
     }
   },
   "taylor.hill@kmbs.konicaminolta.us": {
@@ -409,8 +481,11 @@
   },
   "vthompson@kmbs.konicaminolta.us": {
     "bootCamp": {
+      "classId": "1376018",
+      "enrolledDate": "2026-09-21",
       "registered": true,
-      "registeredDate": "2026-09-21"
+      "sessionDate": "2026-11-17",
+      "sessionEnd": "2026-11-19"
     }
   },
   "wbirkett@kmbs.konicaminolta.us": {
