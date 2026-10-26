@@ -1,6 +1,45 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-10-21
+Last updated: 2026-10-26
+
+---
+
+## Recent Changes (2026-10-26) — Certification Journey tab: placeholder retired, real data wired in (3 rounds)
+
+The tab built 2026-10-21 shipped with a frozen placeholder (`_cert_journey_placeholder.json`) that
+the script never actually read a real file for — Jason noticed it wasn't updating when he dropped
+new data in, which led to this fix.
+
+**Round 1:** Built the first real loader against the two new files Jason had added —
+`Accelerate-Cert-Journey-*.xlsx` (then a registration/session export) for Boot Camp + Social
+Selling registration, and `Accelerate-Certification-Report-*.xlsx` for real Certified status.
+Capstone had no data source at this point.
+
+**Round 2:** Jason caught that more than 2 files were dated that day — re-scanned everything and
+found the general `RegistrationStatusWithOrgCSV_FUTURE_*.xlsx` (already used elsewhere for VILT
+registration flagging) also carries real Capstone registration rows the dedicated file lacked.
+Merged both sources (confirmed zero conflicts on overlapping Boot Camp rows) and hardened the row
+filter so `Cancelled`/`Waitlisted` statuses (seen in past files, not this one) can never be counted
+as "Registered."
+
+**Round 3 — the real fix, superseding both rounds above:** Resmie restructured
+`Accelerate-Cert-Journey-*.xlsx` into one combined course-item report (same shape as the rest of
+the LMS exports: Course ID, Course Title, Assignment Date, Completion Date, Completion Status)
+covering all four stages **with real attendance**, not just registration — per Resmie, "all the
+data is in the Cert Journey Report" now. Rewrote `load_cert_journey()` around Course ID matching
+(`ACCEL_ST`/`SSOL_BYBADE`/`ACCEL_CERT_WORKSHOP`/`ACCEL_CERT`), dropped the Round 2 registration-file
+merge entirely (no longer needed), and kept the separate Certification Report only as a redundant
+cross-check (confirmed 0 new people added — fully superseded by the combined file).
+
+**What this unlocks:** real Boot Camp (16 attended + 19 registered), Social Selling (16 attended),
+and Capstone (7 attended + 9 registered) attendance — all previously 0 — plus full historical
+journeys for already-certified alumni who've since rolled off the active cohort. The tab correctly
+still shows 0% Certified in the default filtered view (the 9 certified people have all rolled off
+the 84-person current cohort — confirmed by checking email overlap directly, not a bug).
+
+Verified via headless Chrome at every round (stat cards, table, detail modal, exports) against real
+emails cross-referenced to the raw Excel data — zero console errors. Pushed across 3 commits. Full
+detail in project memory `onboarding_dashboard.md`.
 
 ---
 

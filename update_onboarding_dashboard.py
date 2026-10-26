@@ -40,12 +40,23 @@ COL_PARENT_CURRIC = 16  # Parent Curriculum ID (ACCELERATE or ACCELERATE_BCA)
 REGISTRATION_FILE_GLOB = 'onboarding-data/RegistrationStatusWithOrgCSV*.xlsx'
 
 # ── Certification Journey tab data (Boot Camp / Social Selling / Capstone / Certified) ──
+# As of 2026-10-26, Accelerate-Cert-Journey-*.xlsx is one combined course-item report (per
+# Resmie: "all the data is in the Cert Journey Report") covering all four stages with real
+# Completion Status — same column shape as the rest of the LMS exports (Course ID/Title,
+# Assignment Date, Completion Date, Completion Status), not the old session/registration shape.
 CERT_JOURNEY_FILE_GLOB       = 'onboarding-data/Accelerate-Cert-Journey-*.xlsx'
 CERT_CERTIFICATION_FILE_GLOB = 'onboarding-data/Accelerate-Certification-Report-*.xlsx'
+_CERT_COURSE_ID_STAGE_MAP = {
+    'ACCEL_ST':            'bootCamp',
+    'SSOL_BYBADE':         'socialSelling',
+    'ACCEL_CERT_WORKSHOP': 'capstone',
+    'ACCEL_CERT':          'certification',
+}
 _CERT_STAGE_TITLE_MAP = [
     ('bootcamp', 'bootCamp'),
     ('social selling', 'socialSelling'),
     ('capstone', 'capstone'),
+    ('certification', 'certification'),
 ]
 
 # ── Playbook traffic columns ──────────────────────────────────────────────────
@@ -221,93 +232,85 @@ def _cert_stage_for_title(title):
     return None
 
 
-def _first_date(*vals):
-    for v in vals:
-        if v is None:
-            continue
-        d = _date(v)
-        if d:
-            return d
-    return None
+def _cert_stage_for_row(course_id, title):
+    """Course ID is the primary, stable match (ACCEL_ST/SSOL_BYBADE/ACCEL_CERT_WORKSHOP/
+    ACCEL_CERT); title-substring is a forward-compatible fallback if the LMS ever renames
+    or adds IDs."""
+    cid = str(course_id or '').strip().upper()
+    if cid in _CERT_COURSE_ID_STAGE_MAP:
+        return _CERT_COURSE_ID_STAGE_MAP[cid]
+    return _cert_stage_for_title(title)
 
 
-def _apply_cert_registration_rows(ws, journey, warn_unknown):
-    """Walk one registration-report worksheet (shared schema: Class ID / Start Date/Time /
-    End Date/Time / Student Email / Title / Status / ENRL_DTE) and fold any Boot Camp / Social
-    Selling / Capstone rows into `journey` in place. Rows for unrelated workshops (Salesforce
-    Live Workshop, DCM, Prospecting Live Workshop, etc.) are silently ignored when warn_unknown
-    is False — the general registration report legitimately carries many workshop types that
-    have nothing to do with the Certification Journey. Returns the count of rows matched."""
+def _apply_cert_journey_rows(ws, journey, warn_unknown):
+    """Walk one combined Cert Journey worksheet — one row per person per Boot Camp/Social
+    Selling/Capstone/Certification course item, same column shape as the rest of the LMS
+    exports (Email Address, Course ID, Course Title, Assignment Date, Completion Date,
+    Completion Status) — and fold it into `journey` in place.
+
+    A Completion Status starting with COMPLETE (COMPLETE_VILT/COMPLETE_ILT/COMPLETE_ONLINE)
+    means attended, with a real Completion Date. Anything else (NOT COMPLETE, INCOMPLETE_VILT)
+    means assigned but not yet attended — the Assignment Date (when present) is kept so the UI
+    can show when they were assigned, same spirit as the rest of the dashboard.
+
+    Returns the count of rows matched, or None if the sheet is missing an expected column."""
     header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
-    email_col   = _find_col(header, 'student email') or _find_col(header, 'email', exclude='supervisor')
-    title_col   = _find_col(header, 'title', exclude='user')
-    status_col  = _find_col(header, 'status')
-    classid_col = _find_col(header, 'class id')
-    start_col   = _find_col(header, 'start date')
-    end_col     = _find_col(header, 'end date')
-    enrl_col    = _find_col(header, 'enrl')
-    if email_col is None or title_col is None or status_col is None:
+    email_col      = _find_col(header, 'email')
+    courseid_col   = _find_col(header, 'course id')
+    title_col      = _find_col(header, 'course title')
+    assign_col     = _find_col(header, 'assignment date')
+    completion_col = _find_col(header, 'completion date')
+    status_col     = _find_col(header, 'completion status')
+    if email_col is None or status_col is None or completion_col is None:
         return None
 
     unknown_titles = set()
     matched_rows = 0
     for row in ws.iter_rows(min_row=2, values_only=True):
         email = str(row[email_col] or '').strip().lower()
-        title = row[title_col]
-        if not email or not title:
+        if not email:
             continue
-        stage = _cert_stage_for_title(title)
+        course_id = row[courseid_col] if courseid_col is not None else None
+        title     = row[title_col] if title_col is not None else None
+        stage = _cert_stage_for_row(course_id, title)
         if not stage:
-            unknown_titles.add(str(title))
+            if title:
+                unknown_titles.add(str(title))
             continue
-        status = str(row[status_col] or '').strip().lower()
-        # Cancelled/Waitlisted rows exist in past registration files (though not in today's) —
-        # never treat either as "registered"; only Active Enrollment or a completed session count.
-        if 'complete' not in status and 'active' not in status:
-            continue
+        status = str(row[status_col] or '').strip().upper()
+        completion_date = _date(row[completion_col]) if completion_col is not None else None
         rec = journey.setdefault(email, {})
-        if 'complete' in status:
-            rec[stage] = {
-                'attended': True,
-                'date': _first_date(row[end_col] if end_col is not None else None,
-                                     row[start_col] if start_col is not None else None),
-            }
+        if stage == 'certification':
+            if status.startswith('COMPLETE') and completion_date:
+                rec[stage] = {'completed': True, 'date': completion_date}
+                matched_rows += 1
+            continue
+        if status.startswith('COMPLETE') and completion_date:
+            rec[stage] = {'attended': True, 'date': completion_date}
         else:
             rec[stage] = {
-                'registered':   True,
-                'sessionDate':  _date(row[start_col]) if start_col is not None else None,
-                'sessionEnd':   _date(row[end_col]) if end_col is not None else None,
-                'classId':      str(row[classid_col]) if classid_col is not None and row[classid_col] is not None else None,
-                'enrolledDate': _date(row[enrl_col]) if enrl_col is not None else None,
+                'registered': True,
+                'assignDate': _date(row[assign_col]) if assign_col is not None else None,
             }
         matched_rows += 1
     if warn_unknown:
         for t in sorted(unknown_titles):
-            print(f"WARNING: unknown Certification Journey class title '{t}' — not mapped to Boot Camp/Social Selling/Capstone")
+            print(f"WARNING: unknown Certification Journey course title '{t}' — not mapped to Boot Camp/Social Selling/Capstone/Certification")
     return matched_rows
 
 
 def load_cert_journey():
     """Real Boot Camp / Social Selling / Capstone / Certified data for the Certification
-    Journey tab — replaces the frozen 2026-10-21 placeholder (onboarding-data/_cert_journey_placeholder.json)
-    now that Resmie's real reports have started arriving. Three independent, optional sources —
-    missing any one just leaves that part of the journey blank rather than failing:
+    Journey tab — replaces the frozen 2026-10-21 placeholder (onboarding-data/_cert_journey_placeholder.json).
 
-      - Accelerate-Cert-Journey-*.xlsx: one row per class enrollment, dedicated to this journey
-        (Boot Camp + Social Selling as of 2026-10-26 — no Capstone rows in this one yet).
-      - RegistrationStatusWithOrgCSV*.xlsx: the broader registration report also used elsewhere
-        for general VILT registration flagging — it carries many unrelated workshop types, but
-        also real Boot Camp AND Capstone rows (Social Selling never appears in it). Confirmed
-        2026-10-26 the two files agree wherever both cover the same person+stage (zero conflicts),
-        so merging them is safe and is what actually surfaces real Capstone registrations.
-      - Accelerate-Certification-Report-*.xlsx: one row per person who has completed the
-        "Accelerate Certification" course — same "any row present = certified" rule already used
-        for Layered Security's Certification Report.
-
-    A row's own Status tells us whether it's a completed session ('...complete...' -> attended)
-    or just booked ('Active Enrollment' -> registered, with the session's dates). The title match
-    is substring-based, so Capstone attendance (or any new session type) picks up automatically
-    the moment the LMS starts reporting it, no code change needed.
+    As of 2026-10-26 Resmie restructured Accelerate-Cert-Journey-*.xlsx into a single combined
+    course-item report covering all four stages, including real attendance/completion (not just
+    registration) and the final Certified status — per Resmie directly, "all the data is in the
+    Cert Journey Report" now, so it's treated as the sole source of truth for this tab. The
+    separate Accelerate-Certification-Report-*.xlsx is still read as a defensive cross-check
+    (same "any row present = certified" rule already used for Layered Security) but only fills
+    in a person's certification if the Cert Journey file doesn't already have it — it's expected
+    to be fully redundant with the Cert Journey file's own ACCEL_CERT rows.
 
     Returns (journey, meta) where journey is {email_lower: {bootCamp/socialSelling/capstone/
     certification: {...}}} — the exact shape certSteps() in the generated JS expects.
@@ -316,34 +319,21 @@ def load_cert_journey():
 
     journey = {}
     meta = {}
-    reg_sources = []  # (label, fpath) for the asof note
 
     cj_files = sorted(glob.glob(CERT_JOURNEY_FILE_GLOB), key=extract_date)
     if cj_files:
         fpath = cj_files[-1]
         wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
-        n = _apply_cert_registration_rows(wb.active, journey, warn_unknown=True)
+        n = _apply_cert_journey_rows(wb.active, journey, warn_unknown=True)
         wb.close()
         if n is None:
-            print(f"WARNING: {os.path.basename(fpath)} missing an expected column (Email/Title/Status) — skipped")
+            print(f"WARNING: {os.path.basename(fpath)} missing an expected column (Email/Completion Date/Completion Status) — Certification Journey skipped")
         else:
-            print(f"Cert Journey registrations ({os.path.basename(fpath)}): {n} class rows matched")
-            reg_sources.append(fpath)
-
-    reg_files = sorted(glob.glob(REGISTRATION_FILE_GLOB), key=extract_date)
-    if reg_files:
-        fpath = reg_files[-1]
-        wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
-        n = _apply_cert_registration_rows(wb.active, journey, warn_unknown=False)
-        wb.close()
-        if n:
-            print(f"Cert Journey registrations ({os.path.basename(fpath)}): {n} additional class rows matched (Capstone/Boot Camp overlap)")
-            reg_sources.append(fpath)
-
-    if reg_sources:
-        print(f"Cert Journey registrations: {len(journey)} people total across {len(reg_sources)} report(s)")
-        meta['registrationSource']  = 'LMS registration reports'
-        meta['registrationThrough'] = max(extract_date(f) for f in reg_sources)
+            print(f"Cert Journey ({os.path.basename(fpath)}): {n} course rows matched, {len(journey)} people")
+            meta['registrationSource']  = 'LMS Accelerate Cert Journey report'
+            meta['registrationThrough'] = extract_date(fpath)
+            meta['completionSource']    = 'LMS Accelerate Cert Journey report'
+            meta['completionThrough']   = extract_date(fpath)
 
     cert_files = sorted(glob.glob(CERT_CERTIFICATION_FILE_GLOB), key=extract_date)
     if cert_files:
@@ -355,9 +345,10 @@ def load_cert_journey():
         title_col = _find_col(header, 'course title')
         date_col  = _find_col(header, 'completion date')
         if email_col is None or date_col is None:
-            print(f"WARNING: {os.path.basename(fpath)} missing an expected column (Email/Completion Date) — Certified status skipped")
+            print(f"WARNING: {os.path.basename(fpath)} missing an expected column (Email/Completion Date) — secondary Certified cross-check skipped")
         else:
             certified_count = 0
+            newly_filled = 0
             for row in ws.iter_rows(min_row=2, values_only=True):
                 email = str(row[email_col] or '').strip().lower()
                 if not email:
@@ -368,14 +359,19 @@ def load_cert_journey():
                 d = _date(row[date_col])
                 if not d:
                     continue
-                journey.setdefault(email, {})['certification'] = {'completed': True, 'date': d}
                 certified_count += 1
-            print(f"Cert Journey certifications ({os.path.basename(fpath)}): {certified_count} people certified")
+                rec = journey.setdefault(email, {})
+                if 'certification' not in rec:
+                    rec['certification'] = {'completed': True, 'date': d}
+                    newly_filled += 1
+            print(f"Certification Report cross-check ({os.path.basename(fpath)}): {certified_count} people certified, {newly_filled} not already in Cert Journey")
         wb.close()
-        meta['completionSource']  = 'LMS Accelerate Certification report'
-        meta['completionThrough'] = extract_date(fpath)
+        if 'completionSource' not in meta:
+            meta['completionSource']  = 'LMS Accelerate Certification report'
+            meta['completionThrough'] = extract_date(fpath)
 
     return journey, meta
+
 
 
 def load_lms():
@@ -1240,18 +1236,14 @@ const COHORT_TOTAL = {cohort_total};
 /* Certification Journey records. Keyed by email (any capitalisation).
    Anyone not listed has not completed that milestone. Shape:
    {{ "name@kmbs.konicaminolta.us": {{
-       bootCamp:      {{ attended: true, date: "YYYY-MM-DD",           // completion report
-                        registered: true, sessionDate: "YYYY-MM-DD", sessionEnd: "YYYY-MM-DD",   // registration report: the session booked
-                        classId: "1376018", enrolledDate: "YYYY-MM-DD" }},
-       socialSelling: {{ attended: true, date: "YYYY-MM-DD",
-                        registered: true, sessionDate: "YYYY-MM-DD", sessionEnd: "YYYY-MM-DD" }},
-       capstone:      {{ attended: true, date: "YYYY-MM-DD",           // Accelerate: Capstone Presentation Certification Workshop
-                        registered: true, sessionDate: "YYYY-MM-DD", sessionEnd: "YYYY-MM-DD" }},
+       bootCamp:      {{ attended: true, date: "YYYY-MM-DD" }} -- OR -- {{ registered: true, assignDate: "YYYY-MM-DD" }},
+       socialSelling: {{ same shape }},
+       capstone:      {{ same shape }},   // Accelerate: Capstone Presentation Certification Workshop
        certification: {{ completed: true, date: "YYYY-MM-DD" }}   // "Accelerate Certification" LMS course
    }} }}
-   Being assigned a class in the LMS (enrolledDate) without a booked session does NOT count as
-   Registered — only a real sessionDate from the registration report does. (Fixed 2026-10-23 per
-   Resmie: the original build mistakenly treated LMS assignment as registration.)               */
+   Source (2026-10-26): Accelerate-Cert-Journey-*.xlsx, one combined course-item report per
+   Resmie covering all four stages with real Completion Status — attended means a real
+   completion ("COMPLETE_*"), registered means only assigned/in-progress so far.             */
 const CERT_JOURNEY = {cert_journey_json};
 /* Source of the completion records above. */
 const CERT_META = {cert_meta_json};
@@ -2564,9 +2556,9 @@ function certSteps(p) {{
   const bc = r.bootCamp || {{}}, ss = r.socialSelling || {{}}, cp = r.capstone || {{}}, cr = r.certification || {{}};
   return {{
     onboarding:    {{done: certOnboardingDone(p), pct: p.overallPct}},
-    bootCamp:      {{done: !!bc.attended, date: bc.date || '', reg: !!bc.registered, sessionDate: bc.sessionDate || '', sessionEnd: bc.sessionEnd || '', enrolled: bc.enrolledDate || ''}},
-    social:        {{done: !!ss.attended, date: ss.date || '', reg: !!ss.registered, sessionDate: ss.sessionDate || '', sessionEnd: ss.sessionEnd || '', enrolled: ss.enrolledDate || ''}},
-    capstone:      {{done: !!cp.attended, date: cp.date || '', reg: !!cp.registered, sessionDate: cp.sessionDate || '', sessionEnd: cp.sessionEnd || '', enrolled: cp.enrolledDate || ''}},
+    bootCamp:      {{done: !!bc.attended, date: bc.date || '', reg: !!bc.registered, assignDate: bc.assignDate || ''}},
+    social:        {{done: !!ss.attended, date: ss.date || '', reg: !!ss.registered, assignDate: ss.assignDate || ''}},
+    capstone:      {{done: !!cp.attended, date: cp.date || '', reg: !!cp.registered, assignDate: cp.assignDate || ''}},
     /* Certified = the Accelerate Certification course has a completion date. */
     certification: {{done: !!(cr.completed || cr.date), date: cr.date || ''}},
   }};
@@ -2582,18 +2574,9 @@ function certMsState(p, key) {{
   if (d.reg) return 'reg';
   return 'none';
 }}
-/* A session's dates: one day ("Oct 22, 2026"), a range in one month ("Nov 17–19, 2026"), or across months. */
-function fmtRange(a, b) {{
-  if (!a) return '';
-  if (!b || b === a) return fmtDate(a);
-  const da = new Date(a + 'T00:00:00'), db = new Date(b + 'T00:00:00');
-  if (da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth())
-    return da.toLocaleDateString('en-US', {{month: 'short'}}) + ' ' + da.getDate() + '–' + db.getDate() + ', ' + da.getFullYear();
-  return fmtDate(a) + ' – ' + fmtDate(b);
-}}
-/* Shown under "Registered": the session the learner is booked into. */
+/* Shown under "Registered": when the learner was assigned the course. */
 function certRegLabel(d) {{
-  return d.sessionDate ? 'Session ' + fmtRange(d.sessionDate, d.sessionEnd) : '';
+  return d.assignDate ? 'Assigned ' + fmtDate(d.assignDate) : '';
 }}
 function certMilestones(p) {{
   const s = certSteps(p);
@@ -2873,7 +2856,7 @@ function openCertModal(email) {{
     const ms = certMsState(p, key);
     let status, detail = '';
     if (ms === 'done')     {{ status = 'Attended'; detail = d.date ? fmtDate(d.date) : ''; }}
-    else if (ms === 'reg') {{ status = 'Registered'; detail = certRegLabel(d) + (d.enrolled ? ' · enrolled ' + fmtDate(d.enrolled) : ''); }}
+    else if (ms === 'reg') {{ status = 'Registered'; detail = certRegLabel(d); }}
     else                   {{ status = 'Not registered'; }}
     return [label, status, detail];
   }}
@@ -2921,7 +2904,7 @@ function openCertModal(email) {{
 function certExportRow(p) {{
   const s = certSteps(p);
   const txt = key => {{ const ms = certMsState(p, key); return ms === 'done' ? 'Attended' : ms === 'reg' ? 'Registered' : 'Not registered'; }};
-  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.sessionDate ? (d.sessionEnd && d.sessionEnd !== d.sessionDate ? d.sessionDate + ' to ' + d.sessionEnd : d.sessionDate) : '') : (d.date || ''); }};
+  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.assignDate || '') : (d.date || ''); }};
   return [
     p.name, p.email, p.market, p.manager || '',
     p.overallPct + '%',

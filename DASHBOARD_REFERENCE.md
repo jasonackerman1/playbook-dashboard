@@ -359,7 +359,7 @@ including average Days to First Sale.
 **TLG:** always hidden — no toggle button exists on this dashboard (a deliberate, permanent
 exclusion, unlike the toggle-able pattern elsewhere).
 
-**Certification Journey tab — added 2026-10-21.** A second tab alongside Onboarding (switch via the
+**Certification Journey tab — added 2026-10-21, real data wired in 2026-10-26.** A second tab alongside Onboarding (switch via the
 tab bar, or open `onboarding.html#cert` directly), tracking the real 4-stage certification path:
 Onboarding Curriculum (100%) → Advanced Boot Camp → Social Selling Workshop → Capstone Workshop →
 Certified. The original Onboarding tab's Overall %/pacing math is untouched — this is purely an
@@ -378,22 +378,25 @@ additional, higher-level view of the later stages the main tab never modeled.
   header showing team size + certified count, and the search box narrows to matching manager groups
   instead of searching learner names. Exports always stay scoped to the real Milestone filter,
   regardless of the table's own view mode or search box.
-- Each milestone maps to a real LMS course: Boot Camp = `ACCEL_ST`; Social Selling =
-  `SSOL_BYBADE` ("Building Your LinkedIn Brand & Driving Engagement" — explicitly NOT the separate
-  online "Prospecting: Social Selling – LinkedIn" course); Capstone = matched by "capstone" in the
-  item title; Certified = `ACCEL_CERT` having a completion date. `INCOMPLETE_VILT` counts as
-  Registered, never Attended; a completed class always beats an older assignment.
-- **⚠️ Data is a TEMPORARY placeholder, not a live loader.** Ported from Resmie's hand-built
-  `onboarding_7.html` prototype — her exact static snapshot (48 of 84 learners, frozen to Oct 21,
-  2026) is saved as `onboarding-data/_cert_journey_placeholder.json` and loaded via a clearly
-  commented `try/except` block in `generate_html()`. Jason explicitly chose to ship this as a test
-  build while Resmie's real `Accelerate_Journey_*.xlsx` report is in transit — replace that one block
-  with a real loader once it arrives.
-- Known current-data caveats, all flagged on the dashboard itself (not bugs): Capstone Workshop has
-  no data source yet, so it always reads Not registered; the default view hides the Early Access
-  Cohort (which holds all 6 currently-certified learners), so Certified reads 0% by default; 3 of the
-  9 people who've actually completed Accelerate Certification aren't in the 84-person onboarding
-  roster and can't appear in the tracker.
+- **Real data (as of 2026-10-26), not a placeholder.** `load_cert_journey()` in
+  `update_onboarding_dashboard.py` reads `Accelerate-Cert-Journey-*.xlsx` — a single combined
+  course-item report (same shape as the rest of the LMS exports: Email, Course ID, Course Title,
+  Assignment Date, Completion Date, Completion Status) covering all four stages in one file,
+  including real attendance and the final Certification — per Resmie, this file is now the sole
+  source of truth for the whole journey. Stage is matched primarily by Course ID (`ACCEL_ST` →
+  Boot Camp, `SSOL_BYBADE` → Social Selling, `ACCEL_CERT_WORKSHOP` → Capstone, `ACCEL_CERT` →
+  Certified), with a title-substring fallback for forward-compatibility. A Completion Status
+  starting `COMPLETE` (`COMPLETE_VILT`/`COMPLETE_ILT`/`COMPLETE_ONLINE`) means attended with a
+  real completion date; anything else (`NOT COMPLETE`, `INCOMPLETE_VILT`) means assigned but not
+  yet attended, shown as "Assigned <date>." The separate `Accelerate-Certification-Report-*.xlsx`
+  is still read as a defensive cross-check but is fully redundant with this file's own `ACCEL_CERT`
+  rows. `onboarding-data/_cert_journey_placeholder.json` (the original Oct 21 test snapshot) is no
+  longer read except as a last-resort fallback if both real files are ever absent.
+- Known current-data characteristics, confirmed real rather than bugs: the default filtered view
+  correctly shows 0% Certified, since the 9 people who've actually certified have all rolled off
+  the 84-person "current cohort" tracked in the latest Curriculum Report and don't overlap with who
+  the tab shows by default; already-certified alumni's historical Boot Camp/Social Selling/Capstone
+  dates ARE now visible when their email appears in the Cert Journey file's own history.
 
 **Nav:** bi-directional hamburger menu linking to Playbook Traffic, Healthcare Certification,
 Public Sector Certification.
