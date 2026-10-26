@@ -39,6 +39,15 @@ COL_PARENT_CURRIC = 16  # Parent Curriculum ID (ACCELERATE or ACCELERATE_BCA)
 # ── Registration status report (VILT/workshop sign-ups) ─────────────────────
 REGISTRATION_FILE_GLOB = 'onboarding-data/RegistrationStatusWithOrgCSV*.xlsx'
 
+# ── Certification Journey tab data (Boot Camp / Social Selling / Capstone / Certified) ──
+CERT_JOURNEY_FILE_GLOB       = 'onboarding-data/Accelerate-Cert-Journey-*.xlsx'
+CERT_CERTIFICATION_FILE_GLOB = 'onboarding-data/Accelerate-Certification-Report-*.xlsx'
+_CERT_STAGE_TITLE_MAP = [
+    ('bootcamp', 'bootCamp'),
+    ('social selling', 'socialSelling'),
+    ('capstone', 'capstone'),
+]
+
 # ── Playbook traffic columns ──────────────────────────────────────────────────
 PB_FIRST = 1
 PB_LAST  = 2
@@ -202,6 +211,171 @@ def attach_registration_status(records):
             matched_people += 1
     print(f"Registration status ({os.path.basename(fpath)}): {matched_people} people, {matched_items} curriculum items flagged Registered")
     return records
+
+
+def _cert_stage_for_title(title):
+    t = str(title or '').strip().lower()
+    for needle, key in _CERT_STAGE_TITLE_MAP:
+        if needle in t:
+            return key
+    return None
+
+
+def _first_date(*vals):
+    for v in vals:
+        if v is None:
+            continue
+        d = _date(v)
+        if d:
+            return d
+    return None
+
+
+def _apply_cert_registration_rows(ws, journey, warn_unknown):
+    """Walk one registration-report worksheet (shared schema: Class ID / Start Date/Time /
+    End Date/Time / Student Email / Title / Status / ENRL_DTE) and fold any Boot Camp / Social
+    Selling / Capstone rows into `journey` in place. Rows for unrelated workshops (Salesforce
+    Live Workshop, DCM, Prospecting Live Workshop, etc.) are silently ignored when warn_unknown
+    is False — the general registration report legitimately carries many workshop types that
+    have nothing to do with the Certification Journey. Returns the count of rows matched."""
+    header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    email_col   = _find_col(header, 'student email') or _find_col(header, 'email', exclude='supervisor')
+    title_col   = _find_col(header, 'title', exclude='user')
+    status_col  = _find_col(header, 'status')
+    classid_col = _find_col(header, 'class id')
+    start_col   = _find_col(header, 'start date')
+    end_col     = _find_col(header, 'end date')
+    enrl_col    = _find_col(header, 'enrl')
+    if email_col is None or title_col is None or status_col is None:
+        return None
+
+    unknown_titles = set()
+    matched_rows = 0
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        email = str(row[email_col] or '').strip().lower()
+        title = row[title_col]
+        if not email or not title:
+            continue
+        stage = _cert_stage_for_title(title)
+        if not stage:
+            unknown_titles.add(str(title))
+            continue
+        status = str(row[status_col] or '').strip().lower()
+        # Cancelled/Waitlisted rows exist in past registration files (though not in today's) —
+        # never treat either as "registered"; only Active Enrollment or a completed session count.
+        if 'complete' not in status and 'active' not in status:
+            continue
+        rec = journey.setdefault(email, {})
+        if 'complete' in status:
+            rec[stage] = {
+                'attended': True,
+                'date': _first_date(row[end_col] if end_col is not None else None,
+                                     row[start_col] if start_col is not None else None),
+            }
+        else:
+            rec[stage] = {
+                'registered':   True,
+                'sessionDate':  _date(row[start_col]) if start_col is not None else None,
+                'sessionEnd':   _date(row[end_col]) if end_col is not None else None,
+                'classId':      str(row[classid_col]) if classid_col is not None and row[classid_col] is not None else None,
+                'enrolledDate': _date(row[enrl_col]) if enrl_col is not None else None,
+            }
+        matched_rows += 1
+    if warn_unknown:
+        for t in sorted(unknown_titles):
+            print(f"WARNING: unknown Certification Journey class title '{t}' — not mapped to Boot Camp/Social Selling/Capstone")
+    return matched_rows
+
+
+def load_cert_journey():
+    """Real Boot Camp / Social Selling / Capstone / Certified data for the Certification
+    Journey tab — replaces the frozen 2026-10-21 placeholder (onboarding-data/_cert_journey_placeholder.json)
+    now that Resmie's real reports have started arriving. Three independent, optional sources —
+    missing any one just leaves that part of the journey blank rather than failing:
+
+      - Accelerate-Cert-Journey-*.xlsx: one row per class enrollment, dedicated to this journey
+        (Boot Camp + Social Selling as of 2026-10-26 — no Capstone rows in this one yet).
+      - RegistrationStatusWithOrgCSV*.xlsx: the broader registration report also used elsewhere
+        for general VILT registration flagging — it carries many unrelated workshop types, but
+        also real Boot Camp AND Capstone rows (Social Selling never appears in it). Confirmed
+        2026-10-26 the two files agree wherever both cover the same person+stage (zero conflicts),
+        so merging them is safe and is what actually surfaces real Capstone registrations.
+      - Accelerate-Certification-Report-*.xlsx: one row per person who has completed the
+        "Accelerate Certification" course — same "any row present = certified" rule already used
+        for Layered Security's Certification Report.
+
+    A row's own Status tells us whether it's a completed session ('...complete...' -> attended)
+    or just booked ('Active Enrollment' -> registered, with the session's dates). The title match
+    is substring-based, so Capstone attendance (or any new session type) picks up automatically
+    the moment the LMS starts reporting it, no code change needed.
+
+    Returns (journey, meta) where journey is {email_lower: {bootCamp/socialSelling/capstone/
+    certification: {...}}} — the exact shape certSteps() in the generated JS expects.
+    """
+    import glob
+
+    journey = {}
+    meta = {}
+    reg_sources = []  # (label, fpath) for the asof note
+
+    cj_files = sorted(glob.glob(CERT_JOURNEY_FILE_GLOB), key=extract_date)
+    if cj_files:
+        fpath = cj_files[-1]
+        wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
+        n = _apply_cert_registration_rows(wb.active, journey, warn_unknown=True)
+        wb.close()
+        if n is None:
+            print(f"WARNING: {os.path.basename(fpath)} missing an expected column (Email/Title/Status) — skipped")
+        else:
+            print(f"Cert Journey registrations ({os.path.basename(fpath)}): {n} class rows matched")
+            reg_sources.append(fpath)
+
+    reg_files = sorted(glob.glob(REGISTRATION_FILE_GLOB), key=extract_date)
+    if reg_files:
+        fpath = reg_files[-1]
+        wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
+        n = _apply_cert_registration_rows(wb.active, journey, warn_unknown=False)
+        wb.close()
+        if n:
+            print(f"Cert Journey registrations ({os.path.basename(fpath)}): {n} additional class rows matched (Capstone/Boot Camp overlap)")
+            reg_sources.append(fpath)
+
+    if reg_sources:
+        print(f"Cert Journey registrations: {len(journey)} people total across {len(reg_sources)} report(s)")
+        meta['registrationSource']  = 'LMS registration reports'
+        meta['registrationThrough'] = max(extract_date(f) for f in reg_sources)
+
+    cert_files = sorted(glob.glob(CERT_CERTIFICATION_FILE_GLOB), key=extract_date)
+    if cert_files:
+        fpath = cert_files[-1]
+        wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
+        ws = wb.active
+        header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+        email_col = _find_col(header, 'email')
+        title_col = _find_col(header, 'course title')
+        date_col  = _find_col(header, 'completion date')
+        if email_col is None or date_col is None:
+            print(f"WARNING: {os.path.basename(fpath)} missing an expected column (Email/Completion Date) — Certified status skipped")
+        else:
+            certified_count = 0
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                email = str(row[email_col] or '').strip().lower()
+                if not email:
+                    continue
+                title = row[title_col] if title_col is not None else None
+                if title is not None and 'certification' not in str(title).lower():
+                    continue
+                d = _date(row[date_col])
+                if not d:
+                    continue
+                journey.setdefault(email, {})['certification'] = {'completed': True, 'date': d}
+                certified_count += 1
+            print(f"Cert Journey certifications ({os.path.basename(fpath)}): {certified_count} people certified")
+        wb.close()
+        meta['completionSource']  = 'LMS Accelerate Certification report'
+        meta['completionThrough'] = extract_date(fpath)
+
+    return journey, meta
 
 
 def load_lms():
@@ -452,18 +626,20 @@ def generate_html(records, sales_map=None):
     header_date_label = _lms_label
     total       = len(people)
 
-    # ── Certification Journey (TEMPORARY placeholder, added 2026-10-21) ──
-    # Hand-ported from Resmie's onboarding_7.html prototype, a static snapshot dated 2026-10-21
-    # (see Change_Log_onboarding_6_to_onboarding_7.docx). Replace this loader with a real one
-    # reading onboarding-data/Accelerate_Journey_*.xlsx once Resmie sends the actual report —
-    # she said it's coming within a day of this build. Until then the tab shows frozen Oct 21 data.
-    try:
-        with open(os.path.join('onboarding-data', '_cert_journey_placeholder.json'), encoding='utf-8') as _cj_f:
-            cert_journey = json.load(_cj_f)
-    except Exception:
-        cert_journey = {}
-    cert_meta         = {'completionSource': 'LMS Accelerate Journey report', 'completionThrough': '2026-10-21',
-                         'registrationSource': 'LMS registration report', 'registrationThrough': '2026-10-22'}
+    # ── Certification Journey (real data as of 2026-10-26) ──
+    # Boot Camp / Social Selling / Capstone attendance+registration from Accelerate-Cert-Journey-*.xlsx,
+    # Certified status+date from Accelerate-Certification-Report-*.xlsx — see load_cert_journey().
+    # Falls back to the frozen 2026-10-21 placeholder only if neither real file is present at all
+    # (e.g. a dev checkout without onboarding-data/).
+    cert_journey, cert_meta = load_cert_journey()
+    if not cert_journey and not cert_meta:
+        try:
+            with open(os.path.join('onboarding-data', '_cert_journey_placeholder.json'), encoding='utf-8') as _cj_f:
+                cert_journey = json.load(_cj_f)
+        except Exception:
+            cert_journey = {}
+        cert_meta = {'completionSource': 'LMS Accelerate Journey report', 'completionThrough': '2026-10-21',
+                     'registrationSource': 'LMS registration report', 'registrationThrough': '2026-10-22'}
     cert_journey_json = json.dumps(cert_journey, separators=(',', ':'))
     cert_meta_json    = json.dumps(cert_meta, separators=(',', ':'))
 
