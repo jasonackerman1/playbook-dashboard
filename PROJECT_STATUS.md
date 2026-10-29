@@ -1,6 +1,28 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-10-26
+Last updated: 2026-10-29
+
+---
+
+## Recent Changes (2026-10-29, Round 5) — Certification Journey tab: Registered now shows the real session date
+
+Resmie, via Jason: "Certification Journey tab where it is noting Registered should be picking up
+the Start Date/Time column for the registration NOT the enrollment date." Confirmed directly: the
+combined Cert Journey file (from Round 3) only has "Assignment Date" (when someone was assigned
+the course) — the real session schedule only lives in the separate general registration report
+(`RegistrationStatusWithOrgCSV_FUTURE_*.xlsx`), which Round 3 stopped reading for this purpose once
+the combined file seemed to cover everything. It covered attendance fine, but silently dropped
+real session-date display along the way.
+
+Fixed with a narrow third pass: for any Boot Camp/Capstone record still "registered" (not yet
+attended), overlay the real Start/End Date-Time from the registration report. Social Selling has
+no session-date source anywhere in this file, so it correctly falls back to showing the assignment
+date instead. "Registered" now reads "Session Oct 29, 2026" where real data exists, instead of a
+less meaningful assignment date.
+
+Verified against real data: 47 registered records picked up a real session date this pull. Headless
+confirmed correct behavior for both a real-session record and a no-session fallback — zero console
+errors. Full detail in project memory `onboarding_dashboard.md`.
 
 ---
 

@@ -340,6 +340,44 @@ def _apply_cert_journey_rows(ws, journey, warn_unknown, person_info=None):
     return matched_rows
 
 
+def _apply_cert_session_dates(ws, journey):
+    """Overlay real session Start Date/Time (and End Date/Time) from the general registration
+    report onto any Boot Camp/Social Selling/Capstone record that's currently 'registered' (not
+    yet attended) in `journey`. Per Resmie (2026-10-29): the combined Cert Journey report's
+    Assignment Date is just when someone was assigned the course, not when their session is
+    actually scheduled — the real session date lives only here, in this file's own Start Date/
+    Time column. Does nothing for anyone not already 'registered' for that stage, and never
+    touches `done`/attended records. Returns the count of rows matched."""
+    header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    email_col  = _find_col(header, 'student email') or _find_col(header, 'email', exclude='supervisor')
+    title_col  = _find_col(header, 'title', exclude='user')
+    status_col = _find_col(header, 'status')
+    start_col  = _find_col(header, 'start date')
+    end_col    = _find_col(header, 'end date')
+    if email_col is None or title_col is None or status_col is None or start_col is None:
+        return 0
+
+    matched = 0
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        email = str(row[email_col] or '').strip().lower()
+        title = row[title_col]
+        if not email or not title:
+            continue
+        stage = _cert_stage_for_title(title)
+        if not stage:
+            continue
+        status = str(row[status_col] or '').strip().lower()
+        if 'active' not in status:
+            continue  # Cancelled/Waitlisted — never a real upcoming session
+        rec = journey.get(email, {}).get(stage)
+        if not rec or not rec.get('registered'):
+            continue  # already attended, or this file has no row for this stage at all
+        rec['sessionDate'] = _date(row[start_col])
+        rec['sessionEnd']  = _date(row[end_col]) if end_col is not None else None
+        matched += 1
+    return matched
+
+
 def load_cert_journey():
     """Real Boot Camp / Social Selling / Capstone / Certified data for the Certification
     Journey tab — replaces the frozen 2026-10-21 placeholder (onboarding-data/_cert_journey_placeholder.json).
@@ -378,6 +416,17 @@ def load_cert_journey():
             meta['registrationThrough'] = extract_date(fpath)
             meta['completionSource']    = 'LMS Accelerate Cert Journey report'
             meta['completionThrough']   = extract_date(fpath)
+
+    reg_files = sorted(glob.glob(REGISTRATION_FILE_GLOB), key=extract_date)
+    if reg_files:
+        fpath = reg_files[-1]
+        wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
+        n = _apply_cert_session_dates(wb.active, journey)
+        wb.close()
+        if n:
+            print(f"Cert Journey session dates ({os.path.basename(fpath)}): {n} registered records got a real session date")
+            meta['registrationSource']  = 'LMS registration report'
+            meta['registrationThrough'] = extract_date(fpath)
 
     cert_files = sorted(glob.glob(CERT_CERTIFICATION_FILE_GLOB), key=extract_date)
     if cert_files:
@@ -2656,9 +2705,9 @@ function certSteps(p) {{
   const bc = r.bootCamp || {{}}, ss = r.socialSelling || {{}}, cp = r.capstone || {{}}, cr = r.certification || {{}};
   return {{
     onboarding:    {{done: certOnboardingDone(p), pct: p.overallPct}},
-    bootCamp:      {{done: !!bc.attended, date: bc.date || '', reg: !!bc.registered, assignDate: bc.assignDate || ''}},
-    social:        {{done: !!ss.attended, date: ss.date || '', reg: !!ss.registered, assignDate: ss.assignDate || ''}},
-    capstone:      {{done: !!cp.attended, date: cp.date || '', reg: !!cp.registered, assignDate: cp.assignDate || ''}},
+    bootCamp:      {{done: !!bc.attended, date: bc.date || '', reg: !!bc.registered, assignDate: bc.assignDate || '', sessionDate: bc.sessionDate || '', sessionEnd: bc.sessionEnd || ''}},
+    social:        {{done: !!ss.attended, date: ss.date || '', reg: !!ss.registered, assignDate: ss.assignDate || '', sessionDate: ss.sessionDate || '', sessionEnd: ss.sessionEnd || ''}},
+    capstone:      {{done: !!cp.attended, date: cp.date || '', reg: !!cp.registered, assignDate: cp.assignDate || '', sessionDate: cp.sessionDate || '', sessionEnd: cp.sessionEnd || ''}},
     /* Certified = the Accelerate Certification course has a completion date. */
     certification: {{done: !!(cr.completed || cr.date), date: cr.date || ''}},
   }};
@@ -2674,8 +2723,20 @@ function certMsState(p, key) {{
   if (d.reg) return 'reg';
   return 'none';
 }}
-/* Shown under "Registered": when the learner was assigned the course. */
+/* A session's dates: one day ("Oct 22, 2026"), a range in one month ("Nov 17–19, 2026"), or across months. */
+function fmtRange(a, b) {{
+  if (!a) return '';
+  if (!b || b === a) return fmtDate(a);
+  const da = new Date(a + 'T00:00:00'), db = new Date(b + 'T00:00:00');
+  if (da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth())
+    return da.toLocaleDateString('en-US', {{month: 'short'}}) + ' ' + da.getDate() + '–' + db.getDate() + ', ' + da.getFullYear();
+  return fmtDate(a) + ' – ' + fmtDate(b);
+}}
+/* Shown under "Registered": the real scheduled session when one exists (Boot Camp/Capstone,
+   from the registration report's own Start/End Date-Time) — falls back to the LMS assignment
+   date only when no session data exists at all (Social Selling has none as of 2026-10-29). */
 function certRegLabel(d) {{
+  if (d.sessionDate) return 'Session ' + fmtRange(d.sessionDate, d.sessionEnd);
   return d.assignDate ? 'Assigned ' + fmtDate(d.assignDate) : '';
 }}
 function certMilestones(p) {{
@@ -3009,7 +3070,7 @@ function openCertModal(email) {{
 function certExportRow(p) {{
   const s = certSteps(p);
   const txt = key => {{ const ms = certMsState(p, key); return ms === 'done' ? 'Attended' : ms === 'reg' ? 'Registered' : 'Not registered'; }};
-  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.assignDate || '') : (d.date || ''); }};
+  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.sessionDate ? (d.sessionEnd && d.sessionEnd !== d.sessionDate ? d.sessionDate + ' to ' + d.sessionEnd : d.sessionDate) : (d.assignDate || '')) : (d.date || ''); }};
   return [
     p.name, p.email, p.market, p.manager || '',
     p.overallPct + '%',

@@ -388,10 +388,18 @@ additional, higher-level view of the later stages the main tab never modeled.
   Certified), with a title-substring fallback for forward-compatibility. A Completion Status
   starting `COMPLETE` (`COMPLETE_VILT`/`COMPLETE_ILT`/`COMPLETE_ONLINE`) means attended with a
   real completion date; anything else (`NOT COMPLETE`, `INCOMPLETE_VILT`) means assigned but not
-  yet attended, shown as "Assigned <date>." The separate `Accelerate-Certification-Report-*.xlsx`
-  is still read as a defensive cross-check but is fully redundant with this file's own `ACCEL_CERT`
-  rows. `onboarding-data/_cert_journey_placeholder.json` (the original Oct 21 test snapshot) is no
+  yet attended. The separate `Accelerate-Certification-Report-*.xlsx` is still read as a defensive
+  cross-check but is fully redundant with this file's own `ACCEL_CERT` rows.
+  `onboarding-data/_cert_journey_placeholder.json` (the original Oct 21 test snapshot) is no
   longer read except as a last-resort fallback if both real files are ever absent.
+- **"Registered" shows the real scheduled session, not an assignment date (fixed 2026-10-29, Round
+  5, per Resmie).** The combined Cert Journey file only has an Assignment Date — the real Start/End
+  Date-Time for a Boot Camp or Capstone session lives in the separate general registration report
+  (`RegistrationStatusWithOrgCSV_FUTURE_*.xlsx`, same file `attach_registration_status()` already
+  uses for VILT flagging on the Onboarding tab). `_apply_cert_session_dates()` overlays that real
+  session date onto any still-`registered` (not yet attended) Boot Camp/Capstone record; `certRegLabel()`
+  shows `"Session <date or range>"` when one exists, falling back to `"Assigned <date>"` only when it
+  doesn't — Social Selling has no session-date source in this file at all, so it always shows Assigned.
 - **This tab's roster is `CERT_PEOPLE`, NOT the Onboarding tab's `PEOPLE` (added 2026-10-26, Round
   4).** `PEOPLE` only ever holds the 84-person *active* Onboarding cohort — anyone who's already
   finished the whole journey has typically rolled off that list entirely, which made some real
