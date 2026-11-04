@@ -2740,9 +2740,10 @@ function fmtRange(a, b) {{
 /* Shown under "Registered": the real scheduled session when one exists (Boot Camp/Capstone,
    from the registration report's own Start/End Date-Time) — falls back to the LMS assignment
    date only when no session data exists at all (Social Selling has none as of 2026-10-29). */
+/* Registered rows show the real session date only. The course Assignment Date is never shown
+   (per Jason 2026-11-04, it doesn't matter) — no session on file means just "Registered". */
 function certRegLabel(d) {{
-  if (d.sessionDate) return 'Session ' + fmtRange(d.sessionDate, d.sessionEnd);
-  return d.assignDate ? 'Assigned ' + fmtDate(d.assignDate) : '';
+  return d.sessionDate ? 'Session ' + fmtRange(d.sessionDate, d.sessionEnd) : '';
 }}
 function certMilestones(p) {{
   const s = certSteps(p);
@@ -3057,7 +3058,8 @@ function openCertModal(email) {{
   document.getElementById('modal-content').innerHTML =
     '<div class="modal-header"><div class="modal-name">' + escHtml(p.name) + '</div>' +
       '<div class="modal-meta"><span>' + escHtml(p.jobTitle || '') + '</span><span>' + escHtml(p.market) + '</span>' +
-      (p.manager ? '<span>Manager: ' + escHtml(p.manager) + '</span>' : '') + '</div></div>' +
+      (p.manager ? '<span>Manager: ' + escHtml(p.manager) + '</span>' : '') +
+      '<span>Hired: ' + (p.hireDate ? escHtml(fmtDate(p.hireDate)) : '—') + '</span></div></div>' +
     '<div class="modal-body">' + banner +
       '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Certification Journey</div>' +
       '<div class="cj-stepper">' + CERT_STEPS.map((st, i) => step(i, st)).join('') + '</div>' +
@@ -3075,7 +3077,7 @@ function openCertModal(email) {{
 function certExportRow(p) {{
   const s = certSteps(p);
   const txt = key => {{ const ms = certMsState(p, key); return ms === 'done' ? 'Attended' : ms === 'reg' ? 'Registered' : 'Not registered'; }};
-  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.sessionDate ? (d.sessionEnd && d.sessionEnd !== d.sessionDate ? d.sessionDate + ' to ' + d.sessionEnd : d.sessionDate) : (d.assignDate || '')) : (d.date || ''); }};
+  const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.sessionDate ? (d.sessionEnd && d.sessionEnd !== d.sessionDate ? d.sessionDate + ' to ' + d.sessionEnd : d.sessionDate) : '') : (d.date || ''); }};
   return [
     p.name, p.email, p.market, p.manager || '',
     p.overallPct + '%',
