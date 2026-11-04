@@ -6,21 +6,30 @@ Last updated: 2026-11-04
 
 ## Recent Changes (2026-11-02 → 11-04)
 
-**Cert Journey tab: roster limited to Onboarding people + Certified (2026-11-04).** Jason asked why the
-Cert Journey tab said 139 enrolled. It was 65 current learners (default view) plus 74 people found
-only in the Cert Journey/Certification reports. 41 of those 74 had only attended the Social Selling
-workshop (hire dates back to 1998, likely not Accelerate at all) and 10 hadn't attended anything.
-New rule in `update_onboarding_dashboard.py`: someone not on the Onboarding tab only appears on the
-Cert Journey tab if they're Certified. Default view is now 69 (66 + Andrew Haynes, Brian Stolz,
-Jeremy Kruse). Jason is also asking Resmie whether the report should include non-Accelerate people.
-
-**⚠️ OPEN — the newer Cert Journey reports are never read.** The loader's glob is
-`Accelerate-Cert-Journey-*.xlsx`, but Resmie's 10.29 and 11.02 reports are named
-`Accelerate-Certification-Journey-Report-*.xlsx`, so the tab still runs on the 10.26 file. Same
-columns. The 11.02 file has 48 people (all with Boot Camp), 29 Social Selling rows and 6 Certified,
-vs. 123 / 109 / 9 in 10.26 — she may have already narrowed it to Accelerate. Proposed: point the
-glob at the new name (old as fallback) and check whether the 3 missing certified people are
-Haynes/Stolz/Kruse. Confirm with Resmie first. Not done yet.
+**Cert Journey tab now runs on Resmie's newest report (2026-11-04, `14ba96a`, `41881af`).** The
+loader reads both report names, `Accelerate-Cert-Journey-*.xlsx` and
+`Accelerate-Certification-Journey-Report-*.xlsx`, and the newest file wins (11.04 now). A
+Certification Report older than that file is ignored, so stale data can't add people back. Results:
+- **Roster = Onboarding people + Certified only** (Jason's rule). With the 11.04 report, the tab shows
+  exactly the Onboarding tab's 87 people. Andrew Haynes, Brian Stolz and Jeremy Kruse (certified in
+  the 10.26 report, never in any Curriculum Report, dropped from Resmie's 11.02/11.04 reports) are gone.
+- **No assumed completions.** People with no Curriculum Report record used to get onboarding stubbed
+  to 100%. Now `noOnboarding: true` and they'd show "Not assigned" and be left out of the average.
+  Rule: a step is complete only if a report shows it.
+- **Registered = Registration report.** The newer Cert Journey reports list completions only (no
+  NOT COMPLETE rows). `_apply_cert_session_dates()` now creates a Registered record from any
+  "Active Enrollment" row in `RegistrationStatusWithOrgCSV_FUTURE_*` (cancelled/waitlisted skipped,
+  attended never overwritten). 11.04: 18 registered for Boot Camp (9 Nov 17–19, 9 Jan 12–14;
+  Kadlubowski and Preston moved from cancelled sessions to Jan). Social Selling/Capstone show 0
+  registered: confirmed with Jason that nobody is registered, not missing data.
+- **Session date only** under Registered (the Assignment Date isn't shown), and the person card
+  shows Hire Date (`a5794b6`).
+- Default view (Early Access hidden): 66 people, Boot Camp 16 attended / 18 registered, Social
+  Selling 16, Capstone 16, Certified 0 (all 6 certified are in the Early Access Cohort).
+- **Leaderboard was stale:** it reads its own `leaderboard-data/` folder, and the 11.04 files only went
+  into `onboarding-data/`. Copied all 5 in. **Every Accelerate data drop = 5 files, into BOTH folders:**
+  Curriculum, Certification Journey, Registration, New Opportunities, Opportunity History.
+- Open, low priority: Jason may ask Resmie whether Haynes/Stolz/Kruse were removed on purpose.
 
 **Workflow push race fixed (2026-11-02, `62f05f1`).** A playbook data upload starts both the Playbook
 and Onboarding workflows (Onboarding also watches `data/playbook-*.xlsx`); Onboarding's push kept

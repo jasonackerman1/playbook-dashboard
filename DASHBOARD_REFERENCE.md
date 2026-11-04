@@ -382,7 +382,9 @@ additional, higher-level view of the later stages the main tab never modeled.
   instead of searching learner names. Exports always stay scoped to the real Milestone filter,
   regardless of the table's own view mode or search box.
 - **Real data (as of 2026-10-26), not a placeholder.** `load_cert_journey()` in
-  `update_onboarding_dashboard.py` reads `Accelerate-Cert-Journey-*.xlsx` — a single combined
+  `update_onboarding_dashboard.py` reads the newest of `Accelerate-Cert-Journey-*.xlsx` /
+  `Accelerate-Certification-Journey-Report-*.xlsx` (Resmie's 10.29+ name; both accepted since
+  2026-11-04, newest wins). Since 10.29 the report lists completions only. It is a single combined
   course-item report (same shape as the rest of the LMS exports: Email, Course ID, Course Title,
   Assignment Date, Completion Date, Completion Status) covering all four stages in one file,
   including real attendance and the final Certification — per Resmie, this file is now the sole
@@ -392,7 +394,7 @@ additional, higher-level view of the later stages the main tab never modeled.
   starting `COMPLETE` (`COMPLETE_VILT`/`COMPLETE_ILT`/`COMPLETE_ONLINE`) means attended with a
   real completion date; anything else (`NOT COMPLETE`, `INCOMPLETE_VILT`) means assigned but not
   yet attended. The separate `Accelerate-Certification-Report-*.xlsx` is still read as a defensive
-  cross-check but is fully redundant with this file's own `ACCEL_CERT` rows.
+  cross-check, but only if it's at least as new as the Cert Journey report (an older one is ignored).
   `onboarding-data/_cert_journey_placeholder.json` (the original Oct 21 test snapshot) is no
   longer read except as a last-resort fallback if both real files are ever absent.
 - **"Registered" shows the real scheduled session, not an assignment date (fixed 2026-10-29, Round
@@ -400,17 +402,20 @@ additional, higher-level view of the later stages the main tab never modeled.
   Date-Time for a Boot Camp or Capstone session lives in the separate general registration report
   (`RegistrationStatusWithOrgCSV_FUTURE_*.xlsx`, same file `attach_registration_status()` already
   uses for VILT flagging on the Onboarding tab). `_apply_cert_session_dates()` overlays that real
-  session date onto any still-`registered` (not yet attended) Boot Camp/Capstone record; `certRegLabel()`
-  shows `"Session <date or range>"` when one exists, falling back to `"Assigned <date>"` only when it
-  doesn't — Social Selling has no session-date source in this file at all, so it always shows Assigned.
+  session date onto any not-yet-attended Boot Camp/Capstone record, and since 2026-11-04 it also
+  **creates** the Registered record from any "Active Enrollment" row (the newer Cert Journey report
+  has no NOT COMPLETE rows, so this report is now the only source of Registered). Cancelled and
+  Waitlisted rows are skipped; attended records are never overwritten. `certRegLabel()` shows
+  `"Session <date or range>"`, or just "Registered" with no date — the Assignment Date is never shown.
+  0 Registered for Social Selling/Capstone means nobody is signed up (confirmed by Jason).
 - **This tab's roster is `CERT_PEOPLE`, NOT the Onboarding tab's `PEOPLE` (added 2026-10-26, Round
   4).** `PEOPLE` only ever holds the 84-person *active* Onboarding cohort — anyone who's already
   finished the whole journey has typically rolled off that list entirely, which made some real
   certified people invisible on every filter setting until this fix. `CERT_PEOPLE` = `PEOPLE` plus
   anyone else found in the Cert Journey/Certification Report files, with identifying fields
-  (name, job title, hire date, market, manager) pulled straight from those files, `overallDone`/
-  `overallPct` stubbed to true/100 and `curricula: {}` since they have no active Onboarding
-  curriculum data. `certBase`, `openCertModal`, and the shared market dropdown (when this tab is
+  (name, job title, hire date, market, manager) pulled straight from those files. Since 2026-11-04
+  they get `noOnboarding: true`, `overallDone: false`, `overallPct: null` (shown as "Not assigned",
+  excluded from the average onboarding %). **Rule: never treat a step as complete without a record.** `certBase`, `openCertModal`, and the shared market dropdown (when this tab is
   active) all read `CERT_PEOPLE`; the Onboarding tab's own `openModal` is untouched, still `PEOPLE`
   only. A person only in `CERT_PEOPLE` sees a plain explanatory message in place of the "View full
   onboarding detail" button, which would otherwise silently do nothing for them.
@@ -419,8 +424,8 @@ additional, higher-level view of the later stages the main tab never modeled.
   Selling workshop, hire dates back to 1998), which inflated Total Enrolled to 139 when only 65 were
   real current learners. Rule now: the Cert Journey tab shows exactly the Onboarding tab's people,
   plus anyone not on that list who is **Certified** (`certification.completed`). Default view went
-  139 → 69 (66 onboarding + Haynes, Stolz, Kruse); the other 6 certified are in the Early Access
-  Cohort.
+  139 → 69 (66 onboarding + Haynes, Stolz, Kruse). Once the 11.04 report was read, those three
+  dropped out (not in Resmie's newer reports), so the tab now matches the Onboarding tab exactly.
 - **Early Access Cohort is still hidden by default on this tab too** (shared `testGroupFilter`
   state with the Onboarding tab) — as of 2026-10-26's real data, all 6 of the certified people who
   ARE in the active 84-person cohort happen to be in that original launch cohort, so they stay
