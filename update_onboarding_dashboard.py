@@ -771,10 +771,15 @@ def generate_html(records, sales_map=None):
     # Resmie's file shows them with real Boot Camp/Social Selling/Capstone/Certified stages, but
     # they'd otherwise be completely invisible on this tab since certBase used to only ever draw
     # from PEOPLE). Found 2026-10-26: Jason noticed real certified people weren't showing up.
+    # Narrowed 2026-11-04: only people who are actually Certified get added this way. The Cert
+    # Journey report also lists reps outside Accelerate (e.g. Social Selling-only attendees), so
+    # anyone else not on the Onboarding tab stays off this tab too.
     _existing_cert_emails = {p['email'] for p in people}
     cert_people = list(people)
     for _email, _info in cert_person_info.items():
         if _email in _existing_cert_emails or pkey(_info['first'], _info['last']) in TLG:
+            continue
+        if not (cert_journey.get(_email, {}).get('certification') or {}).get('completed'):
             continue
         cert_people.append(_info)
     cert_people.sort(key=lambda p: p['name'].lower())

@@ -1,6 +1,42 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-10-29
+Last updated: 2026-11-04
+
+---
+
+## Recent Changes (2026-11-02 → 11-04)
+
+**Cert Journey tab: roster limited to Onboarding people + Certified (2026-11-04).** Jason asked why the
+Cert Journey tab said 139 enrolled. It was 65 current learners (default view) plus 74 people found
+only in the Cert Journey/Certification reports. 41 of those 74 had only attended the Social Selling
+workshop (hire dates back to 1998, likely not Accelerate at all) and 10 hadn't attended anything.
+New rule in `update_onboarding_dashboard.py`: someone not on the Onboarding tab only appears on the
+Cert Journey tab if they're Certified. Default view is now 69 (66 + Andrew Haynes, Brian Stolz,
+Jeremy Kruse). Jason is also asking Resmie whether the report should include non-Accelerate people.
+
+**⚠️ OPEN — the newer Cert Journey reports are never read.** The loader's glob is
+`Accelerate-Cert-Journey-*.xlsx`, but Resmie's 10.29 and 11.02 reports are named
+`Accelerate-Certification-Journey-Report-*.xlsx`, so the tab still runs on the 10.26 file. Same
+columns. The 11.02 file has 48 people (all with Boot Camp), 29 Social Selling rows and 6 Certified,
+vs. 123 / 109 / 9 in 10.26 — she may have already narrowed it to Accelerate. Proposed: point the
+glob at the new name (old as fallback) and check whether the 3 missing certified people are
+Haynes/Stolz/Kruse. Confirm with Resmie first. Not done yet.
+
+**Workflow push race fixed (2026-11-02, `62f05f1`).** A playbook data upload starts both the Playbook
+and Onboarding workflows (Onboarding also watches `data/playbook-*.xlsx`); Onboarding's push kept
+failing with `rejected (fetch first)`. All 6 workflows now retry the push up to 5 times after
+`git pull --rebase -X theirs origin main`, and every `deploy` job shares a `pages-deploy`
+concurrency group. Not yet seen running on a real data upload.
+
+**Data questions answered, no code change (2026-11-02/03):**
+- 9 learners have finished everything except the 2 KMPF courses (11.02 data); 15 counting All
+  Covered and the PAR course too. Both KMPF titles still say "(Coming Soon)" in the LMS even though
+  the playbook relaunched them 10/29, so nobody can finish them and they can't go Overdue. Jason sent
+  Resmie a summary.
+- Homepage Onboarding (86) vs Leaderboard (87) mismatch: Parker Kolb had no email in the 11.02
+  Curriculum Report (Resmie added him by hand). Onboarding skips blank-email rows; Leaderboard
+  doesn't (and would merge several blank-email people into one). Resmie added the email, and the
+  newer data counts him on both. A name fallback in both loaders was offered but not built.
 
 ---
 

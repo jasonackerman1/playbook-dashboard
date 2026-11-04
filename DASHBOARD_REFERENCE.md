@@ -32,6 +32,9 @@ the sole source of truth going forward.
   the script, and auto-commits the regenerated HTML — then a second job deploys the whole repo to
   GitHub Pages. Never commit generated HTML by hand; let Actions do it (see `PROJECT_STATUS.md` for
   the recurring "Actions-vs-Actions push race" gotcha this causes).
+  **Fixed 2026-11-02:** every workflow's push step now retries up to 5 times after pulling the other
+  workflow's commit (`git pull --rebase -X theirs`), and every `deploy` job shares a `pages-deploy`
+  concurrency group so deploys queue instead of colliding.
 - **Navigation:** every dashboard's `<h1>` triple-clicks back to `index.html` (the homepage). Some
   dashboards also have a bi-directional hamburger (☰) menu linking directly to a few sibling
   dashboards — not universal, check the individual dashboard's section below.
@@ -411,6 +414,13 @@ additional, higher-level view of the later stages the main tab never modeled.
   active) all read `CERT_PEOPLE`; the Onboarding tab's own `openModal` is untouched, still `PEOPLE`
   only. A person only in `CERT_PEOPLE` sees a plain explanatory message in place of the "View full
   onboarding detail" button, which would otherwise silently do nothing for them.
+- **Who gets added beyond `PEOPLE` was narrowed 2026-11-04: Certified only.** The Cert Journey report
+  also lists reps outside Accelerate (41 people in the 10.26 file had only attended the Social
+  Selling workshop, hire dates back to 1998), which inflated Total Enrolled to 139 when only 65 were
+  real current learners. Rule now: the Cert Journey tab shows exactly the Onboarding tab's people,
+  plus anyone not on that list who is **Certified** (`certification.completed`). Default view went
+  139 → 69 (66 onboarding + Haynes, Stolz, Kruse); the other 6 certified are in the Early Access
+  Cohort.
 - **Early Access Cohort is still hidden by default on this tab too** (shared `testGroupFilter`
   state with the Onboarding tab) — as of 2026-10-26's real data, all 6 of the certified people who
   ARE in the active 84-person cohort happen to be in that original launch cohort, so they stay
