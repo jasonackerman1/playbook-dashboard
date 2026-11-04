@@ -314,10 +314,11 @@ def _apply_cert_journey_rows(ws, journey, warn_unknown, person_info=None):
                     'hireDate':    _date(row[hiredate_col]) if hiredate_col is not None else None,
                     'assignDate':  _date(row[hiredate_col]) if hiredate_col is not None else None,
                     'daysRem':     None,
-                    # Not in the active Onboarding curriculum roster at all (already past it,
-                    # given they have real Cert Journey stages) — treat onboarding as done.
-                    'overallDone': True,
-                    'overallPct':  100,
+                    # No Curriculum Report rows exist for this person, so nothing says they
+                    # finished onboarding. Never assume completion without a record.
+                    'overallDone': False,
+                    'overallPct':  None,
+                    'noOnboarding': True,
                     'curricula':   {},
                     'playbook':    [],
                 }
@@ -485,8 +486,11 @@ def load_cert_journey():
                             'hireDate':    _date(row[hiredate_col]) if hiredate_col is not None else None,
                             'assignDate':  _date(row[hiredate_col]) if hiredate_col is not None else None,
                             'daysRem':     None,
-                            'overallDone': True,
-                            'overallPct':  100,
+                            # No Curriculum Report rows exist for this person, so nothing says
+                            # they finished onboarding. Never assume completion without a record.
+                            'overallDone': False,
+                            'overallPct':  None,
+                            'noOnboarding': True,
                             'curricula':   {},
                             'playbook':    [],
                         }
@@ -1396,8 +1400,8 @@ const CERT_META = {cert_meta_json};
 /* Certification Journey tab's own roster: PEOPLE (active Onboarding cohort) plus anyone else
    found in the Cert Journey data who isn't in PEOPLE — e.g. already-certified alumni who've
    rolled off the active Onboarding curriculum roster entirely. Shape matches PEOPLE exactly;
-   extras just have overallDone/overallPct stubbed to true/100 and empty curricula (no onboarding
-   curriculum data exists for them — they've already moved past that). Only this tab's code
+   extras have noOnboarding:true, overallDone:false, overallPct:null and empty curricula — no
+   onboarding curriculum record exists for them, so it shows "Not assigned", never a made-up 100%. Only this tab's code
    (certBase, openCertModal, cert-aware populateMarketDropdown) should ever read this array. */
 const CERT_PEOPLE = {cert_people_json};
 const COURSE_PAGE = {course_page_json};
@@ -2691,7 +2695,10 @@ function passesBaseFilters(p, mkt) {{
    completed yet, so until they launch nobody reaches 100% -- the same reason the
    Onboarding tab currently shows 0% Completed. Change this one rule to count someone
    as done once every currently-available course is finished. */
-function certOnboardingDone(p) {{ return !!p.overallDone || p.overallPct >= 100; }}
+function certOnboardingDone(p) {{ return !p.noOnboarding && (!!p.overallDone || p.overallPct >= 100); }}
+/* No Curriculum Report record = "Not assigned". Only completions with a real record count. */
+function certOnbText(p) {{ return p.noOnboarding ? 'Not assigned' : p.overallPct + '%'; }}
+function certOnbSortVal(p) {{ return p.noOnboarding ? -1 : p.overallPct; }}
 
 /* Case-insensitive lookup: report emails are often mixed-case (e.g. ARedondo@...). */
 let _certIdx = null, _certIdxN = -1;
@@ -2709,7 +2716,7 @@ function certSteps(p) {{
   const r = certRec(p);
   const bc = r.bootCamp || {{}}, ss = r.socialSelling || {{}}, cp = r.capstone || {{}}, cr = r.certification || {{}};
   return {{
-    onboarding:    {{done: certOnboardingDone(p), pct: p.overallPct}},
+    onboarding:    {{done: certOnboardingDone(p), pct: p.overallPct, none: !!p.noOnboarding}},
     bootCamp:      {{done: !!bc.attended, date: bc.date || '', reg: !!bc.registered, assignDate: bc.assignDate || '', sessionDate: bc.sessionDate || '', sessionEnd: bc.sessionEnd || ''}},
     social:        {{done: !!ss.attended, date: ss.date || '', reg: !!ss.registered, assignDate: ss.assignDate || '', sessionDate: ss.sessionDate || '', sessionEnd: ss.sessionEnd || ''}},
     capstone:      {{done: !!cp.attended, date: cp.date || '', reg: !!cp.registered, assignDate: cp.assignDate || '', sessionDate: cp.sessionDate || '', sessionEnd: cp.sessionEnd || ''}},
@@ -2808,7 +2815,8 @@ function renderCertStats() {{
   const soc  = certBase.filter(p => certSteps(p).social.done).length;
   const cap  = certBase.filter(p => certSteps(p).capstone.done).length;
   const cert = certBase.filter(isCertified).length;
-  const avg  = total ? Math.round(certBase.reduce((s, p) => s + p.overallPct, 0) / total) : 0;
+  const onbBase = certBase.filter(p => !p.noOnboarding);
+  const avg  = onbBase.length ? Math.round(onbBase.reduce((s, p) => s + p.overallPct, 0) / onbBase.length) : 0;
   const regN = key => certBase.filter(p => certMsState(p, key) === 'reg').length;
   const regTxt = key => ' · ' + regN(key) + ' registered';
   const set = (id, v) => {{ document.getElementById(id).textContent = v; }};
@@ -2849,16 +2857,18 @@ function certFilteredRows(opts) {{
     if (ms) {{ const parts = ms.split(':'); if (certMsState(p, parts[0]) !== parts[1]) return false; }}
     return true;
   }});
-  if (sort === 'ms-desc')       rows.sort((a, b) => (isCertified(b) - isCertified(a)) || certMilestones(b) - certMilestones(a) || b.overallPct - a.overallPct || a.name.localeCompare(b.name));
-  else if (sort === 'ms-asc')   rows.sort((a, b) => (isCertified(a) - isCertified(b)) || certMilestones(a) - certMilestones(b) || a.overallPct - b.overallPct || a.name.localeCompare(b.name));
-  else if (sort === 'onb-desc') rows.sort((a, b) => b.overallPct - a.overallPct || a.name.localeCompare(b.name));
+  if (sort === 'ms-desc')       rows.sort((a, b) => (isCertified(b) - isCertified(a)) || certMilestones(b) - certMilestones(a) || certOnbSortVal(b) - certOnbSortVal(a) || a.name.localeCompare(b.name));
+  else if (sort === 'ms-asc')   rows.sort((a, b) => (isCertified(a) - isCertified(b)) || certMilestones(a) - certMilestones(b) || certOnbSortVal(a) - certOnbSortVal(b) || a.name.localeCompare(b.name));
+  else if (sort === 'onb-desc') rows.sort((a, b) => certOnbSortVal(b) - certOnbSortVal(a) || a.name.localeCompare(b.name));
   else                          rows.sort((a, b) => a.name.localeCompare(b.name));
   return rows;
 }}
 function certVisibleRows() {{ return certFilteredRows(); }}
 
 function certPersonRow(p) {{
-  const onb = '<span class="pct-pill" style="' + overallPillStyle(p) + '">' + p.overallPct + '%</span>';
+  const onb = p.noOnboarding
+    ? '<span class="cj-chip none">Not assigned</span>'
+    : '<span class="pct-pill" style="' + overallPillStyle(p) + '">' + p.overallPct + '%</span>';
   return '<tr data-email="' + escHtml(p.email) + '" onclick="openCertModal(this.dataset.email)">' +
     '<td style="font-weight:600;white-space:nowrap">' + escHtml(p.name) + '<span class="cj-sub">' + escHtml(p.market) + '</span></td>' +
     '<td style="font-size:12px;color:var(--muted);white-space:nowrap">' + escHtml(p.manager || '—') + '</td>' +
@@ -3004,7 +3014,8 @@ function openCertModal(email) {{
     const d = s[st.key];
     let cls = '', status = 'Not yet';
     if (st.key === 'onboarding') {{
-      if (d.done) {{ cls = 'done'; status = '100% complete'; }}
+      if (d.none) {{ status = 'Not assigned'; }}
+      else if (d.done) {{ cls = 'done'; status = '100% complete'; }}
       else if (d.pct > 0) {{ cls = 'active'; status = d.pct + '% complete'; }}
     }} else if (st.key === 'certification') {{
       if (d.done) {{ cls = 'done'; status = 'Certified' + (d.date ? ' · ' + fmtDate(d.date) : ''); }}
@@ -3029,7 +3040,7 @@ function openCertModal(email) {{
   }}
 
   const detailRows = [
-    ['Accelerate Onboarding curriculum', s.onboarding.done ? 'Complete' : s.onboarding.pct + '% complete', ''],
+    ['Accelerate Onboarding curriculum', s.onboarding.none ? 'Not assigned' : s.onboarding.done ? 'Complete' : s.onboarding.pct + '% complete', ''],
     classRow('Accelerate Advanced Boot Camp', 'bootCamp'),
     classRow('Social Selling Workshop: Building Your LinkedIn Brand & Driving Engagement', 'social'),
     classRow('Accelerate: Capstone Presentation Certification Workshop', 'capstone'),
@@ -3068,7 +3079,7 @@ function openCertModal(email) {{
         ? '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Onboarding Curriculum</div>' +
           '<div class="metric-grid">' + curricPills + '</div>' +
           '<button class="btn-reset" onclick="openModal(\\'' + p.email.replace(/'/g, "\\\\'") + '\\')">View full onboarding detail &rarr;</button>'
-        : '<div class="section-hint">Already past the active Onboarding curriculum tracking — no further detail available there.</div>') +
+        : '<div class="section-hint">No Accelerate Onboarding curriculum record for this person.</div>') +
     '</div>';
   document.getElementById('modal-overlay').classList.add('open');
 }}
@@ -3080,7 +3091,7 @@ function certExportRow(p) {{
   const dt = key => {{ const d = s[key], ms = certMsState(p, key); return ms === 'reg' ? (d.sessionDate ? (d.sessionEnd && d.sessionEnd !== d.sessionDate ? d.sessionDate + ' to ' + d.sessionEnd : d.sessionDate) : '') : (d.date || ''); }};
   return [
     p.name, p.email, p.market, p.manager || '',
-    p.overallPct + '%',
+    certOnbText(p),
     txt('bootCamp'), dt('bootCamp'),
     txt('social'),   dt('social'),
     txt('capstone'), dt('capstone'),
