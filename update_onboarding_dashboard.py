@@ -45,6 +45,8 @@ REGISTRATION_FILE_GLOB = 'onboarding-data/RegistrationStatusWithOrgCSV*.xlsx'
 # Completion Status — same column shape as the rest of the LMS exports (Course ID/Title,
 # Assignment Date, Completion Date, Completion Status), not the old session/registration shape.
 CERT_JOURNEY_FILE_GLOB       = 'onboarding-data/Accelerate-Cert-Journey-*.xlsx'
+# Resmie renamed the report on 2026-10-29. Both names are read; the newest file wins.
+CERT_JOURNEY_FILE_GLOB_NEW   = 'onboarding-data/Accelerate-Certification-Journey-Report-*.xlsx'
 CERT_CERTIFICATION_FILE_GLOB = 'onboarding-data/Accelerate-Certification-Report-*.xlsx'
 _CERT_COURSE_ID_STAGE_MAP = {
     'ACCEL_ST':            'bootCamp',
@@ -403,7 +405,8 @@ def load_cert_journey():
     meta = {}
     person_info = {}
 
-    cj_files = sorted(glob.glob(CERT_JOURNEY_FILE_GLOB), key=extract_date)
+    cj_files = sorted(glob.glob(CERT_JOURNEY_FILE_GLOB) + glob.glob(CERT_JOURNEY_FILE_GLOB_NEW), key=extract_date)
+    cj_date = extract_date(cj_files[-1]) if cj_files else ''
     if cj_files:
         fpath = cj_files[-1]
         wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
@@ -429,7 +432,10 @@ def load_cert_journey():
             meta['registrationSource']  = 'LMS registration report'
             meta['registrationThrough'] = extract_date(fpath)
 
-    cert_files = sorted(glob.glob(CERT_CERTIFICATION_FILE_GLOB), key=extract_date)
+    # Only use a Certification Report that's at least as new as the Cert Journey report. An older
+    # one would add back people Resmie's newer report no longer lists (2026-11-04, per Jason).
+    cert_files = [f for f in sorted(glob.glob(CERT_CERTIFICATION_FILE_GLOB), key=extract_date)
+                  if extract_date(f) >= cj_date]
     if cert_files:
         fpath = cert_files[-1]
         wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
