@@ -349,8 +349,8 @@ def _apply_cert_session_dates(ws, journey):
     yet attended) in `journey`. Per Resmie (2026-10-29): the combined Cert Journey report's
     Assignment Date is just when someone was assigned the course, not when their session is
     actually scheduled — the real session date lives only here, in this file's own Start Date/
-    Time column. Does nothing for anyone not already 'registered' for that stage, and never
-    touches `done`/attended records. Returns the count of rows matched."""
+    Time column. An active enrollment with no Cert Journey row creates a 'registered' record
+    (the newer Cert Journey reports list completions only). Never touches attended records. Returns the count of rows matched."""
     header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
     email_col  = _find_col(header, 'student email') or _find_col(header, 'email', exclude='supervisor')
     title_col  = _find_col(header, 'title', exclude='user')
@@ -373,8 +373,12 @@ def _apply_cert_session_dates(ws, journey):
         if 'active' not in status:
             continue  # Cancelled/Waitlisted — never a real upcoming session
         rec = journey.get(email, {}).get(stage)
-        if not rec or not rec.get('registered'):
-            continue  # already attended, or this file has no row for this stage at all
+        if rec and rec.get('attended'):
+            continue  # already attended — never overwrite a real completion
+        if not rec:
+            # Since 2026-10-29 the Cert Journey report lists completions only, so an active
+            # enrollment here is the only record that someone is Registered (per Jason 2026-11-04).
+            rec = journey.setdefault(email, {})[stage] = {'registered': True}
         rec['sessionDate'] = _date(row[start_col])
         rec['sessionEnd']  = _date(row[end_col]) if end_col is not None else None
         matched += 1
