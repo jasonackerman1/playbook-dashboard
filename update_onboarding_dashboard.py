@@ -29,6 +29,7 @@ COL_CURRIC_TTL = 18  # Curriculum Title
 COL_CURRIC_CMP = 19  # Curriculum Complete (Yes/No)
 COL_ASSIGN_DT  = 20  # Curriculum Assignment Date
 COL_DAYS_REM   = 21  # Days Remaining (LMS-computed per curriculum deadline)
+COL_ITEM_ID    = 22  # Item ID (same as the playbook's componentID, e.g. BBV_SCI)
 COL_ITEM_TTL   = 26  # Item Title
 COL_ITEM_TYPE  = 23  # Item Type (ONLINE/VILT)
 COL_ITEM_DATE  = 27  # Item Completion Date
@@ -571,6 +572,7 @@ def load_lms():
                     title = str(ir[COL_ITEM_TTL] or '')
                     is_coming_soon = 'coming soon' in title.lower()
                     items.append({
+                        'id':    str(ir[COL_ITEM_ID] or '').strip(),
                         'title': title,
                         'type':  str(ir[COL_ITEM_TYPE] or 'ONLINE'),
                         'done':  bool(ir[COL_ITEM_STS]),
@@ -3246,6 +3248,57 @@ def main():
     with open('onboarding.html', 'w', encoding='utf-8') as f:
         f.write(html)
     print(f"Generated onboarding.html")
+    write_progress_json(records)
+
+
+# ── Personal progress file for the Accelerate playbook's "My Journey" page ───
+PROGRESS_JSON = 'accelerate-progress.json'
+
+def write_progress_json(records):
+    """Write accelerate-progress.json for the playbook's personal progress page.
+    Anonymous on purpose: no names or emails. Each person is keyed by the
+    SHA-256 of their lowercase email; the playbook hashes the logged-in
+    viewer's email (from IT's employeeID API) the same way to find them."""
+    import hashlib
+    folder = 'onboarding-data'
+    reports = sorted(
+        [f for f in os.listdir(folder) if f.startswith('Accelerate-Curriculum-Report-') and f.endswith('.xlsx')],
+        key=extract_date
+    )
+    as_of = extract_date(reports[-1]) if reports else None
+    # Course titles/types are stored once in "courses"; each person only lists
+    # [id, done, date, due] per course, in curriculum order.
+    courses = {}
+    people = {}
+    for email, p in records.items():
+        key = hashlib.sha256(email.strip().lower().encode('utf-8')).hexdigest()
+        curricula = {}
+        for cid, _name in CURRICULA:
+            c = p['curricula'].get(cid)
+            if not c:
+                continue
+            rows = []
+            for i in c['items']:
+                iid = i.get('id') or i['title']
+                courses.setdefault(iid, {'title': i['title'], 'type': i['type']})
+                rows.append([iid, 1 if i['done'] else 0, i['date'], i['req']])
+            curricula[cid] = {'complete': c['complete'], 'items': rows}
+        people[key] = {
+            'ca':         p['isCanada'],
+            'hireDate':   p['hireDate'],
+            'assignDate': p['assignDate'],
+            'curricula':  curricula,
+        }
+    out = {
+        'asOf':        as_of,
+        'programDays': PROGRAM_DAYS,
+        'curricula':   [{'id': cid, 'name': name} for cid, name in CURRICULA],
+        'courses':     courses,
+        'people':      people,
+    }
+    with open(PROGRESS_JSON, 'w', encoding='utf-8') as f:
+        json.dump(out, f, separators=(',', ':'), ensure_ascii=False)
+    print(f"Wrote {PROGRESS_JSON} ({len(people)} people, data as of {as_of})")
 
 
 if __name__ == '__main__':

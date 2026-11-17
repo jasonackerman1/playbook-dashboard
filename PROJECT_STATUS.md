@@ -4,6 +4,12 @@ Last updated: 2026-11-04
 
 ---
 
+## Recent Changes (2026-11-17) — Accelerate progress file for the playbook's "My Journey" page
+- `update_onboarding_dashboard.py` now keeps each course's LMS **Item ID** (col 22, same as the playbook's `componentID`) and, on every run, writes **`accelerate-progress.json`** via `write_progress_json()`. It's used by the Accelerate Sales Playbook's new My Accelerate Journey page (personal progress, "Up next", checklist).
+- **Anonymous:** no names or emails. Each person is keyed by the SHA-256 of their lowercase email; the playbook hashes the viewer's email from IT's employeeID API to find them. Course titles/types are stored once in `courses`; each person lists `[id, done, date, due]` per course. About 138 KB for 91 reps (11.16 data).
+- `update-onboarding.yml` now also commits `accelerate-progress.json`, so GitHub Pages serves it at `https://jasonackerman1.github.io/playbook-dashboard/accelerate-progress.json` (same way the homepage Leaderboard reads `leaderboard-data.json`).
+- Nothing on `onboarding.html` changed.
+
 ## Recent Changes (2026-11-02 → 11-04)
 
 **Cert Journey tab now runs on Resmie's newest report (2026-11-04, `14ba96a`, `41881af`).** The
