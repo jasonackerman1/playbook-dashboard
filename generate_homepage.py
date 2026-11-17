@@ -503,8 +503,8 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
       </div>
     </div>
 
-    <!-- Accelerate Leaderboard -->
-    <div class="card" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);">
+    <!-- Accelerate Leaderboard (hidden by default - Konami code reveals it, see script below; added 2026-11-17) -->
+    <div class="card" id="card-secret-3" style="--card-bg:url('https://jasonackerman1.github.io/accelerate_sales_playbook/img/accelerateHero.jpg');background-size:auto,160%;background-position:center,calc(50% - 20px) calc(50% + 20px);display:none;opacity:0;transform:scale(.92);transition:opacity .5s ease,transform .5s ease;">
       <div class="card-head">
         <span class="card-icon">&#127942;</span>
         <div>
@@ -754,7 +754,7 @@ function toggleTheme(){{
     setTimeout(function(){{ toast.classList.remove('show'); }},2000);
     setTimeout(function(){{ toast.remove(); }},2400);
 
-    ['card-secret-1','card-secret-2'].forEach(function(id,i){{
+    ['card-secret-1','card-secret-2','card-secret-3'].forEach(function(id,i){{
       var el=document.getElementById(id);
       if(!el||el.dataset.revealed)return;
       el.dataset.revealed='1';
