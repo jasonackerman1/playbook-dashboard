@@ -64,7 +64,7 @@ the sole source of truth going forward.
 | 2 | Playbook Traffic | `playbook.html` | `update_dashboard.py` | ✅ | real |
 | 3 | Internal Dashboard Traffic | `dashboard-traffic.html` | `update_dashboard_traffic.py` | ❌ hidden | real |
 | 4 | Healthcare Certification | `cert-healthcare.html` | `update_cert_dashboard.py` | ✅ | real |
-| 5 | Public Sector Certification | `cert-publicsector.html` | `update_cert_dashboard.py` | ✅ | real |
+| 5 | Public Sector Certification (OMNIA + 3 curricula, since 2026-11-18) | `cert-publicsector.html` | `update_cert_dashboard.py` | ✅ | real |
 | 6 | Layered Security Certification | `cert-layered-security.html` | `update_layered_security_dashboard.py` | ✅ | real |
 | 7 | Accelerate Onboarding | `onboarding.html` | `update_onboarding_dashboard.py` | ✅ | real |
 | 8 | Accelerate Leaderboard | `leaderboard.html` | `update_leaderboard_dashboard.py` | 🔒 hidden (Konami code, since 2026-11-17) | real |
@@ -223,30 +223,52 @@ Accelerate Onboarding.
 
 ## 5. Public Sector Certification
 
-**File / Script:** `cert-publicsector.html` / `update_cert_dashboard.py` (publicsector generator)
+**File / Script:** `cert-publicsector.html` / `update_cert_dashboard.py` (Public Sector v2 build,
+`load_rows_publicsector_v2()` + `generate_html_publicsector_v2()`)
 
-**Purpose:** same idea as Healthcare, for the Public Sector vertical — but note the terminology is
-deliberately different: PS has no formal "certification," only **completion**. Never call it
-"Certified"/"Certification" on this dashboard.
+**Purpose:** became a real certification on 2026-11-18, modeled on Healthcare. Tracks who is **OMNIA
+certified** and how far each person is through **three sub-curricula** under the `PSCERT` program:
+Public Sector Foundations (`PS_FOUNDATIONS`, 3 courses), Layered Security (`LSFDS`, 12, the same
+curriculum as the Layered Security dashboard) and BlueIrisIQ (`PS_BIIQ`, 1). 16 courses in all.
+Roster = the Public Sector team. The page is Resmie's prototype kept exactly as she built it
+(`PS_V2_TEMPLATE` in the script); the script only fills in the data. Verified byte-for-byte
+identical to her prototype on the 11.17.2026 files.
 
-**Data source:** latest-file-only (unlike Healthcare, PS does **not** accumulate across months —
-each file is a full active-roster snapshot, so people who've left the vertical drop off naturally
-rather than lingering). One row per curriculum item per person.
+**Data source (cert-data/, newest of each):**
+- `PublicSector-Curricula-Report-MM.DD.YYYY.xlsx`: LMS Custom Curriculum Item Status export, one row
+  per person per course. Columns read by name.
+- `Public-Sector-Scorecard-MM.DD.YY.xlsx`: workbook with Rep Scorecard (Email), Manager Scorecard
+  (Manager Email) and Removed Personnel (Name) sheets.
+- The old one-file `PublicSector-Certification-Curricula-Report-*` reports are ignored once the new
+  pair exists (they fall back only if the pair is missing).
 
-**What it measures:** Total Enrolled, status pills (Not Started/In Progress/Completed), a
-Completion Pipeline chart (3-stage percentage bar), a Learners by Market chart, a card-based roster
-with per-person curriculum checklists.
+**What it measures:** 5 tiles (Total Enrolled, Not Started, In Progress, Completion Rate, OMNIA
+Certified); 4 charts (Team Progress reps vs. managers, Learners by Market, Timeline, Curriculum
+Progress); roster with status, due date, New Hire tag and 3 course pills; per-person detail with a
+due date on every unfinished course; Status/Market/Hire Status/Timeline/Role filters; PDF + Excel
+exports (Full Report, Not Certified, Manager Summary); light/dark mode; triple-click title → home.
 
-**Custom formulas:**
-- Completion date = the **max Item Completion Date** across a person's 3 curriculum items — there
-  is no dedicated "curriculum completion date" field in this export format.
-- Only 3 curriculum items exist in PS, ever: "Introduction to Public Sector," "Disrupting the
-  Public Sector Buying Cycle," "Public Sector Prospecting Research Guide."
+**Custom formulas / rules:**
+- **Who's on it:** everyone with a `PSCERT` row, minus Removed Personnel and TLG.
+- **OMNIA Certified:** YES in the OMNIA Connect Certification column on the Rep or Manager Scorecard
+  (matched by email, case-insensitive). Not on the scorecard = not certified. Course progress doesn't
+  affect it; the LMS's own certification flag isn't used. No certification dates exist.
+- **Course done:** status `Online-Complete`; if a course appears twice the completed row wins.
+- **Overall %:** courses done ÷ 16, rounded. **BlueIrisIQ counts** (nobody has finished it yet, so
+  Completion Rate = people who finished all 16 ÷ enrolled = 0% for now).
+- **Status:** OMNIA Certified → In Progress (not certified, ≥1 course done) → Not Started.
+- **New Hire:** first 90 days from hire date, measured from the report date (Healthcare uses 65).
+- **Person deadline:** report date + LMS "Days Remaining" on the PSCERT row. **Course due date:** the
+  latest Item Required Date on each unfinished course (re-assigned people carry older dates).
+- **Timeline:** Overdue / Due Soon (≤10 days) / On Track; certified people = Certified.
+- **Manager:** title contains "director of sales," "vice president" or "regional account executive."
+- **Build log** lists people not on the scorecard and people left out, and warns on unknown course IDs.
 
-**TLG:** real Hide/Show toggle, same as Healthcare.
+**Homepage card:** "Public Sector Certification": learners, % OMNIA certified, certified / in progress
+/ not started, from the same loader.
 
-**Nav:** bi-directional hamburger menu linking to Playbook Traffic, Healthcare Certification,
-Accelerate Onboarding.
+**Open decisions (left as Resmie built them):** whether BlueIrisIQ should count toward Overall %;
+the In Progress definition; the 90-day New Hire window. Each is a small edit.
 
 ---
 

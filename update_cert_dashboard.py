@@ -1938,6 +1938,1411 @@ applyFilters();
 </html>"""
 
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Public Sector Certification (v2, 2026-11-18) — ported from Resmie's prototype
+# (cert-public-sector.html + Public_Sector_Dashboard_Build_Guide.docx).
+# Three sub-curricula under the PSCERT program: Public Sector Foundations (3),
+# Layered Security (LSFDS, 12 — the same curriculum as the Layered Security dashboard)
+# and BlueIrisIQ (1). "Certified" = YES in the scorecard's OMNIA Connect Certification
+# column (Rep or Manager Scorecard); Removed Personnel are left out.
+# Inputs (cert-data/): PublicSector-Curricula-Report-MM.DD.YYYY.xlsx +
+#                      Public-Sector-Scorecard-MM.DD.YY(YY).xlsx
+# The page is Resmie's HTML kept as-is (PS_V2_TEMPLATE); only the data is filled in.
+# ══════════════════════════════════════════════════════════════════════════════
+
+PS_CURRICULA = [  # (key, Curriculum ID, course order as Item IDs) — order from Resmie's prototype
+    ('psf',  'PS_FOUNDATIONS', ['ITPS', 'DTPSBC', 'PSPRG']),
+    ('ls',   'LSFDS',          ['LSC_IAPO', 'LS_ITM', 'DS', 'UA_ACCESSCONTROL', 'BIZHUB_BSMFP',
+                                'MFPPT_BSBSNB', 'BREACH_IDADB', 'CSMWSG', 'LSSW', 'LSSB_HI',
+                                'LSSB_NONPROFIT', 'LSSB_GOV']),
+    ('biiq', 'PS_BIIQ',        ['BIIQ_GOVCERT']),
+]
+PS_PROGRAM_ID = 'PSCERT'
+
+def _psv2_date(v):
+    if v is None or v == '' or (isinstance(v, str) and not v.strip()):
+        return ''
+    if hasattr(v, 'strftime'):
+        return v.strftime('%Y-%m-%d')
+    if isinstance(v, (int, float)):
+        return (datetime.date(1899, 12, 30) + datetime.timedelta(days=int(v))).isoformat()
+    m = re.match(r'\s*(\d{1,2})/(\d{1,2})/(\d{4})', str(v))
+    if m:
+        return f'{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}'
+    m = re.match(r'\s*(\d{4}-\d{2}-\d{2})', str(v))
+    return m.group(1) if m else ''
+
+def _psv2_sheet(wb, name):
+    for s in wb.sheetnames:
+        if s.strip().lower() == name.lower():
+            return wb[s]
+    return None
+
+def _psv2_header_idx(header, name):
+    want = re.sub(r'\s+', ' ', name).strip().lower()
+    for i, h in enumerate(header):
+        if h is not None and re.sub(r'\s+', ' ', str(h)).strip().lower() == want:
+            return i
+    return None
+
+def load_scorecard_ps(path):
+    """Returns (certified_emails:set, removed_names:set, scorecard_emails:set)."""
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    certified, known, removed = set(), set(), set()
+    for sheet, email_col in (('Rep Scorecard', 'Email'), ('Manager Scorecard', 'Manager Email')):
+        ws = _psv2_sheet(wb, sheet)
+        if ws is None:
+            print(f'  WARNING: scorecard has no "{sheet}" sheet')
+            continue
+        rows = ws.iter_rows(values_only=True)
+        header = next(rows)
+        ei = _psv2_header_idx(header, email_col)
+        oi = _psv2_header_idx(header, 'OMNIA Connect Certification')
+        if ei is None or oi is None:
+            print(f'  WARNING: "{sheet}" is missing the {email_col} or OMNIA Connect Certification column')
+            continue
+        for r in rows:
+            e = str(r[ei] or '').strip().lower()
+            if not e:
+                continue
+            known.add(e)
+            if str(r[oi] or '').strip().upper() == 'YES':
+                certified.add(e)
+    ws = _psv2_sheet(wb, 'Removed Personnel')
+    if ws is not None:
+        rows = ws.iter_rows(values_only=True)
+        ni = _psv2_header_idx(next(rows), 'Name')
+        for r in rows:
+            if ni is not None and r[ni]:
+                removed.add(re.sub(r'\s+', ' ', str(r[ni])).strip().lower())
+    wb.close()
+    return certified, removed, known
+
+def load_rows_publicsector_v2(curricula_path, scorecard_path, report_date_iso, tlg_names):
+    certified, removed, known = load_scorecard_ps(scorecard_path)
+    wb = openpyxl.load_workbook(curricula_path, read_only=True, data_only=True)
+    rows = wb.active.iter_rows(values_only=True)
+    header = [str(h).strip() if h is not None else '' for h in next(rows)]
+    C = {n: header.index(n) for n in ['Email Address', 'First Name', 'Last Name', 'Job Title', 'Market',
+         'Hire Date', 'ManagerFirstName', 'ManagerLastName', 'SUPEMAILADDR', 'Manager JobTitle',
+         'Curriculum ID', 'Curriculum Assignment Date', 'Days Remaining', 'Item ID', 'Item Title',
+         'Item Completion Date', 'Item Completion Status Description', 'Item Required Date']}
+    report_date = datetime.date.fromisoformat(report_date_iso)
+    cid_to_key = {cid: key for key, cid, _ in PS_CURRICULA}
+    people, items, program = {}, {}, {}
+    unknown = set()
+    for r in rows:
+        email = str(r[C['Email Address']] or '').strip()
+        if not email:
+            continue
+        ek = email.lower()
+        cid = str(r[C['Curriculum ID']] or '').strip()
+        if ek not in people:
+            people[ek] = {
+                'FirstName': str(r[C['First Name']] or '').strip(),
+                'LastName':  str(r[C['Last Name']] or '').strip(),
+                'Email': email,
+                'JobTitle': str(r[C['Job Title']] or '').strip(),
+                'Market': str(r[C['Market']] or '').strip(),
+                'Manager': f"{str(r[C['ManagerFirstName']] or '').strip()} {str(r[C['ManagerLastName']] or '').strip()}".strip(),
+                'MgrEmail': str(r[C['SUPEMAILADDR']] or '').strip(),
+                'MgrTitle': str(r[C['Manager JobTitle']] or '').strip(),
+                'HireDate': _psv2_date(r[C['Hire Date']]),
+            }
+        if cid == PS_PROGRAM_ID:
+            program[ek] = r
+            continue
+        key = cid_to_key.get(cid)
+        if not key:
+            continue
+        iid = str(r[C['Item ID']] or '').strip()
+        if not iid:
+            continue  # curriculum-level row with no course
+        done = str(r[C['Item Completion Status Description']] or '').strip() == 'Online-Complete'
+        rec = items.setdefault(ek, {}).setdefault(key, {}).get(iid)
+        new = {'id': iid, 'title': str(r[C['Item Title']] or '').strip(), 'done': done,
+               'date': _psv2_date(r[C['Item Completion Date']]) if done else '',
+               'due': _psv2_date(r[C['Item Required Date']])}
+        if rec is None:
+            items[ek][key][iid] = new
+        else:
+            # completed row wins; keep the latest Item Required Date
+            if new['done'] and not rec['done']:
+                rec['done'], rec['date'] = True, new['date']
+            if new['due'] > rec['due']:
+                rec['due'] = new['due']
+    wb.close()
+
+    out, not_on_card, left_out = [], [], []
+    for ek, p in people.items():
+        if ek not in program:
+            continue
+        name = f"{p['FirstName']} {p['LastName']}"
+        if name.lower() in removed or name in tlg_names:
+            left_out.append(name)
+            continue
+        if ek not in known:
+            not_on_card.append(name)
+        pr = program[ek]
+        p['AssignDate'] = _psv2_date(pr[C['Curriculum Assignment Date']])
+        try:
+            dr = int(float(pr[C['Days Remaining']]))
+            p['RequiredDate'] = (report_date + datetime.timedelta(days=dr)).isoformat()
+        except (TypeError, ValueError):
+            p['RequiredDate'] = ''
+        p['Certified'] = 'Yes' if ek in certified else 'No'
+        p['CertDate'] = ''
+        p['CertQtr'] = ''
+        tot_done = tot = 0
+        for key, cid, order in PS_CURRICULA:
+            got = items.get(ek, {}).get(key, {})
+            for iid in got:
+                if iid not in order:
+                    unknown.add(iid)
+            lst = []
+            for iid in order + sorted(i for i in got if i not in order):
+                it = got.get(iid)
+                if it is None:
+                    continue
+                if it['done']:
+                    it['due'] = ''
+                lst.append(it)
+            d = sum(1 for i in lst if i['done'])
+            p[key] = {'done': d, 'total': len(order), 'pct': round(d * 100 / len(order)) if order else 0, 'items': lst}
+            tot_done += d
+            tot += len(order)
+        p['overallDone'] = tot_done
+        p['overallTotal'] = tot
+        p['overallPct'] = round(tot_done * 100 / tot) if tot else 0
+        order = ['FirstName', 'LastName', 'Email', 'JobTitle', 'Market', 'Manager', 'MgrEmail', 'MgrTitle',
+                 'HireDate', 'AssignDate', 'RequiredDate', 'Certified', 'CertDate', 'CertQtr',
+                 'ls', 'psf', 'biiq', 'overallDone', 'overallTotal', 'overallPct']
+        out.append({k: p[k] for k in order})
+    out.sort(key=lambda p: (p['LastName'].lower(), p['FirstName'].lower()))
+    for iid in sorted(unknown):
+        print(f"  WARNING: unknown Public Sector item ID '{iid}' — not counted; add it to PS_CURRICULA")
+    return out, not_on_card, left_out
+
+
+def _ps_scorecard_date(fname):
+    """MM.DD.YY or MM.DD.YYYY in the filename -> 'YYYY-MM-DD' for sorting."""
+    m = re.search(r'(\d{2})\.(\d{2})\.(\d{2,4})(?!\d)', os.path.basename(fname))
+    if not m:
+        return '0000-00-00'
+    y = m.group(3)
+    y = ('20' + y) if len(y) == 2 else y
+    return f'{y}-{m.group(1)}-{m.group(2)}'
+
+
+def generate_html_publicsector_v2(rows, date_label, date_iso):
+    return (PS_V2_TEMPLATE
+            .replace('__PS_PEOPLE_JSON__', json.dumps(rows))
+            .replace('__PS_TLG_JSON__', json.dumps(sorted(TLG)))
+            .replace('__PS_REPORT_DATE__', date_iso)
+            .replace('__PS_DATE_LABEL__', date_label))
+
+
+PS_V2_TEMPLATE = r'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Public Sector Certification Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+    --accent:#4f8ef7; --accent2:#7c5cfc; --accent3:#f7c94f;
+    --text:#e8ecf4; --muted:#7b82a0; --green:#3ecf8e; --red:#f76f6f;
+    --teal:#2dd4bf; --green-subtle:#3ecf8e22; --red-subtle:#f76f6f22;
+    --font:'Segoe UI',system-ui,sans-serif;
+  }
+  body.light-mode {
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#eef1f7; --border:#d0d7e8;
+    --accent:#2563eb; --accent2:#6d28d9; --accent3:#d97706;
+    --text:#1a1d27; --muted:#475569; --green:#059669; --red:#dc2626;
+    --teal:#0f766e; --green-subtle:#05966922; --red-subtle:#dc262622;
+  }
+  body.light-mode select,body.light-mode input[type=date]{color-scheme:light;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .2s,color .2s;}
+
+  /* ── Header ────────────────────────────────────────────────────────── */
+  .header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}
+  .header-left{display:flex;align-items:center;gap:16px;}
+  .header-center{display:flex;justify-content:center;align-items:center;}
+  .kma-logo{height:38px;width:auto;display:block;}
+  .kma-logo-light{display:none;}
+  .light-mode .kma-logo-dark{display:none;}
+  .light-mode .kma-logo-light{display:block;}
+  .header h1{font-size:18px;font-weight:700;letter-spacing:.3px;}
+  .header h1 span{color:var(--muted);font-weight:400;}
+  .header-date{font-size:11px;color:var(--muted);margin-top:2px;}
+  .btn-theme{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;}
+  .btn-theme:hover{border-color:var(--accent);color:var(--text);}
+
+  /* ── Export dropdown ───────────────────────────────────────────────── */
+  .btn-export{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600;}
+  .btn-export:hover{opacity:0.88;}
+  .export-drop{position:relative;}
+  .export-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:210px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:visible;}
+  .export-menu.open{display:block;}
+  .export-item{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;transition:background .1s;font-family:inherit;}
+  .export-item:hover{background:var(--surface2);}
+  .export-parent{position:relative;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:13px;color:var(--text);cursor:default;transition:background .1s;}
+  .export-parent:hover{background:var(--surface2);}
+  .export-chevron{font-size:11px;color:var(--muted);margin-left:10px;}
+  .export-submenu{position:absolute;right:100%;top:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:90px;box-shadow:0 4px 24px rgba(0,0,0,0.28);display:none;z-index:201;overflow:hidden;margin-right:4px;}
+  .export-parent:hover .export-submenu{display:block;}
+
+  /* ── Info button / popover ─────────────────────────────────────────── */
+  .info-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:5px;vertical-align:middle;flex-shrink:0;line-height:1;transition:border-color .15s,color .15s;}
+  .info-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .info-popover{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:260px;box-shadow:0 4px 24px rgba(0,0,0,0.5);display:none;}
+  .info-popover.visible{display:block;}
+
+  /* ── Filters ───────────────────────────────────────────────────────── */
+  .filters{padding:14px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);}
+  .filter-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-right:4px;}
+  select,input[type=date],input[type=text]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;color-scheme:dark;}
+  select:focus,input:focus{border-color:var(--accent);}
+  .btn-reset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s;}
+  .btn-reset:hover{border-color:var(--accent);color:var(--text);}
+  .result-count{margin-left:auto;font-size:12px;color:var(--muted);}
+
+  /* ── Stat cards ────────────────────────────────────────────────────── */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:20px 28px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px;}
+  .stat-value{font-size:28px;font-weight:700;line-height:1;}
+  .stat-value.green{color:var(--green);}
+  .stat-value.red{color:var(--red);}
+  .stat-value.teal{color:var(--teal);}
+  .stat-value.blue{color:var(--accent);}
+  .stat-value.amber{color:var(--accent3);}
+  .stat-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  /* ── Charts ────────────────────────────────────────────────────────── */
+  .charts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:0 28px 16px;}
+  @media(max-width:1100px){.charts{grid-template-columns:1fr 1fr;}}
+  @media(max-width:700px){.charts{grid-template-columns:1fr;}}
+  @media(max-width:480px){.chart-wrap{height:180px;}}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}
+  .chart-title{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  body.light-mode .chart-title{color:var(--text);}
+  .chart-wrap{position:relative;height:260px;}
+
+  /* ── Roster ────────────────────────────────────────────────────────── */
+  .section{padding:0 28px 32px;}
+  .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+  .section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  body.light-mode .section-title{color:var(--text);}
+  .section-hint{font-size:11px;color:var(--muted);margin-top:3px;}
+  .roster-search{width:200px;}
+  .roster-wrap{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .roster-left{width:300px;flex-shrink:0;overflow-y:auto;max-height:820px;border-right:1px solid var(--border);}
+  .roster-right{flex:1;overflow-y:auto;max-height:820px;padding:16px 20px;}
+  .roster-right-header{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .no-data{text-align:center;color:var(--muted);padding:40px;font-size:13px;}
+  @media(max-width:680px){.roster-wrap{flex-direction:column;}.roster-left{width:100%;max-height:220px;border-right:none;border-bottom:1px solid var(--border);}}
+
+  /* Person cards */
+  .roster-person{display:flex;flex-direction:column;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;border-left:3px solid transparent;}
+  .roster-person:last-child{border-bottom:none;}
+  .roster-person:hover{background:var(--surface2);}
+  .roster-person.active{background:#4f8ef711;}
+  .roster-person.stripe-green{border-left-color:var(--green);}
+  .roster-person.stripe-yellow{border-left-color:#f59e0b;}
+  .roster-person.stripe-red{border-left-color:var(--red);}
+  .roster-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .roster-name-block{flex:1;min-width:0;}
+  .roster-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .roster-title{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .roster-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:7px;}
+  .roster-pills{display:flex;gap:5px;flex-wrap:wrap;}
+  .pill{font-size:8px;font-weight:700;border-radius:10px;padding:2px 7px;white-space:nowrap;letter-spacing:.03em;}
+  .pill.green{color:var(--green);background:var(--green-subtle);border:1px solid var(--green)44;}
+  .pill.yellow{color:#b45309;background:#fef3c7;border:1px solid #f59e0b44;}
+  .pill.red{color:var(--red);background:var(--red-subtle);border:1px solid var(--red)44;}
+  .roster-pct{font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0;margin-left:8px;}
+  .roster-pct.pct-progress{color:#f59e0b;}
+  .roster-pct.pct-done{color:var(--green);}
+
+  /* Manager group view */
+  .mgr-group-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--surface2);border-bottom:1px solid var(--border);user-select:none;}
+  .mgr-group-hdr:hover{background:var(--border);}
+  .mgr-group-hdr.open .mgr-chevron{transform:rotate(180deg);}
+  .mgr-chevron{transition:transform .15s;font-size:10px;color:var(--muted);flex-shrink:0;}
+  .mgr-team{display:none;}
+  .mgr-team.open{display:block;}
+
+  /* Roster key */
+  .roster-key{display:flex;gap:16px;align-items:center;padding:6px 12px;background:var(--surface2);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--muted);}
+  .key-stripe{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px;}
+  .key-stripe.green{background:var(--green);}
+  .key-stripe.yellow{background:#f59e0b;}
+  .key-stripe.red{background:var(--red);}
+
+  /* Sort buttons */
+  .sort-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .sort-btn:hover{border-color:var(--accent);color:var(--text);}
+  .sort-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}
+
+  /* Detail panel */
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;margin-top:14px;}
+  .detail-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+  .detail-value{font-size:14px;font-weight:500;}
+  .badge-status{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+  .badge-status.certified{background:var(--green-subtle);color:var(--green);}
+  .badge-status.in-progress{background:#fef3c7;color:#b45309;border:1px solid #f59e0b44;}
+  .badge-status.not-certified{background:var(--red-subtle);color:var(--red);border:1px solid var(--red)44;}
+  .roster-bottom .badge-status{font-size:10px;padding:2px 8px;}
+
+  /* Progress bars */
+  .prog-wrap{background:var(--surface2);border-radius:4px;height:6px;width:100%;overflow:hidden;margin-top:4px;}
+  .prog-bar{height:6px;border-radius:4px;transition:width .3s;}
+  .prog-bar.green{background:var(--green);}
+  .prog-bar.blue{background:var(--accent);}
+
+  /* Curriculum course list */
+  .curriculum-section{margin-top:18px;}
+  .curriculum-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;cursor:pointer;user-select:none;}
+  .curriculum-header:hover .curriculum-title{color:var(--accent);}
+  .curriculum-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);transition:color .15s;}
+  body.light-mode .curriculum-title{color:var(--text);}
+  .curriculum-count{font-size:11px;color:var(--muted);}
+  .course-list{margin-top:8px;display:none;}
+  .course-list.open{display:block;}
+  .course-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);}
+  .course-item:last-child{border-bottom:none;}
+  .course-icon{flex-shrink:0;font-size:11px;margin-top:1px;}
+  .course-icon.done{color:var(--green);}
+  .course-icon.todo{color:var(--muted);}
+  .course-title{flex:1;font-size:12px;line-height:1.4;}
+  .course-date{font-size:10px;color:var(--muted);white-space:nowrap;}
+
+  /* Print */
+  @page{size:landscape;margin:.65in;}
+  @media print{
+    body{background:#fff!important;color:#111!important;}
+    .header,.filters,.stats,.charts,.section,.print-hide{display:none!important;}
+    #print-header{display:block!important;}
+    #print-stats{display:flex!important;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;}
+    body.print-no-summary #print-stats{display:none!important;}
+    #print-roster-wrap{display:block!important;}
+    .ptable{width:100%;border-collapse:collapse;font-size:11px;}
+    .ptable th{background:#f0f4ff;color:#111;font-weight:700;padding:5px 8px;border:1px solid #ccc;text-align:left;}
+    .ptable td{padding:5px 8px;border:1px solid #ddd;vertical-align:middle;}
+    .ptable tr:nth-child(even) td{background:#fafafa;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <h1>Public Sector <span>Certification Dashboard</span></h1>
+      <div class="header-date">Data through __PS_DATE_LABEL__</div>
+    </div>
+  </div>
+  <div class="header-center">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;">
+    <div class="export-drop print-hide" id="export-drop">
+      <button class="btn-export" onclick="toggleExportDrop()">&#128438; Export &#9660;</button>
+      <div class="export-menu" id="export-menu">
+        <div class="export-parent">Full Report<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('full')">PDF</button><button class="export-item" onclick="runExportXLSX('full')">Excel</button></div></div>
+        <div class="export-parent">Not Certified<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('not-certified')">PDF</button><button class="export-item" onclick="runExportXLSX('not-certified')">Excel</button></div></div>
+        <div class="export-parent">Manager Summary<span class="export-chevron">&#8249;</span><div class="export-submenu"><button class="export-item" onclick="runExport('manager-summary')">PDF</button><button class="export-item" onclick="runExportXLSX('manager-summary')">Excel</button></div></div>
+      </div>
+    </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
+    <button class="btn-theme print-hide" id="btn-theme" onclick="toggleTheme()">&#9728; Light</button>
+  </div>
+</div>
+
+<!-- ── Filters ─────────────────────────────────────────────────────────── -->
+<div class="filters">
+  <span class="filter-label">Status</span>
+  <select id="f-status" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="Certified">Certified</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Not Started">Not Started</option>
+  </select>
+  <span class="filter-label">Market</span>
+  <select id="f-market" onchange="applyFilters()"><option value="">All Markets</option></select>
+  <span class="filter-label">Hire Status</span>
+  <select id="f-hirestatus" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="New Hire">New Hires</option>
+    <option value="Tenured Rep">Tenured Reps</option>
+  </select>
+  <span class="filter-label">Timeline</span>
+  <select id="f-deadline" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="Overdue">Overdue</option>
+    <option value="Due Soon">Due Soon</option>
+    <option value="On Track">On Track</option>
+  </select>
+  <span class="filter-label">Role</span>
+  <select id="f-role" onchange="applyFilters()">
+    <option value="">All</option>
+    <option value="Manager">Managers</option>
+    <option value="Rep">Reps</option>
+  </select>
+  <span class="filter-label" style="margin-right:2px;display:none">Date From</span>
+  <input type="date" id="f-date-from" onchange="applyFilters()" style="display:none">
+  <span class="filter-label" style="margin:0 2px;display:none">To</span>
+  <input type="date" id="f-date-to" onchange="applyFilters()" style="display:none">
+  <button class="btn-reset" onclick="resetFilters()">Reset</button>
+  <span class="result-count" id="result-count"></span>
+</div>
+
+<!-- ── Stat cards ──────────────────────────────────────────────────────── -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Total Enrolled <span class="info-btn" onclick="showInfo(event,'total-enrolled')">?</span></div>
+    <div class="stat-value" id="s-total">&#8212;</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Not Started <span class="info-btn" onclick="showInfo(event,'not-started')">?</span></div>
+    <div class="stat-value red" id="s-notstarted">&#8212;</div>
+    <div class="stat-sub" id="s-notstarted-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">In Progress <span class="info-btn" onclick="showInfo(event,'in-progress')">?</span></div>
+    <div class="stat-value blue" id="s-inprog">&#8212;</div>
+    <div class="stat-sub" id="s-inprog-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Completion Rate <span class="info-btn" onclick="showInfo(event,'completion-rate')">?</span></div>
+    <div class="stat-value teal" id="s-rate">&#8212;</div>
+    <div class="stat-sub" id="s-rate-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">OMNIA Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
+    <div class="stat-value green" id="s-certified">&#8212;</div>
+    <div class="stat-sub" id="s-certified-sub"></div>
+  </div>
+</div>
+
+<!-- ── Charts ──────────────────────────────────────────────────────────── -->
+<div class="charts" style="grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));">
+  <div class="chart-card">
+    <div class="chart-title">Public Sector Team Progress Update <span class="info-btn" onclick="showInfo(event,'manual-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="manualChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Learners by Market <span class="info-btn" onclick="showInfo(event,'market-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="marketChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Timeline <span class="info-btn" onclick="showInfo(event,'deadline-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="deadlineChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Curriculum Progress <span class="info-btn" onclick="showInfo(event,'curric-chart')">?</span></div>
+    <div class="chart-wrap"><canvas id="curricChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ── Roster ──────────────────────────────────────────────────────────── -->
+<div class="section">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Certification Roster <span class="info-btn" onclick="showInfo(event,'roster')">?</span></div>
+      <div class="section-hint">Click a person to see their course-level progress</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--muted);margin-right:2px;">View:</span>
+      <button class="sort-btn active" id="view-individual" onclick="setRosterView('individual')">Individual</button>
+      <button class="sort-btn" id="view-manager" onclick="setRosterView('manager')">By Manager</button>
+      <span id="sort-controls" style="display:flex;align-items:center;gap:6px;margin-left:6px;">
+        <span style="font-size:11px;color:var(--muted);margin-right:2px;">Sort:</span>
+        <button class="sort-btn" data-sort="name" onclick="setSort('name')">Name</button>
+        <button class="sort-btn" data-sort="status" onclick="setSort('status')">Status</button>
+        <button class="sort-btn active" data-sort="pct" onclick="setSort('pct')">Completion % &#9660;</button>
+      </span>
+    </div>
+    <input type="text" id="f-search" class="roster-search" placeholder="Search by name&hellip;" oninput="applyFilters()" style="width:170px;">
+  </div>
+  <div class="roster-key">
+    <span><span class="key-stripe green"></span>Certified</span>
+    <span><span class="key-stripe yellow"></span>In Progress</span>
+    <span><span class="key-stripe red"></span>Not Started</span>
+  </div>
+  <div class="roster-wrap">
+    <div class="roster-left" id="roster-left"></div>
+    <div class="roster-right" id="roster-right">
+      <div class="no-data">Select a person to view details</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Info popover ────────────────────────────────────────────────────── -->
+<div class="info-popover" id="info-popover"></div>
+
+<!-- ── Print-only elements ────────────────────────────────────────────── -->
+<div id="print-header" style="display:none;margin-bottom:20px;">
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px;" id="ph-title"></div>
+  <div style="font-size:12px;color:#555;margin-bottom:2px;" id="ph-date"></div>
+  <div style="font-size:12px;color:#555;" id="ph-filters"></div>
+  <div id="ph-desc" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #dde4f0;font-size:12px;color:#444;font-style:italic;"></div>
+</div>
+<div id="print-stats" style="display:none;gap:40px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:2px solid #dde4f0;"></div>
+<div id="print-roster-wrap" style="display:none;">
+  <table class="ptable" id="print-roster-table">
+    <thead id="print-roster-head"></thead>
+    <tbody id="print-roster-body"></tbody>
+  </table>
+</div>
+
+<script>
+const PEOPLE = __PS_PEOPLE_JSON__;
+const TLG_SET = new Set(__PS_TLG_JSON__);
+
+// ── Public Sector Team Progress Update data ─────────────────────────────────
+// Derived live from the certification roster (PEOPLE) rather than reported
+// by hand. Managers are excluded since manager certification is already
+// tracked in the stat row above. Reps who are already fully Certified
+// are also excluded from these buckets since they've completed the
+// process.
+let filtered = [];
+
+// ── New Hire designation ─────────────────────────────────────────────────
+// A person is a "New Hire" for their first 90 days of employment (a rolling
+// window from their hire date, checked against the report date below), and
+// automatically becomes a "Tenured Rep" on day 90 and beyond.
+var NEW_HIRE_WINDOW_DAYS = 90;
+function isNewHire(p){
+  if(!p.HireDate) return false;
+  var hire = new Date(p.HireDate + "T00:00:00");
+  var today = new Date(REPORT_DATE + "T00:00:00");
+  var daysSinceHire = Math.round((today - hire) / 86400000);
+  return daysSinceHire >= 0 && daysSinceHire < NEW_HIRE_WINDOW_DAYS;
+}
+function hireStatusLabel(p){
+  if(!p.HireDate) return "Unknown";
+  return isNewHire(p) ? "New Hire" : "Tenured Rep";
+}
+
+// ── Deadline / Overdue status ────────────────────────────────────────────
+// Deadline data comes straight from the LMS's own "Item Required Date"
+// field in the curricula export (per-person, as of import), not a
+// computed policy. This carries forward automatically on every future
+// data import: whatever required date the curricula export has for a
+// not-yet-certified person is what shows here, no manual override needed.
+//
+// Fallback: some not-yet-certified people have finished all their
+// coursework already, so the LMS no longer reports an active required
+// date for them (nothing left to track). If they're still "In Progress"
+// (i.e. not yet officially Certified) and not a new hire, they still
+// carry the same fallback deadline as the rest of their cohort rather
+// than showing as "Unknown". New hires and anyone with no coursework
+// started at all fall through to "Unknown" as before.
+var DUE_SOON_DAYS   = 10;
+var REPORT_DATE     = "__PS_REPORT_DATE__";
+var FALLBACK_DUE_DATE = "";
+function dueDate(p){
+  if(p.RequiredDate) return new Date(p.RequiredDate + "T00:00:00");
+  if(personStatus(p) === "In Progress" && !isNewHire(p)) {
+    return new Date(FALLBACK_DUE_DATE + "T00:00:00");
+  }
+  return null;
+}
+function daysRemaining(p){
+  var due = dueDate(p);
+  if(!due) return null;
+  var today = new Date(REPORT_DATE + "T00:00:00");
+  return Math.round((due - today) / 86400000);
+}
+function deadlineStatus(p){
+  if(p.Certified === "Yes") return "Certified";
+  var dr = daysRemaining(p);
+  if(dr === null) return "Unknown";
+  if(dr < 0) return "Overdue";
+  if(dr <= DUE_SOON_DAYS) return "Due Soon";
+  return "On Track";
+}
+
+let sortField = "pct";
+let sortDir   = "desc";
+let selectedEmail = null;
+let rosterView = "individual";
+let curricChart, marketChart, manualChart, deadlineChart;
+
+function sel(id) { return document.getElementById(id); }
+function cv(v)  { return getComputedStyle(document.body).getPropertyValue(v).trim(); }
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+(function(){
+  if(localStorage.getItem("pb-theme") !== "dark") document.body.classList.add("light-mode");
+  sel("btn-theme").textContent = document.body.classList.contains("light-mode") ? "🌙 Dark" : "☀ Light";
+})();
+function toggleTheme(){
+  var light = document.body.classList.toggle("light-mode");
+  localStorage.setItem("pb-theme", light ? "light" : "dark");
+  sel("btn-theme").textContent = light ? "🌙 Dark" : "☀ Light";
+  applyFilters();
+}
+
+document.addEventListener("click", function(e){
+  if(!e.target.classList.contains("info-btn")) sel("info-popover").classList.remove("visible");
+});
+
+// ── Export dropdown ────────────────────────────────────────────────────────
+function toggleExportDrop(){
+  sel("export-menu").classList.toggle("open");
+}
+document.addEventListener("click", function(e){
+  var d = sel("export-drop");
+  if(d && !d.contains(e.target)) sel("export-menu").classList.remove("open");
+});
+
+// ── Info tooltip ───────────────────────────────────────────────────────────
+var INFO_MSGS = {
+  "total-enrolled": "The total number of people currently assigned to the Public Sector certification program. Use the Status and Market filters above to narrow this to a specific group.",
+  "certified": "People who have earned their Public Sector certification. A person counts as certified when the OMNIA Connect Certification column on the Public Sector scorecard says YES. Certification is tracked there, separately from course completion.",
+  "in-progress":     "People who have started the program and completed at least one course, but haven't finished everything yet.",
+  "not-started":     "People who are assigned to the program but haven't completed any courses yet.",
+  "overdue":         "Past the due date for completing the curriculum and earning certification.",
+  "duesoon":         "Not certified, with 10 days or less until the due date.",
+  "ontrack":         "Not certified, with more than 10 days until the due date.",
+  "deadline-chart":  "Splits the roster into four groups: Certified, On Track (not yet certified, more than 10 days left), Due Soon (not yet certified, 10 days or less left), and Overdue (past the due date to complete the curriculum and earn certification). Updates with your filters.",
+  "completion-rate": "The percentage of assigned people who have finished all 16 courses in the curriculum (100% complete), regardless of whether they've since been marked officially Certified. This number updates when you apply filters.",
+  "new-hires": "People within their first 90 days of employment as of the report date. This is a rolling window: once someone reaches day 90 from their hire date, they automatically become a \"Tenured Rep,\" no manual update needed. Use the Hire Status filter above to isolate either group.",
+  "roster": "The full list of people in the program. Each card shows their name and job title, their progress on PS Foundations, Layered Security and BlueIrisIQ (bottom left), their overall completion percentage (bottom right), and their current status (top right). A \"New Hire\" tag appears under the name for anyone within their first 90 days of employment, and anyone not yet certified also shows their due date plus an \"Overdue\", \"Due Soon\", or \"On Track\" tag against that due date. Click any card to see a full course-by-course breakdown in the panel on the right.",
+  "curric-chart": "For each curriculum, how many of the people assigned to it have completed it, are partway through, or have not started. Public Sector Foundations has 3 courses, Layered Security has 12, and Public Sector BlueIrisIQ has 1, listed in the order they are due. Updates with your filters.",
+  "market-chart":    "Certification progress broken down by sales market. Each bar shows how many people in that market are Certified, In Progress, or Not Started. Hover over any bar to see the exact counts and total enrolled for that market. Updates when you apply filters.",
+  "manual-chart": "Shows where everyone who has not yet earned OMNIA certification stands on their coursework, split by Reps and Managers: what share of each group is 50% or more through the coursework, and what share is still below 50%. Bars show percent of each group (Reps and Managers are counted separately, so groups of different sizes compare fairly). Hover for the underlying headcount.",
+  "export":          "Download a report based on whoever is currently shown on screen. Apply filters first to scope the report to a specific group. Full Report includes everyone with all course progress columns. Not Certified is a contact list of people still working through the program, sorted by manager, useful for follow-up. Manager Summary shows each manager's team size and how many on their team have certified."
+};
+function showInfo(e, key){
+  var pop = sel("info-popover");
+  pop.textContent = INFO_MSGS[key] || "";
+  pop.classList.add("visible");
+  var r = e.target.getBoundingClientRect();
+  pop.style.top  = (r.bottom + 6) + "px";
+  pop.style.left = Math.min(r.left, window.innerWidth - 280) + "px";
+  e.stopPropagation();
+}
+
+// ── JS helpers ─────────────────────────────────────────────────────────────
+function escHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function personStatus(p){
+  if(p.Certified === "Yes") return "Certified";
+  if(p.overallPct > 0)      return "In Progress";
+  return "Not Started";
+}
+function isManager(p){
+  var t = (p.JobTitle || "").toLowerCase();
+  return t.indexOf("director of sales") !== -1 || t.indexOf("vice president") !== -1 || t.indexOf("regional account executive") !== -1;
+}
+function pFiscalQtr(d){
+  if(!d) return null;
+  var pts = d.split("-"), yr = +pts[0], mo = +pts[1];
+  var fy = mo >= 4 ? yr + 1 : yr, q = mo >= 10 ? 3 : mo >= 7 ? 2 : mo >= 4 ? 1 : 4;
+  return "Q" + q + " FY" + String(fy).slice(2);
+}
+function fmtDate(d){
+  if(!d) return "-";
+  var pts = d.split("-"), months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return months[parseInt(pts[1]) - 1] + " " + parseInt(pts[2]) + ", " + pts[0];
+}
+function fmtDateObj(d){
+  if(!d) return "-";
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return months[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear();
+}
+function pillClass(pct, total){
+  if(pct === 100 || (total > 0 && pct >= 100)) return "green";
+  if(pct > 0) return "yellow";
+  return "red";
+}
+
+// ── Curricula ──────────────────────────────────────────────────────────────
+// The three curricula inside the Public Sector Certification program, in the order they are due: Public Sector Foundations
+// (Dec 17), then Layered Security (Jan 16), then BlueIrisIQ (Feb 15). The roster pills, the detail panel, the Curriculum
+// Progress chart and the exports all follow this order. To track another, add one entry here and put its
+// progress on each learner as PEOPLE[i][key] = {done, total, pct, items:[{id, title, done, date}]}; the roster pills,
+// the detail panel, the charts and the exports all follow.
+var CURRICULA = [
+  { key: "psf",  name: "Public Sector Foundations", short: "PS Foundations", exportName: "PS Foundations" },
+  { key: "ls",   name: "Layered Security",          short: "Layered Sec",    exportName: "Layered Security" },
+  { key: "biiq", name: "Public Sector BlueIrisIQ",  short: "BlueIrisIQ",     exportName: "BlueIrisIQ" }
+];
+function curData(p, c){ return p[c.key] || null; }
+function curExportCell(p, c){ var d = curData(p, c); return d ? d.pct + "%" : "-"; }
+
+// ── Populate market dropdown ───────────────────────────────────────────────
+(function(){
+  var markets = [...new Set(PEOPLE.map(function(p){ return p.Market; }).filter(Boolean))].sort();
+  markets.forEach(function(m){
+    sel("f-market").innerHTML += '<option value="' + m + '">' + m + "</option>";
+  });
+})();
+
+function resetFilters(){
+  sel("f-market").value = "";
+  sel("f-status").value = "";
+  sel("f-hirestatus").value = "";
+  sel("f-deadline").value = "";
+  sel("f-role").value = "";
+  sel("f-date-from").value = "";
+  sel("f-date-to").value = "";
+  sel("f-search").value = "";
+  applyFilters();
+}
+
+// ── Roster view toggle ─────────────────────────────────────────────────────
+function setRosterView(v){
+  rosterView = v;
+  sel("view-individual").classList.toggle("active", v === "individual");
+  sel("view-manager").classList.toggle("active", v === "manager");
+  sel("sort-controls").style.display = v === "individual" ? "flex" : "none";
+  selectedEmail = null;
+  sel("roster-right").innerHTML = '<div class="no-data">Select a person to view details</div>';
+  renderRoster();
+}
+function toggleMgrGroup(el){
+  el.classList.toggle("open");
+  el.nextElementSibling.classList.toggle("open");
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────────
+function setSort(field){
+  if(sortField === field){
+    sortDir = sortDir === "desc" ? "asc" : "desc";
+  } else {
+    sortField = field;
+    sortDir   = "desc";
+  }
+  document.querySelectorAll(".sort-btn").forEach(function(btn){
+    var active = btn.dataset.sort === sortField;
+    btn.classList.toggle("active", active);
+    var arrow = active ? (sortDir === "desc" ? " ↓" : " ↑") : "";
+    btn.textContent = btn.textContent.replace(/ [↑↓]$/, "") + arrow;
+  });
+  renderRoster();
+}
+
+// ── applyFilters ───────────────────────────────────────────────────────────
+function applyFilters(){
+  var market = sel("f-market").value;
+  var status = sel("f-status").value;
+  var hireStatus = sel("f-hirestatus").value;
+  var deadline = sel("f-deadline").value;
+  var role   = sel("f-role").value;
+  var from   = sel("f-date-from").value;
+  var to     = sel("f-date-to").value;
+  var q      = (sel("f-search").value || "").toLowerCase();
+  filtered = PEOPLE.filter(function(p){
+    if(TLG_SET.has(p.FirstName + " " + p.LastName)) return false;
+    if(market && p.Market !== market) return false;
+    if(status && personStatus(p) !== status) return false;
+    if(hireStatus && hireStatusLabel(p) !== hireStatus) return false;
+    if(deadline && deadlineStatus(p) !== deadline) return false;
+    if(role && (isManager(p) ? "Manager" : "Rep") !== role) return false;
+    if(from && p.AssignDate && p.AssignDate < from) return false;
+    if(to && p.AssignDate && p.AssignDate > to) return false;
+    if(q && !(p.FirstName + " " + p.LastName).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  sel("result-count").textContent = filtered.length + " shown";
+  renderStats();
+  renderCharts();
+  renderManualChart();
+  renderRoster();
+}
+
+// ── renderStats ────────────────────────────────────────────────────────────
+function renderStats(){
+  var total   = filtered.length;
+  var cert    = filtered.filter(function(p){ return p.Certified === "Yes"; }).length;
+  var inprog  = filtered.filter(function(p){ return p.overallPct > 0 && p.Certified !== "Yes"; }).length;
+  var nostart = filtered.filter(function(p){ return p.overallPct === 0 && p.Certified !== "Yes"; }).length;
+  var certPct    = total > 0 ? Math.round(cert / total * 100) : 0;
+  var inprogPct  = total > 0 ? Math.round(inprog / total * 100) : 0;
+  var nostartPct = total > 0 ? Math.round(nostart / total * 100) : 0;
+  sel("s-total").textContent     = total;
+  sel("s-certified").textContent = certPct + "%";
+  sel("s-certified-sub").textContent = total > 0 ? (cert + " of " + total + " enrolled") : "";
+  sel("s-inprog").textContent    = inprogPct + "%";
+  sel("s-inprog-sub").textContent = total > 0 ? (inprog + " of " + total + " enrolled") : "";
+  sel("s-notstarted").textContent= nostartPct + "%";
+  sel("s-notstarted-sub").textContent = total > 0 ? (nostart + " of " + total + " enrolled") : "";
+
+  var fullComplete = filtered.filter(function(p){ return p.overallPct === 100; }).length;
+  var completeRate = total > 0 ? Math.round(fullComplete / total * 100) : 0;
+  sel("s-rate").textContent      = completeRate + "%";
+  sel("s-rate-sub").textContent  = total > 0 ? (fullComplete + " of " + total + " finished all courses") : "";
+}
+
+// ── renderCharts ───────────────────────────────────────────────────────────
+function renderCharts(){
+  var isLight    = document.body.classList.contains("light-mode");
+  var labelColor = isLight ? cv("--text") : cv("--muted");
+  var gridColor  = cv("--border");
+
+  // Chart 1b: deadline status among not-yet-certified people
+  var deadlineOverdue   = filtered.filter(function(p){ return deadlineStatus(p) === "Overdue"; }).length;
+  var deadlineDueSoon   = filtered.filter(function(p){ return deadlineStatus(p) === "Due Soon"; }).length;
+  var deadlineOnTrack   = filtered.filter(function(p){ return deadlineStatus(p) === "On Track"; }).length;
+  var deadlineCertified = filtered.filter(function(p){ return p.Certified === "Yes"; }).length;
+
+  if(deadlineChart) deadlineChart.destroy();
+  deadlineChart = new Chart(sel("deadlineChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Overdue", "Due Soon", "On Track", "Certified"],
+      datasets: [{
+        data: [deadlineOverdue, deadlineDueSoon, deadlineOnTrack, deadlineCertified],
+        backgroundColor: [cv("--red") + "cc", "#f59e0bcc", cv("--teal") + "cc", cv("--green") + "cc"],
+        borderColor: isLight ? "#fff" : "#0d0f1a",
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: "62%",
+      plugins: {
+        legend: { position: "bottom", labels: { color: labelColor, font: { size: 11 }, boxWidth: 12, padding: 12 } },
+        tooltip: { callbacks: { label: function(ctx){ return " " + ctx.label + ": " + ctx.raw + " people"; } } }
+      }
+    }
+  });
+
+  // Chart 2: progress on each curriculum. For every curriculum, how many of the people on it have completed it,
+  // are partway through, or have not started.
+  var curricRows = CURRICULA.map(function(c){
+    var on   = filtered.filter(function(p){ return !!p[c.key]; });
+    var done = on.filter(function(p){ var d = p[c.key]; return d.total > 0 && d.done >= d.total; }).length;
+    var part = on.filter(function(p){ var d = p[c.key]; return d.done > 0 && d.done < d.total; }).length;
+    return { name: c.name, total: on.length, done: done, part: part, none: on.length - done - part };
+  });
+  if(curricChart) curricChart.destroy();
+  curricChart = new Chart(sel("curricChart"), {
+    type: "bar",
+    data: {
+      labels: curricRows.map(function(r){ return r.name; }),
+      datasets: [
+        { label: "Completed",   data: curricRows.map(function(r){ return r.done; }), backgroundColor: cv("--green") + "cc", borderWidth: 0, borderRadius: 2, maxBarThickness: 34 },
+        { label: "In Progress", data: curricRows.map(function(r){ return r.part; }), backgroundColor: "#f59e0b"       + "cc", borderWidth: 0, borderRadius: 2, maxBarThickness: 34 },
+        { label: "Not Started", data: curricRows.map(function(r){ return r.none; }), backgroundColor: cv("--red")     + "cc", borderWidth: 0, borderRadius: 2, maxBarThickness: 34 }
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: "bottom", labels: { color: labelColor, font: { size: 11 }, padding: 16, boxWidth: 12 } },
+        tooltip: {
+          mode: "index",
+          callbacks: {
+            title: function(items){ return items[0].label; },
+            label: function(ctx){
+              var r = curricRows[ctx.dataIndex], pct = r.total > 0 ? Math.round(ctx.raw / r.total * 100) : 0;
+              return " " + ctx.dataset.label + ": " + ctx.raw + " (" + pct + "%)";
+            },
+            afterBody: function(items){ return ["─────────────", "On this curriculum: " + curricRows[items[0].dataIndex].total]; }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, beginAtZero: true, grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 } } },
+        y: { stacked: true, grid: { display: false }, ticks: { color: labelColor, font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Chart 3: completion by market — stacked horizontal bar
+  var mktMap = {};
+  filtered.forEach(function(p){
+    var m = p.Market || "Unknown";
+    var s = personStatus(p);
+    if(!mktMap[m]) mktMap[m] = { Certified: 0, "In Progress": 0, "Not Started": 0 };
+    mktMap[m][s] = (mktMap[m][s] || 0) + 1;
+  });
+  var mktLabels = Object.keys(mktMap).sort(function(a,b){
+    var ta = mktMap[a].Certified + mktMap[a]["In Progress"] + mktMap[a]["Not Started"];
+    var tb = mktMap[b].Certified + mktMap[b]["In Progress"] + mktMap[b]["Not Started"];
+    return tb - ta;
+  });
+
+  if(marketChart) marketChart.destroy();
+  marketChart = new Chart(sel("marketChart"), {
+    type: "bar",
+    data: {
+      labels: mktLabels,
+      datasets: [
+        { label: "Certified",    data: mktLabels.map(function(m){ return mktMap[m].Certified;      }), backgroundColor: cv("--green") + "cc", borderWidth: 0, borderRadius: 2 },
+        { label: "In Progress",  data: mktLabels.map(function(m){ return mktMap[m]["In Progress"]; }), backgroundColor: "#f59e0b"       + "cc", borderWidth: 0, borderRadius: 2 },
+        { label: "Not Started",  data: mktLabels.map(function(m){ return mktMap[m]["Not Started"]; }), backgroundColor: cv("--red")     + "cc", borderWidth: 0, borderRadius: 2 }
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: "bottom", labels: { color: labelColor, font: { size: 11 }, padding: 16, boxWidth: 12 } },
+        tooltip: {
+          mode: "index",
+          callbacks: {
+            title: function(items){ return items[0].label; },
+            afterBody: function(items){
+              var total = items.reduce(function(s, i){ return s + i.raw; }, 0);
+              return ["─────────────", "Enrolled: " + total];
+            }
+          }
+        },
+        datalabels: { display: false }
+      },
+      scales: {
+        x: { stacked: true, grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 }, stepSize: 1 } },
+        y: { stacked: true, grid: { display: false }, ticks: { color: labelColor, font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ── renderManualChart (manually reported data, not tied to filters) ─────────
+function renderManualChart(){
+  var isLight    = document.body.classList.contains("light-mode");
+  var labelColor = isLight ? cv("--text") : cv("--muted");
+  var gridColor  = cv("--border");
+
+  // All not-yet-certified people, split into Reps vs Managers per tier.
+  var notCert   = filtered.filter(function(p){ return p.Certified !== "Yes"; });
+  var reps      = notCert.filter(function(p){ return !isManager(p); });
+  var mgrs      = notCert.filter(isManager);
+
+  function tiers(list){
+    return [
+      list.filter(function(p){ return p.overallPct >= 50; }).length,                    // 50% or more through the coursework
+      list.filter(function(p){ return p.overallPct < 50; }).length                      // under 50%
+    ];
+  }
+  function toPct(counts, total){
+    return counts.map(function(c){ return total > 0 ? Math.round(c / total * 100) : 0; });
+  }
+  var repsCounts = tiers(reps);
+  var mgrsCounts = tiers(mgrs);
+  var repsTotal  = reps.length;
+  var mgrsTotal  = mgrs.length;
+  var repsPct    = toPct(repsCounts, repsTotal);
+  var mgrsPct    = toPct(mgrsCounts, mgrsTotal);
+
+  var labels = ["\u226550% Complete", "<50% Complete"];
+
+  if(manualChart) manualChart.destroy();
+  manualChart = new Chart(sel("manualChart"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [
+        { label: "Reps",     data: repsPct, counts: repsCounts, total: repsTotal, backgroundColor: "#8b5cf6bb", borderRadius: 3, borderSkipped: false },
+        { label: "Managers", data: mgrsPct, counts: mgrsCounts, total: mgrsTotal, backgroundColor: cv("--accent") + "bb", borderRadius: 3, borderSkipped: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { color: labelColor, font: { size: 11 } }, grid: { display: false } },
+        y: { beginAtZero: true, max: 100, ticks: { color: labelColor, font: { size: 11 }, callback: function(v){ return v + "%"; } }, grid: { color: gridColor } }
+      },
+      plugins: {
+        legend: { display: true, position: "bottom", labels: { color: labelColor, font: { size: 11 }, padding: 14, boxWidth: 12 } },
+        tooltip: { callbacks: { label: function(ctx){
+          var count = ctx.dataset.counts[ctx.dataIndex];
+          var total = ctx.dataset.total;
+          return " " + ctx.dataset.label + ": " + ctx.raw + "% (" + count + " of " + total + ")";
+        } } }
+      }
+    }
+  });
+}
+
+// ── buildPersonCard ────────────────────────────────────────────────────────
+function buildPersonCard(p){
+  var fullName       = p.FirstName + " " + p.LastName;
+  var status         = personStatus(p);
+  var stripe         = status === "Certified" ? " stripe-green" : status === "In Progress" ? " stripe-yellow" : " stripe-red";
+  var pctClass       = status === "Certified" ? " pct-done" : status === "In Progress" ? " pct-progress" : "";
+  var badgeStatusCls = status === "Certified" ? "certified" : status === "In Progress" ? "in-progress" : "not-certified";
+  var badgeStatusTxt = status === "Certified" ? "✓ Certified" : status === "In Progress" ? "In Progress" : "Not Started";
+  var newHireTag     = isNewHire(p) ? '<span class="pill" style="color:var(--accent3);background:var(--accent3)22;border:1px solid var(--accent3)44;margin-top:4px;display:inline-block">New Hire</span>' : "";
+  var dStatus        = deadlineStatus(p);
+  var deadlineTag    = dStatus === "Overdue" ? '<span class="pill" style="color:var(--red);background:var(--red-subtle);border:1px solid var(--red)44;margin-top:4px;margin-left:4px;display:inline-block">Overdue</span>'
+                      : dStatus === "Due Soon" ? '<span class="pill" style="color:#b45309;background:#fef3c7;border:1px solid #f59e0b44;margin-top:4px;margin-left:4px;display:inline-block">Due Soon</span>'
+                      : dStatus === "On Track" ? '<span class="pill" style="color:#0f766e;background:#ccfbf122;border:1px solid #0f766e44;margin-top:4px;margin-left:4px;display:inline-block">On Track</span>'
+                      : "";
+  var dueLine = "";
+  if(p.Certified !== "Yes"){
+    var due = dueDate(p);
+    if(due){
+      var dueColor = dStatus === "Overdue" ? "var(--red)" : dStatus === "Due Soon" ? "#b45309" : "var(--muted)";
+      dueLine = '<div class="roster-title" style="color:' + dueColor + ';margin-top:2px;">Due ' + fmtDateObj(due) + "</div>";
+    }
+  }
+  var h = '<div class="roster-person' + stripe + '" data-email="' + escHtml(p.Email) + '" onclick="showDetail(this.dataset.email)">';
+  h += '<div class="roster-top">';
+  h += '<div class="roster-name-block">';
+  h += '<div class="roster-name">' + fullName + "</div>";
+  h += '<div class="roster-title">' + (p.JobTitle || "") + "</div>";
+  h += dueLine;
+  h += newHireTag + deadlineTag;
+  h += "</div>";
+  h += '<span class="badge-status ' + badgeStatusCls + '">' + badgeStatusTxt + "</span>";
+  h += "</div>";
+  h += '<div class="roster-bottom">';
+  h += '<div class="roster-pills">';
+  CURRICULA.forEach(function(c){
+    var d = curData(p, c);
+    if(d) h += '<span class="pill ' + pillClass(d.pct, d.total) + '">' + c.short + " " + d.done + "/" + d.total + "</span>";
+  });
+  h += "</div>";
+  h += '<span class="roster-pct' + pctClass + '">' + p.overallPct + "%</span>";
+  h += "</div></div>";
+  return h;
+}
+
+// ── renderRoster ───────────────────────────────────────────────────────────
+function renderRoster(){
+  var html = "";
+
+  if(rosterView === "manager"){
+    var groups = {};
+    filtered.forEach(function(p){
+      var mgr = p.Manager || "No Manager";
+      if(!groups[mgr]) groups[mgr] = [];
+      groups[mgr].push(p);
+    });
+    var mgrsSorted = Object.keys(groups).sort();
+    mgrsSorted.forEach(function(mgr){
+      var team = groups[mgr];
+      var certCount = team.filter(function(p){ return p.Certified === "Yes"; }).length;
+      var teamCards = team.slice()
+        .sort(function(a, b){ return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName); })
+        .map(buildPersonCard).join("");
+      html += "<div>";
+      html += '<div class="mgr-group-hdr open" onclick="toggleMgrGroup(this)">';
+      html += "<div>";
+      html += '<div style="font-size:12px;font-weight:600;color:var(--text)">' + mgr + "</div>";
+      html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + team.length + " rep" + (team.length !== 1 ? "s" : "") + " &middot; " + certCount + " certified</div>";
+      html += "</div>";
+      html += '<span class="mgr-chevron">&#9660;</span>';
+      html += "</div>";
+      html += '<div class="mgr-team open">' + teamCards + "</div>";
+      html += "</div>";
+    });
+  } else {
+    var d = sortDir === "desc" ? -1 : 1;
+    var sorted = filtered.slice().sort(function(a, b){
+      if(sortField === "name"){
+        return d * (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+      } else if(sortField === "status"){
+        var order = { "Certified": 2, "In Progress": 1, "Not Started": 0 };
+        var diff = (order[personStatus(a)] || 0) - (order[personStatus(b)] || 0);
+        if(diff !== 0) return d * diff;
+        return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+      } else {
+        var diff2 = a.overallPct - b.overallPct;
+        if(diff2 !== 0) return d * diff2;
+        return (a.LastName + a.FirstName).localeCompare(b.LastName + b.FirstName);
+      }
+    });
+    sorted.forEach(function(p){ html += buildPersonCard(p); });
+  }
+
+  if(!html) {
+    var _df = sel("f-date-from").value, _dt = sel("f-date-to").value;
+    if(_df || _dt) {
+      html = '<div class="no-data">No people enrolled in this date range.<br><span style="font-size:0.85em;opacity:0.75">Try a different range or click Reset to clear all filters.</span></div>';
+    } else {
+      html = '<div class="no-data">No people match the selected filters.</div>';
+    }
+  }
+  sel("roster-left").innerHTML = html;
+
+  if(selectedEmail){
+    var el = sel("roster-left").querySelector('[data-email="' + selectedEmail + '"]');
+    if(el) el.classList.add("active");
+    else   sel("roster-right").innerHTML = '<div class="no-data">Select a person to view details</div>';
+  }
+}
+
+// ── showDetail ─────────────────────────────────────────────────────────────
+function showDetail(email){
+  selectedEmail = email;
+  var p = PEOPLE.find(function(r){ return r.Email === email; });
+  if(!p) return;
+  document.querySelectorAll(".roster-person").forEach(function(el){
+    el.classList.toggle("active", el.dataset.email === email);
+  });
+  var status  = personStatus(p);
+  var isCert  = status === "Certified";
+  var badgeClass = status === "Certified" ? "certified" : status === "In Progress" ? "in-progress" : "not-certified";
+  var badgeText  = status === "Certified" ? ("✓ Certified" + (p.CertDate ? " · " + fmtDate(p.CertDate) : "")) : status === "In Progress" ? "In Progress" : "Not Started";
+
+  function progBar(pct, cls){
+    return '<div class="prog-wrap"><div class="prog-bar ' + cls + '" style="width:' + pct + '%"></div></div>';
+  }
+  function courseList(curriculum, id){
+    var items = curriculum.items;
+    var html2 = '<div class="course-list open" id="cl-' + id + '">';
+    items.forEach(function(item){
+      var iconClass = item.done ? "done" : "todo";
+      var icon      = item.done ? "✓" : "○";
+      var dateStr   = item.done && item.date ? '<span class="course-date">' + fmtDate(item.date) + "</span>" : "";
+      if(!item.done && item.due){
+        var dueIn  = Math.round((new Date(item.due + "T00:00:00") - new Date(REPORT_DATE + "T00:00:00")) / 86400000);
+        var dueClr = dueIn < 0 ? "var(--red)" : dueIn <= DUE_SOON_DAYS ? "#b45309" : "var(--muted)";
+        dateStr = '<span class="course-date" style="color:' + dueClr + (dueIn <= DUE_SOON_DAYS ? ";font-weight:600" : "") + '" title="' + (dueIn < 0 ? Math.abs(dueIn) + " days overdue" : dueIn + " days left") + '">Due ' + fmtDate(item.due) + "</span>";
+      }
+      html2 += '<div class="course-item">';
+      html2 += '<span class="course-icon ' + iconClass + '">' + icon + "</span>";
+      html2 += '<span class="course-title">' + item.title + "</span>";
+      html2 += dateStr;
+      html2 += "</div>";
+    });
+    html2 += "</div>";
+    return html2;
+  }
+  function curriculumSection(label, curriculum, id){
+    var doneOf = curriculum.done + " / " + curriculum.total + " courses";
+    var pct    = curriculum.pct;
+    var barCls = pct >= 100 ? "green" : "blue";
+    var html3  = '<div class="curriculum-section">';
+    html3 += '<div class="curriculum-header" data-id="' + id + '" onclick="toggleCourseList(this.dataset.id)">';
+    html3 += '<span class="curriculum-title">' + label + "</span>";
+    html3 += '<span class="curriculum-count">' + doneOf + " ▼</span>";
+    html3 += "</div>";
+    html3 += progBar(pct, barCls);
+    html3 += courseList(curriculum, id);
+    html3 += "</div>";
+    return html3;
+  }
+
+  var detailHtml = "";
+  detailHtml += '<div class="roster-right-header">';
+  detailHtml += '<div style="font-size:16px;font-weight:700;margin-bottom:6px">' + p.FirstName + " " + p.LastName + "</div>";
+  detailHtml += '<span class="badge-status ' + badgeClass + '">' + badgeText + "</span>";
+  detailHtml += "</div>";
+  detailHtml += '<div class="detail-grid">';
+  detailHtml += '<div><div class="detail-label">Job Title</div><div class="detail-value">' + (p.JobTitle || "-") + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Market</div><div class="detail-value">' + (p.Market || "-") + "</div></div>";
+  detailHtml += '<div><div class="detail-label">Hired</div><div class="detail-value">' + fmtDate(p.HireDate) + (isNewHire(p) ? ' <span class="pill" style="color:var(--accent3);background:var(--accent3)22;border:1px solid var(--accent3)44;">New Hire</span>' : "") + "</div></div>";
+  if(p.Certified !== "Yes"){
+    var dStat = deadlineStatus(p);
+    var dr    = daysRemaining(p);
+    var due   = dueDate(p);
+    var dueStr = due ? (due.getMonth()+1) + "/" + due.getDate() + "/" + due.getFullYear() : "-";
+    var dColor = dStat === "Overdue" ? "var(--red)" : dStat === "Due Soon" ? "#b45309" : "#0f766e";
+    var drTxt  = dr === null ? "-" : dr < 0 ? (Math.abs(dr) + " days overdue") : (dr + " days left");
+    detailHtml += '<div><div class="detail-label">Deadline</div><div class="detail-value" style="color:' + dColor + '">' + dueStr + " · " + drTxt + "</div></div>";
+  }
+  detailHtml += '<div><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:' + p.Email + '" style="color:var(--accent);text-decoration:none">' + (p.Email || "-") + "</a></div></div>";
+  if(p.Manager){
+    detailHtml += '<div><div class="detail-label">Manager</div><div class="detail-value">' + p.Manager + "</div></div>";
+    detailHtml += '<div><div class="detail-label">Manager Email</div><div class="detail-value"><a href="mailto:' + p.MgrEmail + '" style="color:var(--accent);text-decoration:none">' + (p.MgrEmail || "-") + "</a></div></div>";
+  }
+  detailHtml += "</div>";
+  detailHtml += '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">';
+  CURRICULA.forEach(function(c){
+    var d = curData(p, c);
+    if(d) detailHtml += curriculumSection(c.name + " · " + d.done + " / " + d.total + " courses", d, c.key + "-" + email.replace(/[^a-z0-9]/gi, ""));
+  });
+  detailHtml += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);">';
+  detailHtml += p.overallDone + " of " + (p.overallTotal || 16) + " courses complete (" + p.overallPct + "%)";
+  detailHtml += "</div>";
+  sel("roster-right").innerHTML = detailHtml;
+}
+
+function toggleCourseList(id){
+  var el = document.getElementById("cl-" + id);
+  if(el) el.classList.toggle("open");
+}
+
+// ── Print / Export ─────────────────────────────────────────────────────────
+function setupPrintHeader(title, subtitle){
+  sel("ph-title").textContent   = title;
+  sel("ph-date").textContent    = subtitle;
+  var market = sel("f-market").value || "All Markets";
+  var status = sel("f-status").options[sel("f-status").selectedIndex].text;
+  var hireStatus = sel("f-hirestatus").options[sel("f-hirestatus").selectedIndex].text;
+  var role = sel("f-role").options[sel("f-role").selectedIndex].text;
+  var search = sel("f-search").value;
+  var parts  = ["Status: " + status, "Market: " + market, "Hire Status: " + hireStatus, "Role: " + role];
+  if(search) parts.push("Search: " + search);
+  sel("ph-filters").textContent = parts.join("  |  ");
+}
+function pBox(n, l){
+  return '<div style="min-width:90px"><div style="font-size:30px;font-weight:700;color:#1a3a5c;line-height:1">' + n + "</div>"
+       + '<div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:5px">' + l + "</div></div>";
+}
+function tds(cells){ return "<tr>" + cells.map(function(c){ return "<td>" + c + "</td>"; }).join("") + "</tr>"; }
+function thRow(labels){ return "<tr>" + labels.map(function(l){ return "<th>" + l + "</th>"; }).join("") + "</tr>"; }
+
+function runExport(type){
+  sel("export-menu").classList.remove("open");
+  var now = new Date().toLocaleDateString("en-US", {year:"numeric",month:"long",day:"numeric"});
+
+  if(type === "full"){
+    setupPrintHeader("Public Sector Certification Report", "Generated: " + now + "  |  " + filtered.length + " People");
+    var total  = filtered.length;
+    var cert   = filtered.filter(function(p){ return p.Certified === "Yes"; }).length;
+    var inprog = filtered.filter(function(p){ return p.overallPct > 0 && p.Certified !== "Yes"; }).length;
+    var rate   = total > 0 ? Math.round(filtered.filter(function(p){ return p.overallPct === 100; }).length / total * 100) : 0;
+    var newHires = filtered.filter(isNewHire).length;
+    var overdueCt = filtered.filter(function(p){ return deadlineStatus(p) === "Overdue"; }).length;
+    var dueSoonCt = filtered.filter(function(p){ return deadlineStatus(p) === "Due Soon"; }).length;
+    var onTrackCt = filtered.filter(function(p){ return deadlineStatus(p) === "On Track"; }).length;
+    sel("print-stats").innerHTML = pBox(total,"Total Enrolled") + pBox(cert,"Certified") + pBox(inprog,"In Progress") + pBox(rate+"%","Completion Rate") + pBox(newHires,"New Hires") + pBox(overdueCt,"Overdue") + pBox(dueSoonCt,"Due Soon") + pBox(onTrackCt,"On Track");
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Market","Job Title","Hire Status","Status","Deadline"].concat(CURRICULA.map(function(c){ return c.exportName + " %"; }), ["Overall %","Manager"]));
+    sel("print-roster-body").innerHTML = filtered.map(function(p,i){
+      return tds([i+1, "<b>"+p.FirstName+" "+p.LastName+"</b>", p.Market||"-", p.JobTitle||"-",
+        hireStatusLabel(p), personStatus(p), deadlineStatus(p)].concat(
+        CURRICULA.map(function(c){ return curExportCell(p, c); }),
+        [p.overallPct+"%", p.Manager||"-"]));
+    }).join("");
+    sel("ph-desc").style.display = "none";
+    document.body.classList.remove("print-no-summary");
+    window.print();
+
+  } else if(type === "not-certified"){
+    var notCert = filtered.filter(function(p){ return p.Certified !== "Yes"; });
+    setupPrintHeader("Not Certified: Public Sector", "Generated: " + now + "  |  " + notCert.length + " Employees");
+    sel("print-stats").innerHTML = "";
+    sel("print-roster-head").innerHTML = thRow(["#","Name","Email","Market"].concat(CURRICULA.map(function(c){ return c.exportName + " %"; }), ["Manager","Manager Email"]));
+    sel("print-roster-body").innerHTML = notCert.length
+      ? notCert.slice().sort(function(a,b){ return (a.Manager||"").localeCompare(b.Manager||"") || (a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName); })
+          .map(function(p,i){ return tds([i+1,"<b>"+p.FirstName+" "+p.LastName+"</b>",p.Email||"-",p.Market||"-"].concat(CURRICULA.map(function(c){ return curExportCell(p, c); }), [p.Manager||"-",p.MgrEmail||"-"])); }).join("")
+      : '<tr><td colspan="' + (6 + CURRICULA.length) + '" style="color:#999;font-style:italic;padding:10px">All enrolled people are certified.</td></tr>';
+    sel("ph-desc").textContent = "Employees who have not yet earned Public Sector certification, sorted by manager.";
+    sel("ph-desc").style.display = "block";
+    document.body.classList.add("print-no-summary");
+    window.print();
+    document.body.classList.remove("print-no-summary");
+
+  } else if(type === "manager-summary"){
+    var mgrMap = {};
+    filtered.forEach(function(p){
+      var k = p.Manager || "(No Manager)";
+      if(!mgrMap[k]) mgrMap[k] = { name:k, email:p.MgrEmail||"-", total:0, cert:0, avgPct:0, sumPct:0 };
+      mgrMap[k].total++;
+      if(p.Certified === "Yes") mgrMap[k].cert++;
+      mgrMap[k].sumPct += p.overallPct;
+    });
+    var mgrs = Object.values(mgrMap).map(function(m){ m.avgPct = m.total > 0 ? Math.round(m.sumPct / m.total) : 0; return m; })
+      .sort(function(a,b){ return (b.cert/b.total) - (a.cert/a.total); });
+    setupPrintHeader("Manager Summary: Public Sector", "Generated: " + now + "  |  " + mgrs.length + " Managers");
+    sel("print-stats").innerHTML = "";
+    sel("print-roster-head").innerHTML = thRow(["Manager","Manager Email","Team Size","Certified","Avg Overall %"]);
+    sel("print-roster-body").innerHTML = mgrs.map(function(m){ return tds(["<b>"+m.name+"</b>",m.email,m.total,m.cert,"<b>"+m.avgPct+"%</b>"]); }).join("");
+    sel("ph-desc").textContent = "Certification completion by manager, sorted from highest to lowest completion rate.";
+    sel("ph-desc").style.display = "block";
+    document.body.classList.add("print-no-summary");
+    window.print();
+    document.body.classList.remove("print-no-summary");
+  }
+}
+
+// ── xlsx export ────────────────────────────────────────────────────────────
+function runExportXLSX(type){
+  sel("export-menu").classList.remove("open");
+  var now=new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  function makeSheet(rows,colWidths){
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=colWidths.map(function(w){ return {wch:w}; });
+    return ws;
+  }
+  function dlXLSX(name,wb){ XLSX.writeFile(wb,name+'.xlsx'); }
+  var wb=XLSX.utils.book_new();
+  if(type==="full"){
+    var total=filtered.length;
+    var cert=filtered.filter(function(p){ return p.Certified==="Yes"; }).length;
+    var rate=total>0?Math.round(filtered.filter(function(p){ return p.overallPct===100; }).length/total*100):0;
+    var inprogXL  = filtered.filter(function(p){ return p.overallPct > 0 && p.Certified !== "Yes"; }).length;
+    var nostartXL = filtered.filter(function(p){ return p.overallPct === 0 && p.Certified !== "Yes"; }).length;
+    var newHiresXL = filtered.filter(isNewHire).length;
+    var overdueXL  = filtered.filter(function(p){ return deadlineStatus(p) === "Overdue"; }).length;
+    var dueSoonXL  = filtered.filter(function(p){ return deadlineStatus(p) === "Due Soon"; }).length;
+    var onTrackXL  = filtered.filter(function(p){ return deadlineStatus(p) === "On Track"; }).length;
+    var sumRows=[
+      ["Public Sector Certification Report"],
+      ["Generated:",now],
+      [],
+      ["SUMMARY"],
+      ["Total Enrolled",total],
+      ["Certified",cert],
+      ["In Progress",inprogXL],
+      ["Not Started",nostartXL],
+      ["Completion Rate",rate+"%"],
+      ["New Hires",newHiresXL],
+      ["Overdue",overdueXL],
+      ["Due Soon",dueSoonXL],
+      ["On Track",onTrackXL],
+    ];
+    XLSX.utils.book_append_sheet(wb,makeSheet(sumRows,[30,18]),"Summary");
+    var rRows=[["Name","Market","Job Title","Hire Status","Status","Deadline","Days Remaining"].concat(CURRICULA.map(function(c){ return c.exportName + " %"; }), ["Overall %","Manager"])];
+    filtered.forEach(function(p){
+      var dr = daysRemaining(p);
+      rRows.push([p.FirstName+" "+p.LastName,p.Market||"-",p.JobTitle||"-",hireStatusLabel(p),personStatus(p),deadlineStatus(p),(p.Certified==="Yes"?"-":(dr===null?"-":dr))].concat(CURRICULA.map(function(c){ return curExportCell(p, c); }),[p.overallPct+"%",p.Manager||"-"]));
+    });
+    XLSX.utils.book_append_sheet(wb,makeSheet(rRows,[28,18,28,14,14,12,14].concat(CURRICULA.map(function(){ return 16; }),[12,28])),"Roster");
+    dlXLSX("ps-full-report",wb);
+  } else if(type==="not-certified"){
+    var notCert=filtered.filter(function(p){ return p.Certified!=="Yes"; }).slice().sort(function(a,b){
+      return (a.Manager||"").localeCompare(b.Manager||"")||(a.LastName+a.FirstName).localeCompare(b.LastName+b.FirstName);
+    });
+    var rows=[["Name","Email","Market"].concat(CURRICULA.map(function(c){ return c.exportName + " %"; }), ["Manager","Manager Email"])];
+    notCert.forEach(function(p){
+      rows.push([p.FirstName+" "+p.LastName,p.Email||"-",p.Market||"-"].concat(CURRICULA.map(function(c){ return curExportCell(p, c); }),[p.Manager||"-",p.MgrEmail||"-"]));
+    });
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,18].concat(CURRICULA.map(function(){ return 16; }),[28,32])),"Not Certified");
+    dlXLSX("ps-not-certified",wb);
+  } else if(type==="manager-summary"){
+    var mgrMap={};
+    filtered.forEach(function(p){
+      var k=p.Manager||"(No Manager)";
+      if(!mgrMap[k]) mgrMap[k]={name:k,email:p.MgrEmail||"-",total:0,cert:0,sumPct:0};
+      mgrMap[k].total++;
+      if(p.Certified==="Yes") mgrMap[k].cert++;
+      mgrMap[k].sumPct+=p.overallPct;
+    });
+    var rows=[["Manager","Manager Email","Team Size","Certified","Avg Overall %"]];
+    Object.values(mgrMap).map(function(m){ m.avgPct=m.total>0?Math.round(m.sumPct/m.total):0; return m; })
+      .sort(function(a,b){ return (b.cert/b.total)-(a.cert/a.total); })
+      .forEach(function(m){ rows.push([m.name,m.email,m.total,m.cert,m.avgPct+"%"]); });
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows,[28,32,12,12,14]),"Manager Summary");
+    dlXLSX("ps-manager-summary",wb);
+  }
+}
+
+// ── init ───────────────────────────────────────────────────────────────────
+applyFilters();
+var firstCard = sel("roster-left").querySelector(".roster-person");
+if(firstCard) showDetail(firstCard.dataset.email);
+(function(){
+  var n=0,t;
+  var h=document.querySelector(".header h1");
+  if(h) h.addEventListener("click",function(){
+    n++;clearTimeout(t);
+    if(n>=3){n=0;window.location.href="index.html";}
+    else t=setTimeout(function(){n=0;},1500);
+  });
+})();
+</script>
+</body>
+</html>'''
+
+
 def main():
     cert_dir = 'cert-data'
     if not os.path.isdir(cert_dir):
@@ -1977,6 +3382,33 @@ def main():
         generated.append(out)
         hc_handled = True
 
+    # ── Public Sector v2: curricula report + scorecard (latest of each) ─────
+    ps_handled = False
+    ps_curr = sorted(glob.glob(os.path.join(cert_dir, 'PublicSector-Curricula-Report-*.xlsx')), key=extract_file_date)
+    ps_card = sorted(glob.glob(os.path.join(cert_dir, 'Public-Sector-Scorecard-*.xlsx')), key=_ps_scorecard_date)
+    if ps_curr and ps_card:
+        cpath, spath = ps_curr[-1], ps_card[-1]
+        print('\npublicsector (Public Sector) — v2 certification format:')
+        print(f'  {os.path.basename(cpath)}')
+        print(f'  {os.path.basename(spath)}')
+        if _ps_scorecard_date(spath) < extract_file_date(cpath):
+            print('  NOTE: the scorecard is older than the curricula report — using the newest scorecard available')
+        ps_date_iso = _file_date_iso(cpath)
+        rows, not_on_card, left_out = load_rows_publicsector_v2(cpath, spath, ps_date_iso, TLG)
+        cert = sum(1 for r in rows if r['Certified'] == 'Yes')
+        ip = sum(1 for r in rows if r['Certified'] != 'Yes' and r['overallDone'] > 0)
+        print(f'  → {len(rows)} people  ({cert} OMNIA certified, {ip} in progress, {len(rows)-cert-ip} not started)')
+        if not_on_card:
+            print(f'  Not on the scorecard (count as not certified): {", ".join(not_on_card)}')
+        if left_out:
+            print(f'  Left out (Removed Personnel / TLG): {", ".join(left_out)}')
+        out = 'cert-publicsector.html'
+        with open(out, 'w', encoding='utf-8') as fh:
+            fh.write(generate_html_publicsector_v2(rows, _file_date_label(cpath), ps_date_iso))
+        print(f'  Written → {out}')
+        generated.append(out)
+        ps_handled = True
+
     # ── Original single-file loop (PS and other verticals) ───────────────────
     vert_files = {}
     for fname in files:
@@ -1986,6 +3418,8 @@ def main():
             continue
         if slug == 'healthcare' and hc_handled:
             continue  # already handled above with v2 loader
+        if slug == 'publicsector' and ps_handled:
+            continue  # already handled above with the v2 certification build
         vert_files.setdefault(slug, []).append(fname)
 
     for slug in sorted(vert_files):

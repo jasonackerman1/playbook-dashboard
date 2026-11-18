@@ -134,6 +134,21 @@ PS_LEARN_FILE = 'Public Sector Foundations Learning Report.xlsx'
 
 def ps_cert_stats():
     cert_dir = SCRIPT_DIR / 'cert-data'
+    # v2 (2026-11-18): Public Sector Certification = curricula report + scorecard, same loader
+    # as the dashboard, so the card always agrees with cert-publicsector.html.
+    import glob
+    from update_cert_dashboard import (load_rows_publicsector_v2, extract_file_date as _efd,
+                                       _ps_scorecard_date, _file_date_iso, TLG)
+    curr = sorted(glob.glob(str(cert_dir / 'PublicSector-Curricula-Report-*.xlsx')), key=_efd)
+    card = sorted(glob.glob(str(cert_dir / 'Public-Sector-Scorecard-*.xlsx')), key=_ps_scorecard_date)
+    if curr and card:
+        rows, _, _ = load_rows_publicsector_v2(curr[-1], card[-1], _file_date_iso(curr[-1]), TLG)
+        total = len(rows)
+        certified = sum(1 for r in rows if r['Certified'] == 'Yes')
+        in_progress = sum(1 for r in rows if r['Certified'] != 'Yes' and r['overallDone'] > 0)
+        return {'total': total, 'certified': certified,
+                'rate': round(certified / total * 100) if total else 0,
+                'in_progress': in_progress, 'not_started': total - certified - in_progress}
     from update_cert_dashboard import load_rows_publicsector, extract_file_date, person_key
     files = sorted(
         [f for f in os.listdir(cert_dir)
@@ -556,13 +571,13 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
       </div>
     </div>
 
-    <!-- Public Sector Curriculum -->
+    <!-- Public Sector Certification -->
     <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Public_Sector_Playbook_Images/publicSectorHero3.jpg')">
       <div class="card-head">
         <span class="card-icon">&#127963;</span>
         <div>
-          <div class="card-title">Public Sector Curriculum</div>
-          <div class="card-desc">LMS curriculum progress</div>
+          <div class="card-title">Public Sector Certification</div>
+          <div class="card-desc">OMNIA certification + 3 curricula</div>
         </div>
       </div>
       <div>
@@ -570,11 +585,11 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
           <span class="stat-num" style="color:var(--accent)">{ps_total}</span>
           <span class="stat-unit">total learners</span>
         </div>
-        <div class="stat-sub">{ps_rate}% completion rate</div>
+        <div class="stat-sub">{ps_rate}% OMNIA certified</div>
       </div>
       <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
         <div class="stat-row" style="flex:1;">
-          <span class="pill pill-green">&#10003; {ps_completed} completed</span>
+          <span class="pill pill-green">&#10003; {ps_completed} certified</span>
           {ps_inprog_pill}
           <div style="width:100%;height:0;"></div>
           <span class="pill pill-muted">&#9675; {ps_not_started} not started</span>

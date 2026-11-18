@@ -20,11 +20,16 @@ reappears in its usual spot. The dashboard and the Accelerate playbook's leaderb
 time: wait for githubstatus.com to show Actions operational, then re-run the workflow. When a publish
 times out after the build succeeded, check the live site first; it often already updated.
 
-**Public Sector is becoming a certification (planned, nothing built).** Three sub-curricula: the
-current Public Sector courses (more may come), Layered Security (the same 12-module `LSFDS`
-curriculum) and Blue Iris IQ. Same Public Sector team roster. Resmie has a prototype + report; next
-step is to read both, then port into `update_cert_dashboard.py` using Healthcare as the model. Open:
-Certified rule, Blue Iris IQ course list, due dates, Completed → Certified wording.
+**Public Sector is now a certification (BUILT 2026-11-18).** Ported Resmie's prototype
+(`cert-public-sector.html` + build guide) into `update_cert_dashboard.py`: new
+`load_rows_publicsector_v2()` reads `PublicSector-Curricula-Report-*` + `Public-Sector-Scorecard-*`, and
+her page is kept as-is in `PS_V2_TEMPLATE`. Output stays `cert-publicsector.html`, verified byte-for-byte
+identical to her prototype. 11.17 data: 139 people, 117 OMNIA certified, 20 in progress, 2 not started;
+Thomas Gray not on the scorecard; Smith Sinclair left out (Removed Personnel). Homepage card renamed
+"Public Sector Certification" (OMNIA %), Dashboard Traffic label renamed to match. Her prototype file and
+guide were deleted after porting. Defaults kept from her build: BlueIrisIQ counts toward Overall %
+(Completion Rate 0% until someone finishes it), 90-day New Hire window. Every weekly drop now needs the
+Scorecard too. See DASHBOARD_REFERENCE.md §5.
 
 ## Recent Changes (2026-11-17) — Accelerate progress file for the playbook's "My Journey" page
 - `update_onboarding_dashboard.py` now keeps each course's LMS **Item ID** (col 22, same as the playbook's `componentID`) and, on every run, writes **`accelerate-progress.json`** via `write_progress_json()`. It's used by the Accelerate Sales Playbook's new My Accelerate Journey page (personal progress, "Up next", checklist).
