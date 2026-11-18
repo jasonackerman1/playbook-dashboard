@@ -1,8 +1,30 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-11-04
+Last updated: 2026-11-18
 
 ---
+
+## Recent Changes (2026-11-17 → 11-18)
+
+**Registered workshops no longer cause Overdue (Accelerate Onboarding, 2026-11-18).** A past-due
+workshop (VILT) the learner is Registered for but hasn't attended is skipped by a new
+`waitingOnWorkshop()` check in the deadline engine (`itemDaysLeft` / `curricDaysLeft`). It's the only
+exception; unregistered workshops still count. On 11.16 data: 57 → 41 Overdue, nobody newly Overdue.
+
+**Accelerate Leaderboard card hidden behind the Konami code (2026-11-17, `f8d3414`).** It joins
+LinkedIn Learning Engagement and LMS Engagement as `card-secret-3`; the code reveals all three, and it
+reappears in its usual spot. The dashboard and the Accelerate playbook's leaderboard feed are unchanged.
+
+**Deploy notes, 2026-11-09:** GitHub had a major Actions outage. Several publish steps stalled on
+"syncing files" and timed out, and runs failed with "Internal server error" before starting. Fix each
+time: wait for githubstatus.com to show Actions operational, then re-run the workflow. When a publish
+times out after the build succeeded, check the live site first; it often already updated.
+
+**Public Sector is becoming a certification (planned, nothing built).** Three sub-curricula: the
+current Public Sector courses (more may come), Layered Security (the same 12-module `LSFDS`
+curriculum) and Blue Iris IQ. Same Public Sector team roster. Resmie has a prototype + report; next
+step is to read both, then port into `update_cert_dashboard.py` using Healthcare as the model. Open:
+Certified rule, Blue Iris IQ course list, due dates, Completed → Certified wording.
 
 ## Recent Changes (2026-11-17) — Accelerate progress file for the playbook's "My Journey" page
 - `update_onboarding_dashboard.py` now keeps each course's LMS **Item ID** (col 22, same as the playbook's `componentID`) and, on every run, writes **`accelerate-progress.json`** via `write_progress_json()`. It's used by the Accelerate Sales Playbook's new My Accelerate Journey page (personal progress, "Up next", checklist).

@@ -67,12 +67,12 @@ the sole source of truth going forward.
 | 5 | Public Sector Certification | `cert-publicsector.html` | `update_cert_dashboard.py` | ✅ | real |
 | 6 | Layered Security Certification | `cert-layered-security.html` | `update_layered_security_dashboard.py` | ✅ | real |
 | 7 | Accelerate Onboarding | `onboarding.html` | `update_onboarding_dashboard.py` | ✅ | real |
-| 8 | Accelerate Leaderboard | `leaderboard.html` | `update_leaderboard_dashboard.py` | ✅ | real |
+| 8 | Accelerate Leaderboard | `leaderboard.html` | `update_leaderboard_dashboard.py` | 🔒 hidden (Konami code, since 2026-11-17) | real |
 | 9 | LinkedIn Learning Engagement | `linkedin-learning-engagement.html` | `update_linkedin_learning_engagement_dashboard.py` | 🔒 hidden (Konami code) | **placeholder** |
 | 10 | LMS Engagement | `lms-engagement.html` | `update_lms_engagement_dashboard.py` | 🔒 hidden (Konami code) | real |
 
-**🔒 Hidden cards (added 2026-09-28, reveal upgraded 2026-10-14):** #9 and #10 are deliberately
-hidden from the homepage grid by default. Typing the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) anywhere on
+**🔒 Hidden cards (added 2026-09-28, reveal upgraded 2026-10-14, #8 added 2026-11-17):** #8, #9 and #10 are deliberately
+hidden from the homepage grid by default (`card-secret-3` is the Leaderboard, which reappears in its usual spot after Accelerate Onboarding). Typing the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) anywhere on
 the homepage reveals both — does **not** persist, resets on every page reload. Nothing is shown
 before or while typing wrong keys (so the code's existence/length is never given away); each
 correct key pops one large ghosted glyph dead-center on screen that fades out before the next one
@@ -331,6 +331,10 @@ including average Days to First Sale.
 - **Overdue status** is per-curriculum, using the LMS's own "Item Required Date" where the LMS
   provides one, falling back to a `35 − days elapsed` window when it doesn't. "Coming Soon" courses
   count toward completion totals but can **never** trigger Overdue, regardless of any date.
+  **Registered workshops never trigger Overdue either (2026-11-18):** a VILT workshop the learner is
+  Registered for (an Active Enrollment row in the Registration report) but hasn't attended is skipped
+  by `waitingOnWorkshop()` — they're booked and waiting for the class. A workshop they're *not*
+  registered for still counts. On 11.16 data this moved 16 people off Overdue (57 → 41).
   **"Coming Soon" detection is purely dynamic** — any course whose LMS `Item Title` literally
   contains the text "coming soon" (case-insensitive), nothing hardcoded — so the exact set of
   exempted courses shrinks on its own as each one launches for real; always re-check the live data

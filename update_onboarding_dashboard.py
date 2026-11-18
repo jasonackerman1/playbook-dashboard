@@ -1528,13 +1528,16 @@ function pct2color(p) {{
    Each item carries its own LMS-assigned due date (item.req, or null if the
    item has no fixed deadline). A curriculum's days-remaining is the soonest
    due date among its own INCOMPLETE items. */
+/* A workshop the learner is Registered for but hasn't attended yet never counts toward Overdue:
+   they're booked and waiting for the class (per Jason 2026-11-18). The only exception. */
+function waitingOnWorkshop(item) {{ return !item.done && !!item.registered; }}
 function itemDaysLeft(item) {{
-  if (!item.req) return null;
+  if (!item.req || waitingOnWorkshop(item)) return null;
   return Math.round((new Date(item.req) - TODAY) / 86400000);
 }}
 function curricDaysLeft(c) {{
   if (!c || c.complete) return null;
-  const vals = c.items.filter(i => !i.done && i.req).map(itemDaysLeft);
+  const vals = c.items.filter(i => !i.done && i.req && !waitingOnWorkshop(i)).map(itemDaysLeft);
   return vals.length ? Math.min(...vals) : null;
 }}
 function curricTrackStatus(c) {{
