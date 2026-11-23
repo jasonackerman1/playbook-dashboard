@@ -223,52 +223,56 @@ Accelerate Onboarding.
 
 ## 5. Public Sector Certification
 
-**File / Script:** `cert-publicsector.html` / `update_cert_dashboard.py` (Public Sector v2 build,
+**File / Script:** `cert-publicsector.html` / `update_cert_dashboard.py` (Public Sector build,
 `load_rows_publicsector_v2()` + `generate_html_publicsector_v2()`)
 
-**Purpose:** became a real certification on 2026-11-18, modeled on Healthcare. Tracks who is **OMNIA
-certified** and how far each person is through **three sub-curricula** under the `PSCERT` program:
-Public Sector Foundations (`PS_FOUNDATIONS`, 3 courses), Layered Security (`LSFDS`, 12, the same
-curriculum as the Layered Security dashboard) and BlueIrisIQ (`PS_BIIQ`, 1). 16 courses in all.
-Roster = the Public Sector team. The page is Resmie's prototype kept exactly as she built it
-(`PS_V2_TEMPLATE` in the script); the script only fills in the data. Verified byte-for-byte
-identical to her prototype on the 11.17.2026 files.
+**Purpose:** a real certification, modeled on Healthcare. Became a certification on 2026-11-18;
+**rules replaced on 2026-11-23** by Resmie's newer build (`cert-public-sector_RB112326.html` + her
+build script): no more scorecard, and Certified = every course finished. Tracks how far each person is
+through every **sub-curriculum** under the `PSCERT` program. On 11.23 data, in due order:
+Public Sector Foundations (`PS_FOUNDATIONS`, 3 courses), OMNIA Connect Certification
+(`PS_OMNIACONNECTCERT`, 1), Public Sector BlueIrisIQ (`PS_BIIQ`, 1) and Layered Security (`LSFDS`, 12,
+the same curriculum as the Layered Security dashboard). 17 courses in all. The page is Resmie's HTML
+kept exactly as she built it (`PS_V2_TEMPLATE`); the script fills in only the data-driven parts
+(people, report date, TLG list, the `CURRICULA` list and 4 help texts that name the curricula/course
+counts). Verified byte-for-byte identical to her page on her 11.20 data, and record-for-record identical
+to her script's rules on the 11.23 file.
 
-**Data source (cert-data/, newest of each):**
-- `PublicSector-Curricula-Report-MM.DD.YYYY.xlsx`: LMS Custom Curriculum Item Status export, one row
-  per person per course. Columns read by name.
-- `Public-Sector-Scorecard-MM.DD.YY.xlsx`: workbook with Rep Scorecard (Email), Manager Scorecard
-  (Manager Email) and Removed Personnel (Name) sheets.
-- The old one-file `PublicSector-Certification-Curricula-Report-*` reports are ignored once the new
-  pair exists (they fall back only if the pair is missing).
+**Data source (cert-data/):** only the newest `PublicSector-Curricula-Report-MM.DD.YYYY.xlsx` (LMS
+Custom Curriculum Item Status export, one row per person per course, columns read by name). Nothing
+else is needed. Older reports and the scorecard were deleted 2026-11-23 (still in git history).
 
-**What it measures:** 5 tiles (Total Enrolled, Not Started, In Progress, Completion Rate, OMNIA
-Certified); 4 charts (Team Progress reps vs. managers, Learners by Market, Timeline, Curriculum
-Progress); roster with status, due date, New Hire tag and 3 course pills; per-person detail with a
-due date on every unfinished course; Status/Market/Hire Status/Timeline/Role filters; PDF + Excel
-exports (Full Report, Not Certified, Manager Summary); light/dark mode; triple-click title → home.
+**What it measures:** 5 tiles (Total Enrolled, Not Started, In Progress, Completion Rate, Certified);
+4 charts (Team Progress reps vs. managers with 2 tiers ≥50% / <50%, Learners by Market, Timeline,
+Curriculum Progress = completed / in progress / not started per curriculum); roster with status, due
+date, New Hire tag and one pill per curriculum; per-person detail with a due date on every unfinished
+course; Status/Market/Hire Status/Timeline/Role filters; PDF + Excel exports (Full Report, Not
+Certified, Manager Summary) with one % column per curriculum; light/dark mode; triple-click title → home.
 
 **Custom formulas / rules:**
-- **Who's on it:** everyone with a `PSCERT` row, minus Removed Personnel and TLG.
-- **OMNIA Certified:** YES in the OMNIA Connect Certification column on the Rep or Manager Scorecard
-  (matched by email, case-insensitive). Not on the scorecard = not certified. Course progress doesn't
-  affect it; the LMS's own certification flag isn't used. No certification dates exist.
+- **Program and sub-curricula:** the program is the curriculum that is its own parent (`PSCERT`); its
+  children are the sub-curricula, **found automatically**, ordered by their most common "Days
+  Remaining" (soonest first). A new child curriculum appears on its own (name from the LMS title).
+  Known IDs get fixed short names (`PS_KNOWN` in the script).
+- **Who's on it:** everyone with a `PSCERT` row, minus TLG. (No Removed Personnel list anymore.)
+- **Course order:** PS Foundations and Layered Security are pinned (`PS_PINNED`); others follow report
+  order. New course IDs print a NOTE in the build log.
 - **Course done:** status `Online-Complete`; if a course appears twice the completed row wins.
-- **Overall %:** courses done ÷ 16, rounded. **BlueIrisIQ counts** (nobody has finished it yet, so
-  Completion Rate = people who finished all 16 ÷ enrolled = 0% for now).
-- **Status:** OMNIA Certified → In Progress (not certified, ≥1 course done) → Not Started.
+- **Course due date:** the latest Item Required Date among that course's unfinished rows.
+- **Certified:** **every course in every sub-curriculum done** (done = total). No dates (CertDate blank).
+- **Overall %:** courses done ÷ all courses (17 today), rounded. Completion Rate = Certified rate.
+- **Status:** Certified → In Progress (≥1 course done) → Not Started.
+- **Person deadline:** report date + the smallest "Days Remaining" across all their rows.
 - **New Hire:** first 90 days from hire date, measured from the report date (Healthcare uses 65).
-- **Person deadline:** report date + LMS "Days Remaining" on the PSCERT row. **Course due date:** the
-  latest Item Required Date on each unfinished course (re-assigned people carry older dates).
 - **Timeline:** Overdue / Due Soon (≤10 days) / On Track; certified people = Certified.
 - **Manager:** title contains "director of sales," "vice president" or "regional account executive."
-- **Build log** lists people not on the scorecard and people left out, and warns on unknown course IDs.
 
-**Homepage card:** "Public Sector Certification": learners, % OMNIA certified, certified / in progress
-/ not started, from the same loader.
+**Numbers on 11.23 data:** 140 people, 4 certified (3%), 134 in progress, 2 not started. (The old
+OMNIA-scorecard rule had 117 of 139 certified; the drop is expected since almost nobody has finished
+Layered Security and BlueIrisIQ yet.)
 
-**Open decisions (left as Resmie built them):** whether BlueIrisIQ should count toward Overall %;
-the In Progress definition; the 90-day New Hire window. Each is a small edit.
+**Homepage card:** "Public Sector Certification" ("Certified = every course in every curriculum"):
+learners, % certified, certified / in progress / not started, from the same loader.
 
 ---
 

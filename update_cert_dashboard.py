@@ -1940,25 +1940,29 @@ applyFilters();
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Public Sector Certification (v2, 2026-11-18) — ported from Resmie's prototype
-# (cert-public-sector.html + Public_Sector_Dashboard_Build_Guide.docx).
-# Three sub-curricula under the PSCERT program: Public Sector Foundations (3),
-# Layered Security (LSFDS, 12 — the same curriculum as the Layered Security dashboard)
-# and BlueIrisIQ (1). "Certified" = YES in the scorecard's OMNIA Connect Certification
-# column (Rep or Manager Scorecard); Removed Personnel are left out.
-# Inputs (cert-data/): PublicSector-Curricula-Report-MM.DD.YYYY.xlsx +
-#                      Public-Sector-Scorecard-MM.DD.YY(YY).xlsx
-# The page is Resmie's HTML kept as-is (PS_V2_TEMPLATE); only the data is filled in.
+# Public Sector Certification (v3, 2026-11-23) — ported from Resmie's build
+# (cert-public-sector_RB112326.html + her build script).
+# One input: cert-data/PublicSector-Curricula-Report-MM.DD.YYYY.xlsx (newest wins).
+# The program is the curriculum that is its own parent (PSCERT). Its children are the
+# sub-curricula, found automatically and ordered by when they're due (most common Days
+# Remaining, soonest first): today PS Foundations (3), OMNIA Connect (1), BlueIrisIQ (1),
+# Layered Security (LSFDS, 12). A new child curriculum shows up on its own.
+# Certified = every course in every sub-curriculum is Online-Complete. TLG left out.
+# The page is Resmie's HTML kept as-is (PS_V2_TEMPLATE); only data-driven parts are filled in.
 # ══════════════════════════════════════════════════════════════════════════════
 
-PS_CURRICULA = [  # (key, Curriculum ID, course order as Item IDs) — order from Resmie's prototype
-    ('psf',  'PS_FOUNDATIONS', ['ITPS', 'DTPSBC', 'PSPRG']),
-    ('ls',   'LSFDS',          ['LSC_IAPO', 'LS_ITM', 'DS', 'UA_ACCESSCONTROL', 'BIZHUB_BSMFP',
-                                'MFPPT_BSBSNB', 'BREACH_IDADB', 'CSMWSG', 'LSSW', 'LSSB_HI',
-                                'LSSB_NONPROFIT', 'LSSB_GOV']),
-    ('biiq', 'PS_BIIQ',        ['BIIQ_GOVCERT']),
-]
-PS_PROGRAM_ID = 'PSCERT'
+PS_KNOWN = {  # Curriculum ID → (key, name, short, exportName)
+    'PS_FOUNDATIONS':      ('psf',   'Public Sector Foundations',   'PS Foundations', 'PS Foundations'),
+    'LSFDS':               ('ls',    'Layered Security',            'Layered Sec',    'Layered Security'),
+    'PS_BIIQ':             ('biiq',  'Public Sector BlueIrisIQ',    'BlueIrisIQ',     'BlueIrisIQ'),
+    'PS_OMNIACONNECTCERT': ('omnia', 'OMNIA Connect Certification', 'OMNIA Connect',  'OMNIA Connect'),
+}
+PS_PINNED = {  # course order (Item IDs) where it matters; other courses follow report order
+    'PS_FOUNDATIONS': ['ITPS', 'DTPSBC', 'PSPRG'],
+    'LSFDS': ['LSC_IAPO', 'LS_ITM', 'DS', 'UA_ACCESSCONTROL', 'BIZHUB_BSMFP', 'MFPPT_BSBSNB',
+              'BREACH_IDADB', 'CSMWSG', 'LSSW', 'LSSB_HI', 'LSSB_NONPROFIT', 'LSSB_GOV'],
+}
+PS_NEW_HIRE_DAYS = 90
 
 def _psv2_date(v):
     if v is None or v == '' or (isinstance(v, str) and not v.strip()):
@@ -1973,174 +1977,163 @@ def _psv2_date(v):
     m = re.match(r'\s*(\d{4}-\d{2}-\d{2})', str(v))
     return m.group(1) if m else ''
 
-def _psv2_sheet(wb, name):
-    for s in wb.sheetnames:
-        if s.strip().lower() == name.lower():
-            return wb[s]
-    return None
+def _ps_req_date(v):
+    """Item Required Date: 'M/D/YYYY ...' text → date (anything else → None)."""
+    m = re.match(r'\s*(\d{1,2})/(\d{1,2})/(\d{4})', str(v))
+    return datetime.date(int(m.group(3)), int(m.group(1)), int(m.group(2))) if m else None
 
-def _psv2_header_idx(header, name):
-    want = re.sub(r'\s+', ' ', name).strip().lower()
-    for i, h in enumerate(header):
-        if h is not None and re.sub(r'\s+', ' ', str(h)).strip().lower() == want:
-            return i
-    return None
+def _ps_txt(v):
+    return '' if v is None else str(v).strip()
 
-def load_scorecard_ps(path):
-    """Returns (certified_emails:set, removed_names:set, scorecard_emails:set)."""
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    certified, known, removed = set(), set(), set()
-    for sheet, email_col in (('Rep Scorecard', 'Email'), ('Manager Scorecard', 'Manager Email')):
-        ws = _psv2_sheet(wb, sheet)
-        if ws is None:
-            print(f'  WARNING: scorecard has no "{sheet}" sheet')
-            continue
-        rows = ws.iter_rows(values_only=True)
-        header = next(rows)
-        ei = _psv2_header_idx(header, email_col)
-        oi = _psv2_header_idx(header, 'OMNIA Connect Certification')
-        if ei is None or oi is None:
-            print(f'  WARNING: "{sheet}" is missing the {email_col} or OMNIA Connect Certification column')
-            continue
-        for r in rows:
-            e = str(r[ei] or '').strip().lower()
-            if not e:
-                continue
-            known.add(e)
-            if str(r[oi] or '').strip().upper() == 'YES':
-                certified.add(e)
-    ws = _psv2_sheet(wb, 'Removed Personnel')
-    if ws is not None:
-        rows = ws.iter_rows(values_only=True)
-        ni = _psv2_header_idx(next(rows), 'Name')
-        for r in rows:
-            if ni is not None and r[ni]:
-                removed.add(re.sub(r'\s+', ' ', str(r[ni])).strip().lower())
-    wb.close()
-    return certified, removed, known
+def _ps_num(v):
+    if v is None or (isinstance(v, str) and not v.strip()):
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
 
-def load_rows_publicsector_v2(curricula_path, scorecard_path, report_date_iso, tlg_names):
-    certified, removed, known = load_scorecard_ps(scorecard_path)
+def load_rows_publicsector_v2(curricula_path, report_date_iso, tlg_names):
+    """Returns (rows, curricula_meta, left_out). rows match Resmie's PEOPLE records key for key."""
     wb = openpyxl.load_workbook(curricula_path, read_only=True, data_only=True)
-    rows = wb.active.iter_rows(values_only=True)
-    header = [str(h).strip() if h is not None else '' for h in next(rows)]
-    C = {n: header.index(n) for n in ['Email Address', 'First Name', 'Last Name', 'Job Title', 'Market',
-         'Hire Date', 'ManagerFirstName', 'ManagerLastName', 'SUPEMAILADDR', 'Manager JobTitle',
-         'Curriculum ID', 'Curriculum Assignment Date', 'Days Remaining', 'Item ID', 'Item Title',
-         'Item Completion Date', 'Item Completion Status Description', 'Item Required Date']}
-    report_date = datetime.date.fromisoformat(report_date_iso)
-    cid_to_key = {cid: key for key, cid, _ in PS_CURRICULA}
-    people, items, program = {}, {}, {}
-    unknown = set()
-    for r in rows:
-        email = str(r[C['Email Address']] or '').strip()
-        if not email:
+    ws = wb.worksheets[0]
+    it = ws.iter_rows(values_only=True)
+    header = [_ps_txt(h) for h in next(it)]
+    col = {h: i for i, h in reversed(list(enumerate(header)))}  # first column wins on duplicate names
+    need = ['Parent Curriculum ID', 'Curriculum ID', 'Curriculum Title', 'Email Address', 'First Name', 'Last Name',
+            'Job Title', 'Market', 'ManagerFirstName', 'ManagerLastName', 'SUPEMAILADDR', 'Manager JobTitle',
+            'Hire Date', 'Curriculum Assignment Date', 'Days Remaining', 'Item ID', 'Item Title',
+            'Item Completion Date', 'Item Completion Status Description', 'Item Required Date']
+    missing = [n for n in need if n not in col]
+    if missing:
+        raise ValueError(f'{os.path.basename(curricula_path)} is missing columns: {missing}')
+    recs = []
+    for r in it:
+        if r is None or all(v is None for v in r):
             continue
-        ek = email.lower()
-        cid = str(r[C['Curriculum ID']] or '').strip()
-        if ek not in people:
-            people[ek] = {
-                'FirstName': str(r[C['First Name']] or '').strip(),
-                'LastName':  str(r[C['Last Name']] or '').strip(),
-                'Email': email,
-                'JobTitle': str(r[C['Job Title']] or '').strip(),
-                'Market': str(r[C['Market']] or '').strip(),
-                'Manager': f"{str(r[C['ManagerFirstName']] or '').strip()} {str(r[C['ManagerLastName']] or '').strip()}".strip(),
-                'MgrEmail': str(r[C['SUPEMAILADDR']] or '').strip(),
-                'MgrTitle': str(r[C['Manager JobTitle']] or '').strip(),
-                'HireDate': _psv2_date(r[C['Hire Date']]),
-            }
-        if cid == PS_PROGRAM_ID:
-            program[ek] = r
-            continue
-        key = cid_to_key.get(cid)
-        if not key:
-            continue
-        iid = str(r[C['Item ID']] or '').strip()
-        if not iid:
-            continue  # curriculum-level row with no course
-        done = str(r[C['Item Completion Status Description']] or '').strip() == 'Online-Complete'
-        rec = items.setdefault(ek, {}).setdefault(key, {}).get(iid)
-        new = {'id': iid, 'title': str(r[C['Item Title']] or '').strip(), 'done': done,
-               'date': _psv2_date(r[C['Item Completion Date']]) if done else '',
-               'due': _psv2_date(r[C['Item Required Date']])}
-        if rec is None:
-            items[ek][key][iid] = new
-        else:
-            # completed row wins; keep the latest Item Required Date
-            if new['done'] and not rec['done']:
-                rec['done'], rec['date'] = True, new['date']
-            if new['due'] > rec['due']:
-                rec['due'] = new['due']
+        g = lambda n: r[col[n]] if col[n] < len(r) else None
+        recs.append({n: g(n) for n in need})
     wb.close()
+    report = datetime.date.fromisoformat(report_date_iso)
 
-    out, not_on_card, left_out = [], [], []
-    for ek, p in people.items():
-        if ek not in program:
+    program = next(r['Curriculum ID'] for r in recs if r['Parent Curriculum ID'] == r['Curriculum ID'])
+    sub_ids = list(dict.fromkeys(r['Curriculum ID'] for r in recs
+                                 if r['Parent Curriculum ID'] == program and r['Curriculum ID'] != program))
+    title_of = {}
+    for r in recs:
+        title_of.setdefault(r['Curriculum ID'], _ps_txt(r['Curriculum Title']))
+    def label(cid):
+        t = title_of.get(cid, cid)
+        return PS_KNOWN.get(cid, (re.sub(r'\W+', '_', cid.lower()), t, t[:16], t))
+    def due_days(cid):  # most common Days Remaining (ties → smallest), none → last
+        vals = [_ps_num(r['Days Remaining']) for r in recs if r['Curriculum ID'] == cid]
+        vals = [v for v in vals if v is not None]
+        if not vals:
+            return 10 ** 6
+        counts = {}
+        for v in vals:
+            counts[v] = counts.get(v, 0) + 1
+        top = max(counts.values())
+        return min(v for v, c in counts.items() if c == top)
+    days_of = {c: due_days(c) for c in sub_ids}
+    sub_ids = sorted(sub_ids, key=lambda c: (days_of[c], sub_ids.index(c)))
+
+    has_item = lambda r: r['Item ID'] is not None and _ps_txt(r['Item ID']) != ''
+    item_titles = {}
+    for r in recs:
+        if has_item(r):
+            item_titles.setdefault(r['Item ID'], r['Item Title'])
+    courses = {}
+    for cid in sub_ids:
+        ids = list(dict.fromkeys(r['Item ID'] for r in recs if r['Curriculum ID'] == cid and has_item(r)))
+        pinned = [i for i in PS_PINNED.get(cid, []) if i in ids]
+        courses[cid] = pinned + [i for i in ids if i not in pinned]
+        unknown = [i for i in ids if cid in PS_PINNED and i not in PS_PINNED[cid]]
+        if unknown:
+            print(f'  NOTE: new course(s) in {cid}: {", ".join(unknown)} (listed after the known ones)')
+
+    by_person = {}
+    for r in recs:
+        by_person.setdefault(str(r['Email Address']).strip().lower(), []).append(r)
+    tlg = {n.lower() for n in tlg_names}
+
+    def curriculum(g, cid):
+        rows = [r for r in g if r['Curriculum ID'] == cid and has_item(r)]
+        done_rows, due = {}, {}
+        for r in rows:
+            iid = r['Item ID']
+            if r['Item Completion Status Description'] == 'Online-Complete':
+                done_rows.setdefault(iid, r)
+            else:
+                d = _ps_req_date(r['Item Required Date'])
+                if d and (iid not in due or d > due[iid]):
+                    due[iid] = d
+        items = []
+        for iid in courses[cid]:
+            done = iid in done_rows
+            items.append({'id': iid, 'title': item_titles[iid], 'done': done,
+                          'date': _psv2_date(done_rows[iid]['Item Completion Date']) if done else '',
+                          'due': '' if done else (due[iid].isoformat() if iid in due else '')})
+        d = sum(i['done'] for i in items)
+        return {'done': d, 'total': len(items), 'pct': round(d / len(items) * 100) if items else 0, 'items': items}
+
+    people, left_out = [], []
+    for email, g in by_person.items():
+        par = next((r for r in g if r['Curriculum ID'] == program), None)
+        if par is None:
             continue
-        name = f"{p['FirstName']} {p['LastName']}"
-        if name.lower() in removed or name in tlg_names:
+        name = f"{par['First Name']} {par['Last Name']}".strip()
+        if name.lower() in tlg:
             left_out.append(name)
             continue
-        if ek not in known:
-            not_on_card.append(name)
-        pr = program[ek]
-        p['AssignDate'] = _psv2_date(pr[C['Curriculum Assignment Date']])
-        try:
-            dr = int(float(pr[C['Days Remaining']]))
-            p['RequiredDate'] = (report_date + datetime.timedelta(days=dr)).isoformat()
-        except (TypeError, ValueError):
-            p['RequiredDate'] = ''
-        p['Certified'] = 'Yes' if ek in certified else 'No'
-        p['CertDate'] = ''
-        p['CertQtr'] = ''
-        tot_done = tot = 0
-        for key, cid, order in PS_CURRICULA:
-            got = items.get(ek, {}).get(key, {})
-            for iid in got:
-                if iid not in order:
-                    unknown.add(iid)
-            lst = []
-            for iid in order + sorted(i for i in got if i not in order):
-                it = got.get(iid)
-                if it is None:
-                    continue
-                if it['done']:
-                    it['due'] = ''
-                lst.append(it)
-            d = sum(1 for i in lst if i['done'])
-            p[key] = {'done': d, 'total': len(order), 'pct': round(d * 100 / len(order)) if order else 0, 'items': lst}
-            tot_done += d
-            tot += len(order)
-        p['overallDone'] = tot_done
-        p['overallTotal'] = tot
-        p['overallPct'] = round(tot_done * 100 / tot) if tot else 0
-        order = ['FirstName', 'LastName', 'Email', 'JobTitle', 'Market', 'Manager', 'MgrEmail', 'MgrTitle',
-                 'HireDate', 'AssignDate', 'RequiredDate', 'Certified', 'CertDate', 'CertQtr',
-                 'ls', 'psf', 'biiq', 'overallDone', 'overallTotal', 'overallPct']
-        out.append({k: p[k] for k in order})
-    out.sort(key=lambda p: (p['LastName'].lower(), p['FirstName'].lower()))
-    for iid in sorted(unknown):
-        print(f"  WARNING: unknown Public Sector item ID '{iid}' — not counted; add it to PS_CURRICULA")
-    return out, not_on_card, left_out
+        progress = {label(c)[0]: curriculum(g, c) for c in sub_ids}
+        done = sum(v['done'] for v in progress.values())
+        total = sum(v['total'] for v in progress.values())
+        days = [v for v in (_ps_num(r['Days Remaining']) for r in g) if v is not None]
+        req = (report + datetime.timedelta(days=int(min(days)))).isoformat() if days else ''
+        people.append({
+            'FirstName': _ps_txt(par['First Name']), 'LastName': _ps_txt(par['Last Name']),
+            'Email': _ps_txt(par['Email Address']), 'JobTitle': _ps_txt(par['Job Title']),
+            'Market': _ps_txt(par['Market']),
+            'Manager': f"{_ps_txt(par['ManagerFirstName'])} {_ps_txt(par['ManagerLastName'])}".strip(),
+            'MgrEmail': _ps_txt(par['SUPEMAILADDR']), 'MgrTitle': _ps_txt(par['Manager JobTitle']),
+            'HireDate': _psv2_date(par['Hire Date']), 'AssignDate': _psv2_date(par['Curriculum Assignment Date']),
+            'RequiredDate': req,
+            'Certified': 'Yes' if total > 0 and done == total else 'No',
+            'CertDate': '', 'CertQtr': '',
+            **progress, 'overallDone': done, 'overallTotal': total,
+            'overallPct': round(done / total * 100) if total else 0,
+        })
+    people.sort(key=lambda p: (p['LastName'].lower(), p['FirstName'].lower(), p['Email'].lower()))
+    meta = [dict(zip(('key', 'name', 'short', 'export'), label(c)), id=c, courses=len(courses[c])) for c in sub_ids]
+    return people, meta, left_out
 
+def _ps_join_and(items):
+    return items[0] if len(items) == 1 else ', '.join(items[:-1]) + ' and ' + items[-1]
 
-def _ps_scorecard_date(fname):
-    """MM.DD.YY or MM.DD.YYYY in the filename -> 'YYYY-MM-DD' for sorting."""
-    m = re.search(r'(\d{2})\.(\d{2})\.(\d{2,4})(?!\d)', os.path.basename(fname))
-    if not m:
-        return '0000-00-00'
-    y = m.group(3)
-    y = ('20' + y) if len(y) == 2 else y
-    return f'{y}-{m.group(1)}-{m.group(2)}'
-
-
-def generate_html_publicsector_v2(rows, date_label, date_iso):
-    return (PS_V2_TEMPLATE
-            .replace('__PS_PEOPLE_JSON__', json.dumps(rows))
+def generate_html_publicsector_v2(rows, meta, date_label, date_iso):
+    js = lambda s: json.dumps(s, ensure_ascii=False)
+    total = rows[0]['overallTotal'] if rows else sum(m['courses'] for m in meta)
+    names = _ps_join_and([m['name'] for m in meta]) if meta else ''
+    shorts = _ps_join_and([m['short'] for m in meta]) if meta else ''
+    n = PS_NEW_HIRE_DAYS
+    info = {
+        '__PS_INFO_CERTIFIED__': js(f"People who have completed every course in the Public Sector Certification program: all {total} courses, across {names}. Anyone with a course still open is not yet certified."),
+        '__PS_INFO_RATE__': js(f"The percentage of assigned people who have finished all {total} courses in the program (100% complete). Because finishing every course is what makes someone Certified, this matches the Certified tile. This number updates when you apply filters."),
+        '__PS_INFO_ROSTER__': js(f"The full list of people in the program. Each card shows their name and job title, their progress on {shorts} (bottom left), their overall completion percentage (bottom right), and their current status (top right). A \"New Hire\" tag appears under the name for anyone within their first {n} days of employment, and anyone not yet certified also shows their due date plus an \"Overdue\", \"Due Soon\", or \"On Track\" tag against that due date. Click any card to see a full course-by-course breakdown in the panel on the right."),
+        '__PS_INFO_CURRIC__': js("For each curriculum, how many of the people assigned to it have completed it, are partway through, or have not started. " + _ps_join_and([m['name'] + ' has ' + str(m['courses']) + (' course' if m['courses'] == 1 else ' courses') for m in meta]) + ", listed in the order they are due. Updates with your filters."),
+    }
+    curricula_js = ",\n".join('  { key: %s, name: %s, short: %s, exportName: %s }'
+                              % (json.dumps(m['key']), json.dumps(m['name']), json.dumps(m['short']), json.dumps(m['export']))
+                              for m in meta)
+    html = (PS_V2_TEMPLATE
+            .replace('__PS_CURRICULA_JS__', curricula_js)
             .replace('__PS_TLG_JSON__', json.dumps(sorted(TLG)))
             .replace('__PS_REPORT_DATE__', date_iso)
             .replace('__PS_DATE_LABEL__', date_label))
+    for k, v in info.items():
+        html = html.replace(k, v)
+    return html.replace('__PS_PEOPLE_JSON__', json.dumps(rows))  # last, so no placeholder text inside the data is touched
 
 
 PS_V2_TEMPLATE = r'''<!DOCTYPE html>
@@ -2426,7 +2419,7 @@ PS_V2_TEMPLATE = r'''<!DOCTYPE html>
     <div class="stat-sub" id="s-rate-sub"></div>
   </div>
   <div class="stat">
-    <div class="stat-label">OMNIA Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
+    <div class="stat-label">Certified <span class="info-btn" onclick="showInfo(event,'certified')">?</span></div>
     <div class="stat-value green" id="s-certified">&#8212;</div>
     <div class="stat-sub" id="s-certified-sub"></div>
   </div>
@@ -2608,19 +2601,19 @@ document.addEventListener("click", function(e){
 // ── Info tooltip ───────────────────────────────────────────────────────────
 var INFO_MSGS = {
   "total-enrolled": "The total number of people currently assigned to the Public Sector certification program. Use the Status and Market filters above to narrow this to a specific group.",
-  "certified": "People who have earned their Public Sector certification. A person counts as certified when the OMNIA Connect Certification column on the Public Sector scorecard says YES. Certification is tracked there, separately from course completion.",
+  "certified": __PS_INFO_CERTIFIED__,
   "in-progress":     "People who have started the program and completed at least one course, but haven't finished everything yet.",
   "not-started":     "People who are assigned to the program but haven't completed any courses yet.",
   "overdue":         "Past the due date for completing the curriculum and earning certification.",
   "duesoon":         "Not certified, with 10 days or less until the due date.",
   "ontrack":         "Not certified, with more than 10 days until the due date.",
   "deadline-chart":  "Splits the roster into four groups: Certified, On Track (not yet certified, more than 10 days left), Due Soon (not yet certified, 10 days or less left), and Overdue (past the due date to complete the curriculum and earn certification). Updates with your filters.",
-  "completion-rate": "The percentage of assigned people who have finished all 16 courses in the curriculum (100% complete), regardless of whether they've since been marked officially Certified. This number updates when you apply filters.",
+  "completion-rate": __PS_INFO_RATE__,
   "new-hires": "People within their first 90 days of employment as of the report date. This is a rolling window: once someone reaches day 90 from their hire date, they automatically become a \"Tenured Rep,\" no manual update needed. Use the Hire Status filter above to isolate either group.",
-  "roster": "The full list of people in the program. Each card shows their name and job title, their progress on PS Foundations, Layered Security and BlueIrisIQ (bottom left), their overall completion percentage (bottom right), and their current status (top right). A \"New Hire\" tag appears under the name for anyone within their first 90 days of employment, and anyone not yet certified also shows their due date plus an \"Overdue\", \"Due Soon\", or \"On Track\" tag against that due date. Click any card to see a full course-by-course breakdown in the panel on the right.",
-  "curric-chart": "For each curriculum, how many of the people assigned to it have completed it, are partway through, or have not started. Public Sector Foundations has 3 courses, Layered Security has 12, and Public Sector BlueIrisIQ has 1, listed in the order they are due. Updates with your filters.",
+  "roster": __PS_INFO_ROSTER__,
+  "curric-chart": __PS_INFO_CURRIC__,
   "market-chart":    "Certification progress broken down by sales market. Each bar shows how many people in that market are Certified, In Progress, or Not Started. Hover over any bar to see the exact counts and total enrolled for that market. Updates when you apply filters.",
-  "manual-chart": "Shows where everyone who has not yet earned OMNIA certification stands on their coursework, split by Reps and Managers: what share of each group is 50% or more through the coursework, and what share is still below 50%. Bars show percent of each group (Reps and Managers are counted separately, so groups of different sizes compare fairly). Hover for the underlying headcount.",
+  "manual-chart": "Shows where everyone who is not yet certified stands on their coursework, split by Reps and Managers: what share of each group is 50% or more through the coursework, and what share is still below 50%. Bars show percent of each group (Reps and Managers are counted separately, so groups of different sizes compare fairly). Hover for the underlying headcount.",
   "export":          "Download a report based on whoever is currently shown on screen. Apply filters first to scope the report to a specific group. Full Report includes everyone with all course progress columns. Not Certified is a contact list of people still working through the program, sorted by manager, useful for follow-up. Manager Summary shows each manager's team size and how many on their team have certified."
 };
 function showInfo(e, key){
@@ -2667,15 +2660,11 @@ function pillClass(pct, total){
 }
 
 // ── Curricula ──────────────────────────────────────────────────────────────
-// The three curricula inside the Public Sector Certification program, in the order they are due: Public Sector Foundations
-// (Dec 17), then Layered Security (Jan 16), then BlueIrisIQ (Feb 15). The roster pills, the detail panel, the Curriculum
-// Progress chart and the exports all follow this order. To track another, add one entry here and put its
-// progress on each learner as PEOPLE[i][key] = {done, total, pct, items:[{id, title, done, date}]}; the roster pills,
-// the detail panel, the charts and the exports all follow.
+// The sub-curricula of the Public Sector Certification program, in the order they are due (soonest first). The roster
+// pills, the detail panel, the Curriculum Progress chart and the exports all follow this order. To track another, add one
+// entry here and put its progress on each learner as PEOPLE[i][key] = {done, total, pct, items:[{id, title, done, date, due}]}.
 var CURRICULA = [
-  { key: "psf",  name: "Public Sector Foundations", short: "PS Foundations", exportName: "PS Foundations" },
-  { key: "ls",   name: "Layered Security",          short: "Layered Sec",    exportName: "Layered Security" },
-  { key: "biiq", name: "Public Sector BlueIrisIQ",  short: "BlueIrisIQ",     exportName: "BlueIrisIQ" }
+__PS_CURRICULA_JS__
 ];
 function curData(p, c){ return p[c.key] || null; }
 function curExportCell(p, c){ var d = curData(p, c); return d ? d.pct + "%" : "-"; }
@@ -2826,11 +2815,18 @@ function renderCharts(){
     var part = on.filter(function(p){ var d = p[c.key]; return d.done > 0 && d.done < d.total; }).length;
     return { name: c.name, total: on.length, done: done, part: part, none: on.length - done - part };
   });
+  // long curriculum names wrap onto several lines so the axis labels are never cut off
+  function wrapLabel(s, n){
+    var lines = [], line = "";
+    s.split(" ").forEach(function(w){ if((line + " " + w).trim().length > n && line){ lines.push(line); line = w; } else { line = (line + " " + w).trim(); } });
+    if(line) lines.push(line);
+    return lines;
+  }
   if(curricChart) curricChart.destroy();
   curricChart = new Chart(sel("curricChart"), {
     type: "bar",
     data: {
-      labels: curricRows.map(function(r){ return r.name; }),
+      labels: curricRows.map(function(r){ return wrapLabel(r.name, 18); }),
       datasets: [
         { label: "Completed",   data: curricRows.map(function(r){ return r.done; }), backgroundColor: cv("--green") + "cc", borderWidth: 0, borderRadius: 2, maxBarThickness: 34 },
         { label: "In Progress", data: curricRows.map(function(r){ return r.part; }), backgroundColor: "#f59e0b"       + "cc", borderWidth: 0, borderRadius: 2, maxBarThickness: 34 },
@@ -2845,7 +2841,7 @@ function renderCharts(){
         tooltip: {
           mode: "index",
           callbacks: {
-            title: function(items){ return items[0].label; },
+            title: function(items){ return curricRows[items[0].dataIndex].name; },
             label: function(ctx){
               var r = curricRows[ctx.dataIndex], pct = r.total > 0 ? Math.round(ctx.raw / r.total * 100) : 0;
               return " " + ctx.dataset.label + ": " + ctx.raw + " (" + pct + "%)";
@@ -3382,29 +3378,24 @@ def main():
         generated.append(out)
         hc_handled = True
 
-    # ── Public Sector v2: curricula report + scorecard (latest of each) ─────
+    # ── Public Sector certification: newest curricula report (no other file needed) ─────
     ps_handled = False
     ps_curr = sorted(glob.glob(os.path.join(cert_dir, 'PublicSector-Curricula-Report-*.xlsx')), key=extract_file_date)
-    ps_card = sorted(glob.glob(os.path.join(cert_dir, 'Public-Sector-Scorecard-*.xlsx')), key=_ps_scorecard_date)
-    if ps_curr and ps_card:
-        cpath, spath = ps_curr[-1], ps_card[-1]
-        print('\npublicsector (Public Sector) — v2 certification format:')
+    if ps_curr:
+        cpath = ps_curr[-1]
+        print('\npublicsector (Public Sector) — certification format:')
         print(f'  {os.path.basename(cpath)}')
-        print(f'  {os.path.basename(spath)}')
-        if _ps_scorecard_date(spath) < extract_file_date(cpath):
-            print('  NOTE: the scorecard is older than the curricula report — using the newest scorecard available')
         ps_date_iso = _file_date_iso(cpath)
-        rows, not_on_card, left_out = load_rows_publicsector_v2(cpath, spath, ps_date_iso, TLG)
+        rows, meta, left_out = load_rows_publicsector_v2(cpath, ps_date_iso, TLG)
         cert = sum(1 for r in rows if r['Certified'] == 'Yes')
         ip = sum(1 for r in rows if r['Certified'] != 'Yes' and r['overallDone'] > 0)
-        print(f'  → {len(rows)} people  ({cert} OMNIA certified, {ip} in progress, {len(rows)-cert-ip} not started)')
-        if not_on_card:
-            print(f'  Not on the scorecard (count as not certified): {", ".join(not_on_card)}')
+        print('  Sub-curricula (in due order): ' + ', '.join(f"{m['name']} ({m['courses']})" for m in meta))
+        print(f'  → {len(rows)} people  ({cert} certified, {ip} in progress, {len(rows)-cert-ip} not started)')
         if left_out:
-            print(f'  Left out (Removed Personnel / TLG): {", ".join(left_out)}')
+            print(f'  Left out (TLG): {", ".join(left_out)}')
         out = 'cert-publicsector.html'
         with open(out, 'w', encoding='utf-8') as fh:
-            fh.write(generate_html_publicsector_v2(rows, _file_date_label(cpath), ps_date_iso))
+            fh.write(generate_html_publicsector_v2(rows, meta, _file_date_label(cpath), ps_date_iso))
         print(f'  Written → {out}')
         generated.append(out)
         ps_handled = True

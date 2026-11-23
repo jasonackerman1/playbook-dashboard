@@ -1,6 +1,22 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-11-18
+Last updated: 2026-11-23
+
+---
+
+## Recent Changes (2026-11-23)
+
+**Public Sector Certification switched to Resmie's newer build (2026-11-23).** Ported her
+`cert-public-sector_RB112326.html` + build script into `update_cert_dashboard.py`. One input file now:
+the newest `PublicSector-Curricula-Report-*` (no scorecard). Sub-curricula under `PSCERT` are found
+automatically and ordered by due date: PS Foundations (3), OMNIA Connect (1), BlueIrisIQ (1), Layered
+Security (12) = 17 courses. **Certified = all 17 courses done** (was OMNIA YES on the scorecard).
+Curriculum Progress chart, 2-tier Team Progress chart, one pill / export column per curriculum.
+Verified: page byte-identical to hers on her 11.20 data; records identical to her rules on 11.23.
+11.23 data: 140 people, 4 certified, 134 in progress, 2 not started (was 117 of 139 under the OMNIA
+rule). Homepage card updated to match. Deleted: her HTML, the 11.17 scorecard, and 17 older Public
+Sector reports (`PublicSector-Certification-Curricula-Report-*`, the 11.17 report, the FY26 file).
+Full rules: `DASHBOARD_REFERENCE.md` §5.
 
 ---
 

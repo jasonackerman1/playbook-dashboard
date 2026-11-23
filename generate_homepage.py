@@ -134,15 +134,14 @@ PS_LEARN_FILE = 'Public Sector Foundations Learning Report.xlsx'
 
 def ps_cert_stats():
     cert_dir = SCRIPT_DIR / 'cert-data'
-    # v2 (2026-11-18): Public Sector Certification = curricula report + scorecard, same loader
-    # as the dashboard, so the card always agrees with cert-publicsector.html.
+    # 2026-11-23: Public Sector Certification = newest curricula report, same loader as the
+    # dashboard (certified = every course done), so the card always agrees with cert-publicsector.html.
     import glob
     from update_cert_dashboard import (load_rows_publicsector_v2, extract_file_date as _efd,
-                                       _ps_scorecard_date, _file_date_iso, TLG)
+                                       _file_date_iso, TLG)
     curr = sorted(glob.glob(str(cert_dir / 'PublicSector-Curricula-Report-*.xlsx')), key=_efd)
-    card = sorted(glob.glob(str(cert_dir / 'Public-Sector-Scorecard-*.xlsx')), key=_ps_scorecard_date)
-    if curr and card:
-        rows, _, _ = load_rows_publicsector_v2(curr[-1], card[-1], _file_date_iso(curr[-1]), TLG)
+    if curr:
+        rows, _, _ = load_rows_publicsector_v2(curr[-1], _file_date_iso(curr[-1]), TLG)
         total = len(rows)
         certified = sum(1 for r in rows if r['Certified'] == 'Yes')
         in_progress = sum(1 for r in rows if r['Certified'] != 'Yes' and r['overallDone'] > 0)
@@ -577,7 +576,7 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
         <span class="card-icon">&#127963;</span>
         <div>
           <div class="card-title">Public Sector Certification</div>
-          <div class="card-desc">OMNIA certification + 3 curricula</div>
+          <div class="card-desc">Certified = every course in every curriculum</div>
         </div>
       </div>
       <div>
@@ -585,7 +584,7 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
           <span class="stat-num" style="color:var(--accent)">{ps_total}</span>
           <span class="stat-unit">total learners</span>
         </div>
-        <div class="stat-sub">{ps_rate}% OMNIA certified</div>
+        <div class="stat-sub">{ps_rate}% certified</div>
       </div>
       <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
         <div class="stat-row" style="flex:1;">
