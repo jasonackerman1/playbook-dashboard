@@ -3258,10 +3258,13 @@ def main():
 PROGRESS_JSON = 'accelerate-progress.json'
 
 def write_progress_json(records):
-    """Write accelerate-progress.json for the playbook's personal progress page.
-    Anonymous on purpose: no names or emails. Each person is keyed by the
-    SHA-256 of their lowercase email; the playbook hashes the logged-in
-    viewer's email (from IT's employeeID API) the same way to find them."""
+    """Write accelerate-progress.json for the playbook's "My Journey" and
+    "My Team's Journey" pages. Each person is keyed by the SHA-256 of their
+    lowercase email; the playbook hashes the logged-in viewer's email (from IT's
+    employeeID API) the same way to find them. "teams" lists each manager's reps
+    (keyed by the manager's hashed email) for the manager view. Names, emails,
+    titles and markets are included for that view (2026-11-23, Jason: same data
+    the public dashboards already show)."""
     import hashlib
     folder = 'onboarding-data'
     reports = sorted(
@@ -3270,11 +3273,17 @@ def write_progress_json(records):
     )
     as_of = extract_date(reports[-1]) if reports else None
     # Course titles/types are stored once in "courses"; each person only lists
-    # [id, done, date, due] per course, in curriculum order.
+    # [id, done, date, due, registered] per course, in curriculum order.
     courses = {}
     people = {}
+    teams = {}
+    hkey = lambda e: hashlib.sha256(e.strip().lower().encode('utf-8')).hexdigest()
     for email, p in records.items():
-        key = hashlib.sha256(email.strip().lower().encode('utf-8')).hexdigest()
+        key = hkey(email)
+        mgr_email = (p.get('mgrEmail') or '').strip()
+        if mgr_email:
+            t = teams.setdefault(hkey(mgr_email), {'name': p.get('manager', ''), 'reps': []})
+            t['reps'].append(key)
         curricula = {}
         for cid, _name in CURRICULA:
             c = p['curricula'].get(cid)
@@ -3284,9 +3293,16 @@ def write_progress_json(records):
             for i in c['items']:
                 iid = i.get('id') or i['title']
                 courses.setdefault(iid, {'title': i['title'], 'type': i['type']})
-                rows.append([iid, 1 if i['done'] else 0, i['date'], i['req']])
+                # 5th value: registered for this live workshop (not attended yet). Like the
+                # dashboard's waitingOnWorkshop(), a registered workshop is never overdue.
+                rows.append([iid, 1 if i['done'] else 0, i['date'], i['req'],
+                             1 if (i.get('registered') and not i['done']) else 0])
             curricula[cid] = {'complete': c['complete'], 'items': rows}
         people[key] = {
+            'name':       p.get('name', ''),
+            'email':      email.strip().lower(),
+            'title':      p.get('jobTitle', ''),
+            'market':     p.get('market', ''),
             'ca':         p['isCanada'],
             'hireDate':   p['hireDate'],
             'assignDate': p['assignDate'],
@@ -3298,10 +3314,11 @@ def write_progress_json(records):
         'curricula':   [{'id': cid, 'name': name} for cid, name in CURRICULA],
         'courses':     courses,
         'people':      people,
+        'teams':       teams,
     }
     with open(PROGRESS_JSON, 'w', encoding='utf-8') as f:
         json.dump(out, f, separators=(',', ':'), ensure_ascii=False)
-    print(f"Wrote {PROGRESS_JSON} ({len(people)} people, data as of {as_of})")
+    print(f"Wrote {PROGRESS_JSON} ({len(people)} people, {len(teams)} managers, data as of {as_of})")
 
 
 if __name__ == '__main__':
