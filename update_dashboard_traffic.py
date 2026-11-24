@@ -41,6 +41,7 @@ DASHBOARD_MAP = {
     "cert-layered-security.html": "Layered Security Curriculum",
     "linkedin-learning-engagement.html": "LinkedIn Learning Engagement",
     "lms-engagement.html":        "LMS Engagement",
+    "sales-training.html":        "Sales Training & L&D Engagement",
 }
 
 def get_dashboard(url):
@@ -359,6 +360,7 @@ const DASHBOARD_COLORS = {{
   "Layered Security Curriculum": "#5cf0f7",
   "LinkedIn Learning Engagement":"#e35cf7",
   "LMS Engagement":              "#8ff75c",
+  "Sales Training & L&D Engagement": "#f75cb4",
 }};
 function dashColor(d){{ return DASHBOARD_COLORS[d] || "#7b82a0"; }}
 

@@ -70,6 +70,7 @@ the sole source of truth going forward.
 | 8 | Accelerate Leaderboard | `leaderboard.html` | `update_leaderboard_dashboard.py` | 🔒 hidden (Konami code, since 2026-11-17) | real |
 | 9 | LinkedIn Learning Engagement | `linkedin-learning-engagement.html` | `update_linkedin_learning_engagement_dashboard.py` | 🔒 hidden (Konami code) | **placeholder** |
 | 10 | LMS Engagement | `lms-engagement.html` | `update_lms_engagement_dashboard.py` | 🔒 hidden (Konami code) | real |
+| 11 | Sales Training & L&D Engagement (since 2026-11-24) | `sales-training.html` | `update_sales_training_dashboard.py` | ✅ | real |
 
 **🔒 Hidden cards (added 2026-09-28, reveal upgraded 2026-10-14, #8 added 2026-11-17):** #8, #9 and #10 are deliberately
 hidden from the homepage grid by default (`card-secret-3` is the Leaderboard, which reappears in its usual spot after Accelerate Onboarding). Typing the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) anywhere on
@@ -597,3 +598,80 @@ dashboard #9.
 **Export:** a real Export ▾ dropdown — PDF prints the on-screen report exactly as filtered; Excel
 writes a 7-sheet workbook (Summary, Monthly, Your Filtered View YoY, Learning Completion Summary,
 YoY All/No-Compliance, Top Courses), all computed from the same live numbers shown on screen.
+
+---
+
+## 11. Sales Training & L&D Engagement
+
+**File / Script:** `sales-training.html` / `update_sales_training_dashboard.py` (built 2026-11-24 from
+Resmie's `Sales_Training_LD_Dashboard.html` + her "Sales Training & L&D Engagement Dashboard Guide";
+both deleted after porting). Page template: `templates/sales-training-shell.html` (her page, data
+swapped for placeholders, house look applied); header behavior: `templates/sales-training-house.js`.
+
+**Homepage card:** ✅ visible (people who completed training, completions, % online, instructor-led,
+data-through date; All Groups, fiscal year to date, TLG hidden).
+
+**Purpose:** shows executive leadership how much **sales training** people completed this fiscal
+year, who completed it, and which live classes are coming up. Employees and dealers, online and
+instructor-led. Counts **completions only** (no enrollments, incomplete or past-due work).
+
+**Data source (`sales-training-data/`, newest of each by MM.DD.YYYY in the name):**
+- `LMS-Course-Status-Data-*.xlsx`: LMS learning export (EmployeeLearningCSV_BD2_ACTIVE, active users).
+- `Master-User-Data-*.xlsx`: Master User Data; the SF/SFC roster (1,024) for Reach.
+- `Registration-Status-Future-*.xlsx`: future class registrations for Upcoming live classes.
+- `Catalog-Report-*.xlsx`: only used to label left-out courses in the build log with the catalog's
+  SALES flag.
+- `sales-course-list.json`: the sales course list (342 courses) and 93 catalog categories, frozen
+  from Resmie's page. **A course not on it is left out and printed in the build log** ("new courses
+  need a decision"); to add one, add it to this file.
+
+**Time frame:** fiscal year to date (April 1 → report date). Report date = the newest completion
+date in the learning export. Quarters Q1 Apr–Jun, Q2 Jul–Sep, Q3 Oct–Dec, Q4 Jan–Mar.
+
+**Tabs:** All Groups (everyone; split by business unit), Sales Org (SF + SFC; split by sales field),
+Dealers (US + BCD; split by country). Filters: Branch (Dealer on the Dealers tab), Format, Rep
+status, Period, Category. Upcoming live classes follow the tab, its first filter and Rep status only,
+plus their own Instructor filter.
+
+**Sections:** 4 headline tiles with averages (People, Completions, Online, Instructor-led; Reach on
+Sales Org), Completions by month, Where training happens (top 10 categories), All instructor-led
+courses, New hires vs tenured, Upcoming live classes, Participation breakdown (group or branch),
+Top 10 courses, "How these figures are calculated" notes.
+
+**Custom formulas / rules:**
+- **Completion:** Completion Status starts with COMPLETE, dated in the period; one per person-course
+  (earliest date kept).
+- **Instructor-led** = delivery ILT or VILT. **Complete ILT (\*)** = status COMPLETE_ILT, except
+  Pipeline Powerlifting for Managed IT (always treated as VILT).
+- **Business unit** (first match wins): Dealers (DEALER_ domain) → IIM (job or manager title mentions
+  IIM / Intelligent Information Management / BlueIrisIQ) → AC (allcovered.com email, or an EMP_TYP_ID
+  starting "AC", which includes IT Weapons' ACC) → BCA (bt.konicaminolta.ca email or EMP_BCA) → BUS.
+- **Sales field:** EMP_TYP_ID SF (US) / SFC (Canada). **Dealer country:** DEALER_US / DEALER_BCD.
+- **Rep status:** new hire if the completion is within 65 days of the hire date, tenured after;
+  dealers and people with no hire date get no status (only under All reps).
+- **Reach** (Sales Org only, not with a branch selected): roster reps (Master User Data SF/SFC,
+  matched by STUD_ID = Employee ID) with a completion in view ÷ the roster.
+- **Monthly averages** use complete months only. **Per attendee** = instructor-led completions ÷
+  people with an instructor-led completion.
+- **Upcoming:** classes starting on or after the report date; one row per person per class;
+  group = Dealers / All Covered / Sales team (SF, SFC) / Other employees; new hire = class starts
+  within 65 days of hire; waitlisted count as registered, cancelled left out; same class + date
+  combined.
+- Blank branch = "Unassigned". Category totals overlap (a course can have several categories).
+
+**TLG:** hidden by default everywhere (tiles, charts, tables, roster, upcoming, exports); **Show TLG**
+adds them back. On 11.24 data that's 10 people and 72 completions.
+
+**Export:** PDF prints the page as shown; Excel writes 8 sheets (Summary, By Month, Categories,
+Courses, New Hires vs Tenured, Upcoming Classes, by business unit / sales field / country, by branch
+or dealer), all following the current tab, filters and TLG setting.
+
+**Verified 2026-11-24:** rebuilt from the 11.24 files, the data is identical to Resmie's page (13,640
+completions, 1,918 people, 265 branches, roster 1,024, upcoming 67 registrations), and 12 views
+compared in a browser (with TLG shown) showed the same numbers. Her row order couldn't be reproduced
+(another copy of the export), which only affects how exact ties are listed.
+
+**Known limits (from her guide):** active users only (leavers' completions drop out); Reach only for
+SF/SFC; dealers can't be split by rep status; IIM can't be identified in registrations; no seat
+capacity, so no fill rates; no training hours.
+

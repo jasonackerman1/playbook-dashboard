@@ -15,6 +15,7 @@ Do not push to GitHub unless Jason explicitly says to. All development is tested
 | `cert-publicsector.html` | `update_cert_dashboard.py` | Public Sector Certification Dashboard |
 | `onboarding.html` | `update_onboarding_dashboard.py` | Accelerate Onboarding |
 | `leaderboard.html` | `update_leaderboard_dashboard.py` | Accelerate Leaderboard |
+| `sales-training.html` | `update_sales_training_dashboard.py` | Sales Training & L&D Engagement (data: `sales-training-data/`) |
 
 **Never edit generated HTML files directly** — always edit the Python script and regenerate.
 

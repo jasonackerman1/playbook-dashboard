@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sales Training &amp; L&amp;D Engagement</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+/* House palette (cert-healthcare.html / lms-engagement.html): dark by default, light via body.light-mode.
+   Resmie's color names are mapped onto it on <body>, so they follow the theme. */
+body{
+  --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+  --accent:#4f8ef7; --text:#e8ecf4; --muted:#7b82a0; --red:#f76f6f; --green:#3ecf8e;
+  --ink2:#b3b9cf; --blue-soft:#4f8ef722; --il:#2dd4bf; --online:#4f8ef7; --warn:#f7c94f; --warn-soft:#f7c94f22;
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+  --panel:var(--surface); --ink:var(--text); --ink3:var(--muted); --rule:var(--border); --blue:var(--accent); --ok:var(--green);
+  color-scheme:dark;
+}
+body.light-mode{
+  --bg:#f4f6fb; --surface:#ffffff; --surface2:#eef1f7; --border:#d0d7e8;
+  --accent:#2563eb; --text:#1a1d27; --muted:#475569; --red:#dc2626; --green:#059669;
+  --ink2:#334155; --blue-soft:#2563eb18; --il:#0f766e; --online:#7aa6e8; --warn:#b45309; --warn-soft:#d9770622;
+  color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* Header (house convention: 3-col grid, centered KM logo) */
+.header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.header-center{display:flex;justify-content:center;align-items:center}
+.kma-logo{height:34px;width:auto;display:block}
+.kma-logo-light{display:none}
+.light-mode .kma-logo-dark{display:none}
+.light-mode .kma-logo-light{display:block}
+.header h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.2px;cursor:pointer}
+.header .status{color:var(--muted);margin-top:4px;font-size:12px}
+.hdr-actions{display:flex;justify-content:flex-end;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-theme,.btn-export,.btn-tlg{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn-theme:hover{border-color:var(--accent);color:var(--text)}
+.btn-export{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn-export:hover{opacity:.88}
+.btn-tlg:hover{border-color:var(--red);color:var(--red)}
+.btn-tlg.active{background:#f76f6f22;border-color:var(--red);color:var(--red)}
+.export-drop{position:relative}
+.export-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:150px;box-shadow:0 4px 24px rgba(0,0,0,.28);display:none;z-index:200;overflow:hidden}
+.export-menu.open{display:block}
+.export-item{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;font-family:inherit}
+.export-item:hover{background:var(--surface2)}
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;margin-left:6px;vertical-align:middle;flex-shrink:0;line-height:1;font-style:normal}
+.info-btn:hover{border-color:var(--accent);color:var(--accent)}
+.info-popover{position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text);line-height:1.6;max-width:300px;box-shadow:0 4px 24px rgba(0,0,0,.5);display:none}
+.info-popover.visible{display:block}
+.tabs{display:flex;gap:6px;padding:12px 28px 0;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:transparent;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:8px 16px 10px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;font-family:inherit}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent)}
+.tab small{display:block;font-weight:500;font-size:11px;opacity:.8}
+
+/* Filter bar */
+.filters{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--border)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.filters-in{padding:14px 28px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.fgroup{display:flex;align-items:center;gap:8px}
+.flabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+.chips{display:inline-flex;flex-wrap:wrap;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.chip{border:0;border-right:1px solid var(--border);background:transparent;padding:6px 12px;font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit}
+.chip:last-child{border-right:0}
+.chip:hover:not(:disabled){background:var(--surface2);color:var(--text)}
+.chip[aria-pressed="true"],.chip[aria-pressed="true"]:hover{background:var(--accent);color:#fff;font-weight:600}
+.chip:disabled{opacity:.35;cursor:default}
+select{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;outline:none;max-width:260px;font-family:inherit}
+select:focus{border-color:var(--accent)}
+.reset{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:auto}
+.reset:hover{border-color:var(--accent);color:var(--text)}
+
+main{padding:22px 28px 56px}
+.scope{font-size:14px;color:var(--ink2);margin:0 0 16px}
+.scope b{color:var(--ink);font-weight:600}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.kpi{padding:18px 20px 20px;border-left:1px solid var(--rule)}
+.kpi:first-child{border-left:0}
+.kpi .n{font-size:clamp(26px,2.6vw,36px);font-weight:700;letter-spacing:-.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:14px;font-weight:600;margin-top:6px;display:flex;align-items:center}
+.kpi .s{font-size:13px;color:var(--ink3);margin-top:2px}
+.kpi.rate .n{color:var(--blue)}
+.kpi.il .n{color:var(--il)}
+.kpi.warn .n{color:var(--warn)}
+.bar-mini{height:6px;border-radius:3px;background:var(--rule);margin-top:10px;overflow:hidden}
+.bar-mini i{display:block;height:100%;background:var(--blue)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:18px;margin-top:18px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:18px 18px 16px;min-width:0}
+.panel h2{margin:0;font-size:18px;font-weight:700;letter-spacing:0;display:flex;align-items:center}
+.panel .sub{margin:3px 0 14px;font-size:13px;color:var(--ink3)}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--ink2)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.trend-panel{display:flex;flex-direction:column}.trend-panel .chart{flex:1;display:flex;align-items:flex-end}
+.chart text{fill:var(--ink3);font-size:11px;font-family:inherit}
+.chart .gl{stroke:var(--rule);stroke-width:1}
+.tip{position:fixed;pointer-events:none;background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:7px 10px;border-radius:6px;font-size:13px;line-height:1.35;z-index:20;opacity:0;transition:opacity .1s;max-width:260px}
+
+.cats{display:flex;flex-direction:column;gap:9px}
+.cat-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:14px}
+.cat-row .nm{font-weight:600}
+.cat-row .vl{color:var(--ink2);font-variant-numeric:tabular-nums;font-size:13px}
+.cat-row .tr{grid-column:1/-1;height:10px;border-radius:5px;background:var(--bg);overflow:hidden;display:flex}
+.cat-row .tr i{display:block;height:100%}
+
+.wide{grid-column:1/-1}
+.seg{display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:3px}
+.seg button{border:0;background:transparent;padding:5px 11px;border-radius:6px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--rule)}
+.tablewrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:9px 10px;border-bottom:1px solid var(--rule);background:var(--surface2);white-space:nowrap;cursor:pointer;user-select:none}
+th.num,td.num{text-align:right}
+th[aria-sort="descending"]::after{content:" ▾"}
+th[aria-sort="ascending"]::after{content:" ▴"}
+td{padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--surface2)}
+td .cid{display:block;font-size:12px;color:var(--ink3)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.tag.il{background:color-mix(in srgb,var(--il) 16%,transparent);color:var(--il)}
+.tag.on{background:var(--blue-soft);color:var(--blue)}
+.rate-cell{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.rate-cell .b{width:64px;height:6px;border-radius:3px;background:var(--bg);overflow:hidden}
+.rate-cell .b i{display:block;height:100%;background:var(--blue)}
+.od{color:var(--warn);font-weight:600}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+input[type=search]{background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:7px 10px;font-size:14px;width:min(260px,100%)}
+.more{margin-top:12px;border:1px solid var(--rule);background:var(--panel);border-radius:8px;padding:8px 14px;font-weight:600;font-size:14px;cursor:pointer;color:var(--blue)}
+.empty{padding:28px 0;text-align:center;color:var(--ink3)}
+.notes{margin-top:22px;font-size:13px;color:var(--ink3);max-width:110ch}
+.notes summary{cursor:pointer;color:var(--ink2);font-weight:600}
+.notes ul{padding-left:18px}
+
+.lede{font-size:clamp(17px,1.6vw,20px);line-height:1.5;margin:0 0 18px;max-width:80ch}
+.lede b{font-weight:700}
+.half{display:grid;grid-template-columns:1fr 1fr;gap:18px;grid-column:1/-1}
+.ilt{display:flex;flex-direction:column;gap:8px}
+.ilt-row{display:grid;grid-template-columns:minmax(0,1fr) 120px 44px;gap:10px;align-items:center;font-size:14px}
+.ilt-row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ilt-row .tr{height:10px;border-radius:5px;background:var(--bg);overflow:hidden}
+.ilt-row .tr i{display:block;height:100%;background:var(--il)}
+.ilt-row .vl{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.cmp>div{padding:14px 16px}
+.cmp>div+div{border-left:1px solid var(--rule)}
+.cmp h3{margin:0 0 10px;font-size:15px}
+.cmp dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:7px 10px;font-size:14px}
+.cmp dt{color:var(--ink2)} .cmp dd{margin:0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.mini{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.mini .n{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.mini .l{font-size:13px;color:var(--ink3)}
+.past{color:var(--ink3)}
+.cmpt td.num{font-weight:600;font-size:15px}
+.cmpt td:first-child{color:var(--ink2)}
+.kpi{display:flex;flex-direction:column}
+.kavg{margin-top:auto;padding-top:14px}
+.kavg-h{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);border-top:1px solid var(--rule);padding-top:12px;margin-bottom:8px}
+.kavg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kavg-row>div+div{border-left:1px solid var(--rule);padding-left:12px}
+.kavg .an{font-size:22px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi.rate .kavg .an{color:var(--blue)} .kpi.il .kavg .an{color:var(--il)}
+.kavg .al{font-size:12.5px;color:var(--ink2);margin-top:2px;line-height:1.3}
+.ast{font-size:.55em;vertical-align:super;margin-left:2px;font-weight:700}
+.astnote{color:var(--ink2)}
+.iltnote{font-size:12.5px;color:var(--ink2);margin:10px 0 0;padding-top:10px;border-top:1px solid var(--rule)}
+.ilt-row .vl{white-space:nowrap}
+.avgnote{font-size:12.5px;color:var(--ink3);margin:8px 2px 0}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi:nth-child(3){border-left:0}.kpi:nth-child(n+3){border-top:1px solid var(--rule)}.grid{grid-template-columns:1fr}.half{grid-template-columns:1fr}}
+@media (max-width:640px){.header{grid-template-columns:1fr;text-align:left}.header-center{justify-content:flex-start}.hdr-actions{justify-content:flex-start}.filters-in,.tabs{padding-left:20px;padding-right:20px}main{padding:18px 20px 56px}}
+@media (max-width:600px){.filters{position:static}.mini{grid-template-columns:1fr 1fr}.cmp{grid-template-columns:1fr}.cmp>div+div{border-left:0;border-top:1px solid var(--rule)}.kpis{grid-template-columns:repeat(2,1fr)}.kpi{border-left:0!important;border-top:1px solid var(--rule)}.kpi:nth-child(-n+2){border-top:0}.kpi:nth-child(even){border-left:1px solid var(--rule)!important}.reset{margin-left:0}.asof{text-align:left}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+#print-header{display:none}
+@media print{body{background:#fff!important;color:#111!important}.header,.filters,.tabs,.print-hide,.more,.reset,.info-btn{display:none!important}#print-header{display:block!important}main{padding:0}.panel,.kpis{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1 id="dash-title" title="Triple-click to go home">Sales Training &amp; L&amp;D Engagement</h1>
+    <p class="status">Data through <span id="asof"></span> · <span id="range"></span></p>
+  </div>
+  <div class="header-center">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-wht.svg" class="kma-logo kma-logo-dark" alt="KM Academy">
+    <img src="https://jasonackerman1.github.io/playbook-dashboard/KMA-drk.svg" class="kma-logo kma-logo-light" alt="KM Academy">
+  </div>
+  <div class="hdr-actions">
+    <div class="export-drop print-hide">
+      <button class="btn-export" type="button" onclick="toggleExportDrop(event)">&#128438; Export &#9660;</button>
+      <div class="export-menu" id="export-menu">
+        <button class="export-item" type="button" onclick="runExportPDF()">PDF</button>
+        <button class="export-item" type="button" onclick="runExportXLSX()">Excel</button>
+      </div>
+    </div><span class="info-btn print-hide" onclick="showInfo(event,'export')">?</span>
+    <button class="btn-tlg active print-hide" id="btn-tlg" type="button" onclick="toggleTLG()">Show TLG</button><span class="info-btn print-hide" onclick="showInfo(event,'tlg')">?</span>
+    <button class="btn-theme print-hide" type="button" id="themeBtn" onclick="toggleTheme()">&#9728; Light</button>
+  </div>
+</div>
+<nav class="tabs" role="tablist" id="tabs"></nav>
+
+<div class="filters">
+  <div class="filters-in">
+    <div class="fgroup" id="buGroup"><span class="flabel">Business unit</span><div class="chips" id="buChips"></div></div>
+    <div class="fgroup"><label class="flabel" for="fBranch" id="branchLabel">Branch</label><select id="fBranch"></select></div>
+    <div class="fgroup"><label class="flabel" for="fDeliv">Format</label><select id="fDeliv">
+      <option value="all">All formats</option><option value="1">Instructor-led (ILT + VILT)</option><option value="0">Online</option></select></div>
+    <div class="fgroup"><label class="flabel" for="fStatus">Rep status</label><select id="fStatus">
+      <option value="all">All reps</option><option value="1">New hires (first 65 days)</option><option value="2">Tenured (after 65 days)</option></select></div>
+    <div class="fgroup"><label class="flabel" for="fYear">Period</label><select id="fYear"></select></div>
+    <div class="fgroup"><label class="flabel" for="fCat">Category</label><select id="fCat"></select></div>
+    <button class="reset" id="reset">Clear filters</button><span class="info-btn" onclick="showInfo(event,'filters')">?</span>
+  </div>
+</div>
+
+<main>
+  <div id="print-header">
+    <h1 style="font-size:22px;margin:0">Sales Training &amp; L&amp;D Engagement</h1>
+    <div id="ph-date" style="font-size:12px;color:#555;margin:6px 0 2px"></div>
+  </div>
+  <p class="scope" id="scope"></p>
+  <section class="kpis" id="kpis" aria-label="Key figures"></section>
+  <p class="avgnote" id="avgSub"></p>
+
+  <div class="grid">
+    <section class="panel trend-panel">
+      <div class="ph"><div><h2>Completions by month<span class="info-btn" onclick="showInfo(event,'trend')">?</span></h2><p class="sub" id="trendSub"></p></div>
+        <div class="legend"><span style="--c:var(--il)">Instructor-led</span><span style="--c:var(--online)">Online</span></div></div>
+      <div class="chart" id="trend"></div>
+    </section>
+    <section class="panel">
+      <h2>Where training happens<span class="info-btn" onclick="showInfo(event,'cats')">?</span></h2>
+      <p class="sub">Top 10 catalog categories by completions</p>
+      <div class="cats" id="cats"></div>
+    </section>
+
+    <div class="half">
+      <section class="panel">
+        <h2>All instructor-led courses<span class="info-btn" onclick="showInfo(event,'ilt')">?</span></h2>
+        <p class="sub" id="iltSub"></p>
+        <div class="ilt" id="ilt"></div>
+      </section>
+      <section class="panel">
+        <h2>New hires vs tenured reps<span class="info-btn" onclick="showInfo(event,'cmp')">?</span></h2>
+        <p class="sub">New hire = first 65 days after hire date</p>
+        <div id="cmp"></div>
+      </section>
+    </div>
+
+    <section class="panel wide">
+        <div class="ph"><div><h2>Upcoming live classes<span class="info-btn" onclick="showInfo(event,'upcoming')">?</span></h2><p class="sub">From the __ST_REG_DATE__ registration report · not affected by branch, period or category filters</p></div>
+          <div class="fgroup"><label class="flabel" for="fIns">Instructor</label><select id="fIns"></select></div></div>
+        <div class="mini" id="upMini" style="grid-template-columns:repeat(3,max-content);column-gap:48px"></div>
+        <div class="tablewrap"><table id="upTable"></table></div>
+      </section>
+
+    <section class="panel wide">
+      <div class="ph"><div><h2>Participation breakdown<span class="info-btn" onclick="showInfo(event,'breakdown')">?</span></h2><p class="sub" id="bdSub">By business unit or branch</p></div>
+        <div class="seg" id="bdSeg"><button data-k="b">Business unit</button><button data-k="br" id="segBranch">Branch</button></div></div>
+      <div class="tablewrap"><table id="bdTable"></table></div>
+      <button class="more" id="bdMore" hidden></button>
+    </section>
+
+    <section class="panel wide">
+      <div class="ph"><div><h2>Top 10 sales training courses<span class="info-btn" onclick="showInfo(event,'top')">?</span></h2><p class="sub">Ranked by completions</p></div></div>
+      <div class="tablewrap"><table id="crsTable"></table></div>
+    </section>
+  </div>
+
+  <details class="notes">
+    <summary>How these figures are calculated</summary>
+    <ul id="notesList"></ul>
+  </details>
+</main>
+<div class="tip" id="tip"></div>
+<div id="info-popover" class="info-popover"></div>
+
+<script>
+const D = __ST_DATA__;
+const C = D.cols, N = C.e.length;
+const TABS = [
+  {id:'all', name:'All Groups', sub:'Employees and dealers', test:i=>true, bu:true},
+  {id:'org', name:'Sales Org', sub:'SF and SFC', test:i=>C.o[i]>0, bu:true},
+  {id:'dlr', name:'Dealers', sub:'US and Canada (BCD)', test:i=>C.b[i]===4, bu:true},
+];
+const BU_LABEL = {BUS:'BUS', BCA:'BCA', AC:'AC', IIM:'IIM', Dealers:'Dealers'};
+const fmt = n => n.toLocaleString('en-US');
+const pct = (a,b) => b ? Math.round(a/b*1000)/10 : 0;
+const dayToYM = d => { const t=new Date(d*864e5); return t.getUTCFullYear()*12+t.getUTCMonth(); };
+const YM = C.d.map(d => d<0 ? -1 : dayToYM(d));
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const asof = new Date(D.asof+'T00:00:00Z');
+const asofYM = asof.getUTCFullYear()*12+asof.getUTCMonth();
+document.getElementById('asof').textContent = asof.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'});
+
+let state = {tlg:false, tab:'all', bu:'all', region:'all', branch:'all', deliv:'all', year:'all', cat:'all', status:'all', ins:'all', sfield:'all', dfield:'all', bd:'b', bdAll:false, crsAll:false, crsQ:'', crsSort:['k',-1], bdSort:['k',-1]};
+const tabIdx = {}; TABS.forEach(t => { tabIdx[t.id] = []; });
+for (let i=0;i<N;i++) for (const t of TABS) if (t.test(i)) tabIdx[t.id].push(i);
+
+// Tabs
+const tabsEl = document.getElementById('tabs');
+TABS.forEach(t => {
+  const b = document.createElement('button'); b.className='tab'; b.role='tab'; b.id='tab-'+t.id;
+  b.innerHTML = `${t.name}<small>${t.sub}</small>`;
+  b.onclick = () => { state = {...state, tab:t.id, sfield:'all', dfield:'all', bu:'all', region:'all', branch:'all', bdAll:false, crsAll:false, bd: t.bu ? state.bd : (state.bd==='b'?'br':state.bd)}; render(); setHash(t.id); };
+  tabsEl.appendChild(b);
+});
+// Remember the tab in the link where the browser allows it; some previews (like Claude's) block this, so failures are ignored.
+function setHash(id){ try { if (location.hash.slice(1)!==id) history.replaceState(null,'','#'+id); } catch(e) {} }
+let h = ''; try { h = location.hash.slice(1); } catch(e) {} if (TABS.some(t=>t.id===h)) state.tab = h; else if (h==='sf'||h==='sfc'){ state.tab='org'; state.sfield=h==='sf'?'1':'2'; }
+
+// Filters
+// Fiscal year starts April 1; everything below follows the report date.
+const FY0 = (asof.getUTCMonth()>=3 ? asof.getUTCFullYear() : asof.getUTCFullYear()-1)*12+3;
+const PERIODS = {all:['Fiscal year to date',FY0,asofYM]};
+for (let q=0;q<4;q++){ const s=FY0+q*3, e=s+2; if (s>asofYM) break;
+  const cur = e>=asofYM; PERIODS['q'+(q+1)] = [`Q${q+1}${cur?' to date':''} (${MON[s%12]}–${MON[Math.min(e,asofYM)%12]})`, s, Math.min(e,asofYM)]; }
+document.getElementById('range').textContent = `Fiscal year to date: ${MON[FY0%12]} 1, ${Math.floor(FY0/12)} – ${asof.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'})}`;
+document.getElementById('fYear').innerHTML = Object.entries(PERIODS).map(([k,p])=>`<option value="${k}">${p[0]}</option>`).join('');
+document.getElementById('fCat').innerHTML = '<option value="all">All categories</option>' + D.cats.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
+const INS = [...new Set(D.upcoming.flatMap(r=>r[3].split('; ')))].sort();
+document.getElementById('fIns').innerHTML = '<option value="all">All instructors</option>' + INS.map(n=>`<option value="${n}">${n}</option>`).join('');
+['fBranch','fDeliv','fYear','fCat','fStatus','fIns'].forEach(id => document.getElementById(id).onchange = e => {
+  const k = {fBranch:'branch',fDeliv:'deliv',fYear:'year',fCat:'cat',fStatus:'status',fIns:'ins'}[id];
+  state[k] = e.target.value; if (k==='region') state.branch='all'; state.bdAll=false; state.crsAll=false; render();
+});
+document.getElementById('reset').onclick = () => { Object.assign(state,{sfield:'all',dfield:'all',bu:'all',region:'all',branch:'all',deliv:'all',year:'all',cat:'all',status:'all',ins:'all',crsQ:''}); render(); };
+document.querySelectorAll('#bdSeg button').forEach(b => b.onclick = () => { state.bd=b.dataset.k; state.bdAll=false; render(); });
+
+function baseRows(skip){ // rows in tab that pass filters except `skip`
+  const t = state.tab, out=[];
+  const bu = state.bu==='all'?-1:D.bus.indexOf(state.bu);
+  const rg = state.region==='all'?-1:+state.region, br = state.branch==='all'?-1:+state.branch;
+  const sf = state.tab==='org' && state.sfield!=='all' ? +state.sfield : 0, df = state.tab==='dlr' && state.dfield!=='all' ? +state.dfield : 0, st = state.status==='all'?-1:+state.status, dv = state.deliv==='all'?-1:+state.deliv, per = PERIODS[state.year], ct = state.cat==='all'?-1:+state.cat;
+  for (const i of tabIdx[t]) {
+    if (!state.tlg && C.t[i]) continue;
+    if (skip!=='bu' && bu>=0 && C.b[i]!==bu) continue;
+    if (skip!=='bu' && sf>0 && C.o[i]!==sf) continue;
+    if (skip!=='bu' && df>0 && C.dc[i]!==df) continue;
+    if (skip!=='region' && rg>=0 && C.r[i]!==rg) continue;
+    if (skip!=='branch' && br>=0 && C.br[i]!==br) continue;
+    if (dv>=0 && C.v[i]!==dv) continue;
+    if (skip!=='year' && (YM[i]<per[1] || YM[i]>per[2])) continue;
+    if (ct>=0 && !D.courses[C.c[i]][2].includes(ct)) continue;
+    if (skip!=='status' && st>=0 && C.s[i]!==st) continue;
+    out.push(i);
+  }
+  return out;
+}
+
+function fillSelect(id, label, rows, key, names){
+  const cnt = new Map(); rows.forEach(i => cnt.set(C[key][i], (cnt.get(C[key][i])||0)+1));
+  const opts = [...cnt.keys()].sort((a,b)=>names[a].localeCompare(names[b]));
+  const el = document.getElementById(id), cur = state[id==='fRegion'?'region':'branch'];
+  el.innerHTML = `<option value="all">${label}</option>` + opts.map(v=>`<option value="${v}">${names[v]}</option>`).join('');
+  el.value = opts.includes(+cur) ? cur : 'all';
+  if (el.value==='all') state[id==='fRegion'?'region':'branch']='all';
+}
+
+let lastRows = [];
+function render(){
+  const tab = TABS.find(t=>t.id===state.tab);
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.id==='tab-'+tab.id));
+  // BU chips
+  const buRows = baseRows('bu'); const present = new Set(buRows.map(i=>C.b[i]));
+  const chips = document.getElementById('buChips');
+  document.getElementById('buGroup').style.display = tab.bu ? '' : 'none';
+  chips.innerHTML = '';
+  document.querySelector('#buGroup .flabel').textContent = tab.id==='org' ? 'Sales field' : tab.id==='dlr' ? 'Dealers' : 'Business unit';
+  if (tab.id==='org') {
+    [['all','SF + SFC'],['1','SF (US)'],['2','SFC (Canada)']].forEach(([v,l]) => {
+      const b = document.createElement('button'); b.className='chip'; b.textContent=l;
+      b.setAttribute('aria-pressed', state.sfield===v);
+      b.onclick = () => { state.sfield=v; state.branch='all'; state.bdAll=false; render(); };
+      chips.appendChild(b);
+    });
+  } else if (tab.id==='dlr') {
+    [['all','All dealers'],['1','US'],['2','BCD (Canada)']].forEach(([v,l]) => {
+      const b = document.createElement('button'); b.className='chip'; b.textContent=l;
+      b.setAttribute('aria-pressed', state.dfield===v);
+      b.onclick = () => { state.dfield=v; state.branch='all'; state.bdAll=false; render(); };
+      chips.appendChild(b);
+    });
+  } else
+  [['all','All'], ...D.bus.map(b=>[b,BU_LABEL[b]])].forEach(([v,l]) => {
+    const b = document.createElement('button'); b.className='chip'; b.textContent=l;
+    b.setAttribute('aria-pressed', state.bu===v);
+    if (v!=='all' && !present.has(D.bus.indexOf(v))) b.disabled = true;
+    b.onclick = () => { state.bu=v; state.region='all'; state.branch='all'; state.bdAll=false; state.crsAll=false; render(); };
+    chips.appendChild(b);
+  });
+  fillSelect('fBranch', tab.id==='dlr'?'All dealers':'All branches', baseRows('branch'), 'br', D.branches);
+  document.getElementById('branchLabel').textContent = tab.id==='dlr' ? 'Dealer' : 'Branch';
+  document.getElementById('segBranch').textContent = tab.id==='dlr' ? 'Dealer' : 'Branch';
+  ['fDeliv','fYear','fCat','fStatus','fIns'].forEach(id => document.getElementById(id).value = state[{fDeliv:'deliv',fYear:'year',fCat:'cat',fStatus:'status',fIns:'ins'}[id]]);
+  const segB = document.querySelector('#bdSeg button[data-k="b"]'); segB.hidden = !tab.bu; segB.textContent = tab.id==='org' ? 'Sales field' : tab.id==='dlr' ? 'Country' : 'Business unit';
+  document.getElementById('bdSub').textContent = tab.id==='org' ? 'By sales field or branch' : tab.id==='dlr' ? 'By country or dealer' : 'By business unit or branch';
+  if (!tab.bu && state.bd==='b') state.bd='br';
+  document.querySelectorAll('#bdSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k===state.bd));
+
+  const rows = baseRows(); lastRows = rows;
+  // Scope line
+  const parts = [`<b>${tab.name}</b>`];
+  if (state.bu!=='all') parts.push(BU_LABEL[state.bu]);
+  if (tab.id==='org') parts.push(state.sfield==='1'?'SF (US)':state.sfield==='2'?'SFC (Canada)':'SF + SFC');
+  if (tab.id==='dlr') parts.push(state.dfield==='1'?'US dealers':state.dfield==='2'?'BCD (Canada) dealers':'all dealers');
+  if (state.region!=='all') parts.push(D.regions[+state.region]);
+  if (state.branch!=='all') parts.push(D.branches[+state.branch]);
+  parts.push(state.deliv==='all'?'all formats':state.deliv==='1'?'instructor-led (ILT + VILT)':'online');
+  if (state.cat!=='all') parts.push(D.cats[+state.cat]);
+  if (state.status!=='all') parts.push(state.status==='1'?'new hires':'tenured reps');
+  parts.push(state.year==='all'?'fiscal year to date':PERIODS[state.year][0]);
+  document.getElementById('scope').innerHTML = 'Showing ' + parts.join(', ');
+
+  renderKpis(rows); renderAvg(rows); renderTrend(rows); renderCats(rows); renderIlt(rows); renderCmp(); renderUpcoming(); renderBreakdown(rows); renderCourses(rows);
+}
+
+function agg(rows){
+  const L=new Set(), LC=new Set(); let k=0,x=0,il=0,ilE=0;
+  for (const i of rows){ L.add(C.e[i]); if(C.k[i]){k++; LC.add(C.e[i]); if(C.v[i]) il++;} if(C.x[i]) x++; if(C.v[i]) ilE++; }
+  return {learners:L.size, learnersDone:LC.size, enr:rows.length, k, x, il, ilE, open:rows.length-k};
+}
+function renderKpis(rows){
+  const a = agg(rows); let iltN=0; for (const i of rows) if (C.i[i]) iltN++;
+  document.getElementById('kpis').innerHTML = `
+   <div class="kpi"><div class="n">${fmt(a.learners)}</div><div class="l">People who completed training</div><div class="s">${reachLine(rows)}</div><div class="kavg" id="kavg0"></div></div>
+   <div class="kpi"><div class="n">${fmt(a.k)}</div><div class="l">Completions</div><div class="s">All formats</div><div class="kavg" id="kavg1"></div></div>
+   <div class="kpi rate"><div class="n">${fmt(a.k-a.il)}</div><div class="l">Online completions</div><div class="s">Self-paced e-learning, ${pct(a.k-a.il,a.k)}% of the total</div><div class="kavg" id="kavg2"></div></div>
+   <div class="kpi il"><div class="n">${fmt(a.il)}${iltN?'<sup class="ast">*</sup>':''}</div><div class="l">Instructor-led completions</div><div class="s">${state.tab==='dlr'?'VILT only':'ILT + VILT'}, ${pct(a.il,a.k)}% of the total${iltN?`<br><span class="astnote">* ${fmt(iltN)} recorded as Complete ILT (in person)</span>`:''}</div><div class="kavg" id="kavg3"></div></div>`;
+}
+
+const tip = document.getElementById('tip');
+function showTip(e,html){ tip.innerHTML=html; tip.style.opacity=1; const x=Math.min(e.clientX+14, innerWidth-tip.offsetWidth-8); tip.style.left=x+'px'; tip.style.top=(e.clientY-tip.offsetHeight-12)+'px'; }
+function hideTip(){ tip.style.opacity=0; }
+
+function renderTrend(rows){
+  let start,end;
+  start=PERIODS[state.year][1]; end=PERIODS[state.year][2];
+  const n=end-start+1, on=new Array(n).fill(0), il=new Array(n).fill(0);
+  for (const i of rows){ if(!C.k[i]) continue; const m=YM[i]-start; if(m<0||m>=n) continue; (C.v[i]?il:on)[m]++; }
+  document.getElementById('trendSub').textContent = `${MON[start%12]}–${MON[end%12]} ${Math.floor(end/12)}${end===asofYM?', current month to date':''}`;
+  const W=760,H=330,pl=44,pr=8,pt=10,pb=28, iw=W-pl-pr, ih=H-pt-pb;
+  const max = Math.max(1,...on.map((v,j)=>v+il[j]));
+  const step = niceStep(max/4), top = Math.ceil(max/step)*step;
+  const bw = iw/n, gap = Math.max(2,bw*.22);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly completions chart">`;
+  for (let v=0; v<=top; v+=step){ const y=pt+ih-v/top*ih; s+=`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text x="${pl-8}" y="${y+4}" text-anchor="end">${fmt(v)}</text>`; }
+  for (let j=0;j<n;j++){
+    const x=pl+j*bw+gap/2, w=bw-gap, ho=on[j]/top*ih, hi=il[j]/top*ih, ym=start+j;
+    const yb=pt+ih;
+    s+=`<g data-j="${j}"><rect x="${pl+j*bw}" y="${pt}" width="${bw}" height="${ih}" fill="transparent"/>`;
+    s+=`<rect x="${x}" y="${yb-ho}" width="${w}" height="${ho}" fill="var(--online)" rx="2"/>`;
+    s+=`<rect x="${x}" y="${yb-ho-hi}" width="${w}" height="${hi}" fill="var(--il)" rx="2"/></g>`;
+    s+=`<text x="${x+w/2}" y="${H-10}" text-anchor="middle">${MON[ym%12]}${ym===asofYM?' (MTD)':''}</text>`;
+    if (on[j]+il[j]) s+=`<text x="${x+w/2}" y="${yb-ho-hi-6}" text-anchor="middle" style="fill:var(--ink2);font-weight:600">${fmt(on[j]+il[j])}</text>`;
+  }
+  s+='</svg>';
+  const el=document.getElementById('trend'); el.innerHTML=s;
+  el.querySelectorAll('g[data-j]').forEach(g => { const j=+g.dataset.j, ym=start+j;
+    g.onmousemove = e => showTip(e, `<b>${MON[ym%12]} ${Math.floor(ym/12)}</b><br>${fmt(il[j]+on[j])} completions<br>Instructor-led ${fmt(il[j])} · Online ${fmt(on[j])}`);
+    g.onmouseleave = hideTip; });
+}
+function niceStep(x){ const p=Math.pow(10,Math.floor(Math.log10(Math.max(x,1)))); const f=x/p; return (f<=1?1:f<=2?2:f<=5?5:10)*p; }
+
+function renderCats(rows){
+  const m = D.cats.map(()=>({il:0,on:0}));
+  let tot=0;
+  for (const i of rows){ if(!C.k[i]) continue; tot++; for (const c of D.courses[C.c[i]][2]) C.v[i]?m[c].il++:m[c].on++; }
+  const list = D.cats.map((c,j)=>({c,...m[j],t:m[j].il+m[j].on})).filter(r=>r.t>0).sort((a,b)=>b.t-a.t).slice(0,10);
+  const max = list.length?list[0].t:1;
+  document.getElementById('cats').innerHTML = list.length ? list.map(r=>`
+    <div class="cat-row"><span class="nm">${r.c}</span><span class="vl">${fmt(r.t)}</span>
+    <span class="tr" title="Instructor-led ${fmt(r.il)}, Online ${fmt(r.on)}"><i style="width:${r.il/max*100}%;background:var(--il)"></i><i style="width:${r.on/max*100}%;background:var(--online)"></i></span></div>`).join('')
+    : '<p class="empty">No completions match these filters.</p>';
+}
+
+function rateCell(k,e){ const r=pct(k,e); return `<td class="num"><span class="rate-cell">${r}%<span class="b"><i style="width:${r}%"></i></span></span></td>`; }
+function sortHead(cols, sort, id){
+  return '<thead><tr>'+cols.map(([k,l,num])=>`<th data-k="${k}" class="${num?'num':''}" ${sort[0]===k?`aria-sort="${sort[1]<0?'descending':'ascending'}"`:''}>${l}</th>`).join('')+'</tr></thead>';
+}
+function bindSort(tableId, key, rerender){
+  document.querySelectorAll(`#${tableId} th`).forEach(th => th.onclick = () => {
+    const k=th.dataset.k; state[key] = state[key][0]===k ? [k,-state[key][1]] : [k, k==='name'||k==='t'?1:-1]; rerender(lastRows); });
+}
+
+function renderBreakdown(rows){
+  const orgB = state.tab==='org' && state.bd==='b', dlrB = state.tab==='dlr' && state.bd==='b', key = orgB ? 'o' : dlrB ? 'dc' : state.bd, names = orgB?['','SF (US)','SFC (Canada)']:dlrB?['','US','BCD (Canada)']:key==='b'?D.bus.map(b=>BU_LABEL[b]):key==='r'?D.regions:D.branches;
+  const g = new Map();
+  for (const i of rows){ const v=C[key][i]; let o=g.get(v); if(!o){o={L:new Set(),e:0,k:0,il:0,x:0}; g.set(v,o);} o.L.add(C.e[i]); o.e++; if(C.k[i]){o.k++; if(C.v[i]) o.il++;} if(C.x[i]) o.x++; }
+  let list = [...g].map(([v,o])=>({name:names[v],l:o.L.size,k:o.k,il:o.il,on:o.k-o.il,pp:o.L.size?o.k/o.L.size:0}));
+  const [sk,sd]=state.bdSort; list.sort((a,b)=> sk==='name'? sd*a.name.localeCompare(b.name) : sd*(a[sk]-b[sk]));
+  const lim = state.bdAll?list.length:12, shown=list.slice(0,lim);
+  const label = orgB?'Sales field':dlrB?'Country':key==='b'?'Business unit':key==='r'?'Region':(state.tab==='dlr'?'Dealer':'Branch');
+  const t = document.getElementById('bdTable');
+  t.innerHTML = sortHead([['name',label],['l','People',1],['k','Completions',1],['on','Online',1],['il','Instructor-led',1],['pp','Per person',1]], state.bdSort) +
+   '<tbody>'+(shown.length?shown.map(r=>`<tr><td>${r.name}</td><td class="num">${fmt(r.l)}</td><td class="num">${fmt(r.k)}</td><td class="num">${fmt(r.on)}</td><td class="num">${fmt(r.il)}</td><td class="num">${r.pp.toFixed(1)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">No records match these filters.</td></tr>')+'</tbody>';
+  bindSort('bdTable','bdSort',renderBreakdown);
+  const more=document.getElementById('bdMore'); more.hidden = list.length<=12;
+  more.textContent = state.bdAll ? 'Show top 12' : `Show all ${fmt(list.length)}`;
+  more.onclick = () => { state.bdAll=!state.bdAll; renderBreakdown(lastRows); };
+}
+
+function renderCourses(rows){
+  const g = new Map();
+  for (const i of rows){ const c=C.c[i]; let o=g.get(c); if(!o){o={k:0,L:new Set(),ilt:0}; g.set(c,o);} o.k++; o.L.add(C.e[i]); if (C.i[i]) o.ilt++; }
+  const list = [...g].map(([c,o])=>{ const cr=D.courses[c]; return {t:cr[1],cat:D.cats[cr[2][0]], catAll:cr[2].map(j=>D.cats[j]).join(', '),il:cr[3],k:o.k,p:o.L.size,ilt:o.ilt}; })
+    .sort((a,b)=>b.k-a.k || a.t.localeCompare(b.t)).slice(0,10);
+  document.getElementById('crsTable').innerHTML = '<thead><tr><th style="cursor:default">#</th><th style="cursor:default">Course</th><th style="cursor:default">Category</th><th style="cursor:default">Delivery</th><th class="num" style="cursor:default">Completions</th></tr></thead><tbody>' +
+   (list.length ? list.map((r,j)=>`<tr><td style="color:var(--ink3);font-weight:600">${j+1}</td><td>${esc(r.t)}</td><td style="color:var(--ink2);font-size:13px;max-width:240px" title="${esc(r.catAll)}">${esc(r.cat)}</td><td>${r.il?'<span class="tag il">Instructor-led</span>':'<span class="tag on">Online</span>'}</td><td class="num">${fmt(r.k)}${r.ilt?'<sup class="ast">*</sup>':''}</td></tr>`).join('')
+     : '<tr><td colspan="5" class="empty">No completions match these filters.</td></tr>') + '</tbody>';
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+
+// ---- Reach (Master User Data roster) ----
+const addDays = (iso,n) => new Date(Date.parse(iso)+n*864e5).toISOString().slice(0,10);
+const ymToISO = (ym,endOfMonth) => { const y=Math.floor(ym/12), m=ym%12; return endOfMonth ? new Date(Date.UTC(y,m+1,0)).toISOString().slice(0,10) : new Date(Date.UTC(y,m,1)).toISOString().slice(0,10); };
+function rosterScope(){
+  if (state.tab!=='org' || state.branch!=='all') return null;
+  const typ = state.sfield==='1' ? 1 : state.sfield==='2' ? 2 : 0;
+  return {typ, label: typ===1?'SF':typ===2?'SFC':'SF + SFC'};
+}
+// Reach: roster members (Master User Data, matched by employee ID) with one or more completions in view.
+function reachOf(rows, statusOverride){
+  const sc = rosterScope(); if (!sc) return null;
+  const status = statusOverride ?? state.status, per = PERIODS[state.year];
+  const start = ymToISO(per[1]), end = per[2]===asofYM ? D.asof : ymToISO(per[2],true);
+  const roster = D.roster.filter(p => (state.tlg || !p[3]) && (!sc.typ || p[1]===sc.typ) && (
+    status==='all' || (status==='1' && p[2] && p[2]<=end && addDays(p[2],65)>=start) || (status==='2' && p[2] && addDays(p[2],66)<=end)));
+  const done = new Set(); for (const i of rows) done.add(C.e[i]);
+  const n = roster.filter(p => p[0]>=0 && done.has(p[0])).length;
+  return roster.length ? {pct:pct(n, roster.length), n:roster.length, done:n, label:sc.label} : null;
+}
+function reachLine(rows){
+  const r = reachOf(rows); const a = new Set(); rows.forEach(i=>{ if(C.k[i]) a.add(C.e[i]); });
+  return r ? `<b style="color:var(--ink)">${r.pct}% of reps on the roster</b> (${fmt(r.done)} of ${fmt(r.n)})` : `Unique learners with a completion`;
+}
+
+function renderAvg(rows){
+  const per = PERIODS[state.year], last = Math.min(per[2], asofYM-1); // complete months only
+  const months = Math.max(0, last-per[1]+1);
+  const L=new Set(), Lil=new Set(), byM=new Map(), byB=new Map(); let k=0, il=0, km=0;
+  for (const i of rows){ L.add(C.e[i]); k++; if(C.v[i]){il++; Lil.add(C.e[i]);}
+    byB.set(C.br[i],(byB.get(C.br[i])||0)+1);
+    if (YM[i]<=last){ km++; let s=byM.get(YM[i]); if(!s){s=new Set(); byM.set(YM[i],s);} s.add(C.e[i]); } }
+  const f1 = v => isFinite(v) ? v.toFixed(1) : '–', f0 = v => isFinite(v) ? fmt(Math.round(v)) : '–';
+  const actM = [...byM.values()].reduce((s,x)=>s+x.size,0);
+  const unit = state.tab==='dlr' ? 'dealer' : 'branch';
+  const mRange = months>1 ? `${MON[per[1]%12]}–${MON[last%12]}` : MON[last%12];
+  const mLabel = months ? `${mRange}, ${months} complete month${months>1?'s':''}` : 'no complete month yet';
+  document.getElementById('avgSub').textContent = `Monthly averages use complete months only (${mLabel}).`;
+  const ilM=new Map(), onM=new Map(); let ilk=0, onk=0;
+  for (const i of rows) if (YM[i]<=last) { C.v[i]?ilk++:onk++; }
+  const pBr = new Map(); for (const i of rows){ let s=pBr.get(C.br[i]); if(!s){s=new Set(); pBr.set(C.br[i],s);} s.add(C.e[i]); }
+  const pplPerBr = [...pBr.values()].reduce((s,x)=>s+x.size,0)/pBr.size;
+  const st = (n,l) => `<div><div class="an">${n}</div><div class="al">${l}</div></div>`;
+  const mo = v => months ? f0(v/months) : '–', mos = months ? `Average month, ${mRange}` : 'No complete month yet';
+  const plural = unit==='branch'?'branches':'dealers';
+  const cells = [
+    [st(months?f0(actM/months):'–','Active learners per month')],
+    [st(f1(k/L.size),'Per person'), st(mo(km),'Per month')],
+    [st(f1((k-il)/L.size),'Per person'), st(mo(onk),'Per month')],
+    [st(f1(il/Lil.size),'Per attendee'), st(mo(ilk),'Per month')]];
+  cells.forEach((c,j) => document.getElementById('kavg'+j).innerHTML = '<span class="kavg-h">Averages</span><div class="kavg-row"'+(c.length===1?' style="grid-template-columns:1fr"':'')+'>'+c.join('')+'</div>');
+}
+
+function renderLede(rows){
+  const a = agg(rows);
+  const nh = baseRows('status').filter(i=>C.s[i]===1), te = baseRows('status').filter(i=>C.s[i]===2);
+  const pp = rs => { const L=new Set(); rs.forEach(i=>L.add(C.e[i])); return L.size ? (rs.length/L.size).toFixed(1) : null; };
+  const pn = pp(nh), pt = pp(te);
+  let s = `<b>${fmt(a.learners)}</b> people logged <b>${fmt(a.k)}</b> sales training completions, ${pct(a.il,a.k)}% of them instructor-led.`;
+  if (pn && pt && state.status==='all') s += ` New hires average <b>${pn}</b> courses each, tenured reps <b>${pt}</b>.`;
+  document.getElementById('lede').innerHTML = s;
+}
+
+function renderIlt(rows){
+  const g = new Map(), gi = new Map();
+  for (const i of rows){ if(!C.v[i]) continue; g.set(C.c[i],(g.get(C.c[i])||0)+1); if (C.i[i]) gi.set(C.c[i],(gi.get(C.c[i])||0)+1); }
+  const list=[...g].sort((a,b)=>b[1]-a[1]), max=list.length?list[0][1]:1;
+  const iltTot=[...gi.values()].reduce((s,x)=>s+x,0);
+  document.getElementById('iltSub').textContent = `${state.tab==='dlr'?'VILT only':'ILT and VILT'}, ranked by completions · ${fmt(list.length)} courses`;
+  document.getElementById('ilt').innerHTML = list.length ? list.map(([c,n])=>{ const k=gi.get(c)||0;
+      return `<div class="ilt-row" title="${esc(D.courses[c][1])}${k?` – ${k} recorded as Complete ILT`:''}"><span class="nm">${esc(D.courses[c][1])}</span><span class="tr"><i style="width:${n/max*100}%"></i></span><span class="vl">${fmt(n)}${k?'<sup class="ast">*</sup>':''}</span></div>`; }).join('')
+      + (iltTot ? `<p class="iltnote">* Includes completions recorded as Complete ILT (in person): ${[...gi].sort((a,b)=>b[1]-a[1]).map(([c,k])=>`${esc(D.courses[c][1])} ${fmt(k)}`).join(', ')}.</p>` : '')
+    : '<p class="empty">No instructor-led completions match these filters.</p>';
+}
+
+function renderCmp(){
+  if (state.tab==='dlr'){ document.getElementById('cmp').innerHTML='<p class="empty">Dealer hire dates are placeholders, so dealers can’t be split by rep status.</p>'; return; }
+  const base = baseRows('status');
+  const m = [1,2].map(s => { const rs=base.filter(i=>C.s[i]===s), a=agg(rs), r=reachOf(rs,String(s)); return {a, r}; });
+  const row = (l,f) => `<tr><td>${l}</td>${m.map(x=>`<td class="num">${f(x)}</td>`).join('')}</tr>`;
+  document.getElementById('cmp').innerHTML = `<table class="cmpt"><thead><tr><th style="cursor:default"></th><th class="num" style="cursor:default">New hires</th><th class="num" style="cursor:default">Tenured</th></tr></thead><tbody>
+    ${row('People', x=>fmt(x.a.learners))}
+    ${row('Completions', x=>fmt(x.a.k))}
+    ${row('Courses per person', x=>x.a.learners?(x.a.k/x.a.learners).toFixed(1):'–')}
+    ${row('Online', x=>fmt(x.a.k-x.a.il))}
+    ${row('Instructor-led', x=>fmt(x.a.il))}
+    ${m.some(x=>x.r) ? row('Reach', x=>x.r?`${x.r.pct}% <span style="color:var(--ink3);font-weight:400">of ${fmt(x.r.n)}</span>`:'–') : ''}
+  </tbody></table>`;
+}
+
+function upFilter(r){ // r: [class, title, date, instructors, group, bu, status, reg]
+  const t=state.tab, bu=state.bu;
+  if (!state.tlg && r[8]) return false;
+  if (t==='org' && r[4]!=='Sales team') return false;
+  if (t==='org' && state.sfield==='1' && r[5]!=='BUS') return false;
+  if (t==='org' && state.sfield==='2' && r[5]!=='BCA') return false;
+  if (t==='dlr' && r[4]!=='Dealers') return false;
+  if (bu==='BUS' && !(r[5]==='BUS' && (r[4]==='Sales team'||r[4]==='Other employees'))) return false;
+  if (bu==='BCA' && !(r[5]==='BCA' && r[4]!=='Dealers')) return false;
+  if (bu==='AC' && r[4]!=='All Covered') return false;
+  if (bu==='Dealers' && r[4]!=='Dealers') return false;
+  if (bu==='IIM') return false;
+  if (state.status!=='all' && r[6]!==(state.status==='1'?'New hire':'Tenured')) return false;
+  if (state.ins!=='all' && !r[3].split('; ').includes(state.ins)) return false;
+  return true;
+}
+function renderUpcoming(){
+  const rs = D.upcoming.filter(upFilter), g=new Map();
+  for (const r of rs){ const key=r[2]+'|'+r[1]; let o=g.get(key); if(!o){o={d:r[2],t:r[1],ins:r[3],reg:0,nh:0,te:0,dl:0,cx:0}; g.set(key,o);}
+    if (r[7]==='Cancelled'){o.cx++; continue;} o.reg++; if(r[4]==='Dealers') o.dl++; else if(r[6]==='New hire') o.nh++; else if(r[6]==='Tenured') o.te++; }
+  const list=[...g.values()].filter(o=>o.reg>0).sort((a,b)=>a.d.localeCompare(b.d)||a.t.localeCompare(b.t));
+  const reg=list.reduce((s,o)=>s+o.reg,0), nh=list.reduce((s,o)=>s+o.nh,0), cx=list.reduce((s,o)=>s+o.cx,0);
+  document.getElementById('upMini').innerHTML = `<div><div class="n">${list.length}</div><div class="l">Classes scheduled</div></div><div><div class="n">${fmt(reg)}</div><div class="l">People registered</div></div><div><div class="n">${reg?Math.round(nh/reg*100):0}%</div><div class="l">New hires among them</div></div>`;
+  const dfmt = s => new Date(s+'T00:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
+  document.getElementById('upTable').innerHTML = '<thead><tr><th>Date</th><th>Class</th><th>Instructors</th><th class="num">Registered</th><th class="num">New hires</th><th class="num">Tenured</th><th class="num">Dealers</th></tr></thead><tbody>' +
+    (list.length ? list.map(o=>`<tr><td style="white-space:nowrap">${dfmt(o.d)}</td><td>${esc(o.t)}</td><td style="color:var(--ink2)">${esc(o.ins)}</td><td class="num">${o.reg}</td><td class="num">${o.nh}</td><td class="num">${o.te}</td><td class="num">${o.dl}</td></tr>`).join('')
+      : `<tr><td colspan="7" class="empty">${state.bu==='IIM'?'The registration report doesn’t identify IIM staff.':'No upcoming registrations match these filters.'}</td></tr>`) + '</tbody>';
+}
+
+document.getElementById('notesList').innerHTML = "<li>Sources: completions, hire dates, employee type and branch come from the LMS learning export (EmployeeLearningCSV_BD2_ACTIVE, __ST_LMS_DATE__). The SF and SFC roster comes from Master User Data (active only, __ST_MASTER_DATE__), matched to completions by employee ID. Upcoming classes come from the Registration Status (future classes) report (__ST_REG_DATE_LONG__). Course categories and the sales course list come from the Catalog Report used in the earlier Sales L&amp;D Engagement Dashboard.</li><li>Time frame: the fiscal year runs April 1 to March 31. The dashboard shows the current fiscal year up to the report date. Q1 = Apr\u2013Jun, Q2 = Jul\u2013Sep, Q3 = Oct\u2013Dec, Q4 = Jan\u2013Mar. Only completions are counted; enrollments and incomplete courses aren\u2019t, for online or instructor-led training.</li><li>Courses included: the sales training courses in the L&amp;D Engagement Dashboard (catalog courses flagged Sales, plus the confirmed instructor-led workshops outside the catalog). Courses not on that list are included when their content is sales training; LMS test courses and data-privacy compliance courses are excluded. Compliance courses (catalog Compliance category) and technical certifications are excluded. __ST_LEFT_OUT__ courses with completions this fiscal year are left out. OMNIA Connect Certification and BlueIrisIQ Government Certification are included as sales-program certifications.</li><li>Categories come from the catalog subject. A course with several subjects counts toward each, so category totals add up to more than total completions. Courses outside the catalog are grouped as Sales training (not in catalog).</li><li>Instructor-led combines ILT and VILT delivery. Online is self-paced e-learning. The asterisk on the Instructor-led tile counts completions whose LMS completion status is COMPLETE_ILT (taken in person), even where the course itself is set up as VILT. Pipeline Powerlifting for Managed IT is always treated as VILT, whatever its completion status says.</li><li>Business units: Dealers = dealer domains, US (DEALER_US) and Canada (DEALER_BCD); the Dealers tab can show either one; IIM = job title or manager title references IIM, Intelligent Information Management or BlueIrisIQ; AC = All Covered email or AC employee type; BCA = Canadian (bt.konicaminolta.ca) employees; BUS = all other KMBS employees.</li><li>Sales Org: SF and SFC employee types. SF is the US sales field; SFC is the Canadian sales field. Use the Sales field filter on that tab to see either one on its own.</li><li>Rep status is set per record: New hire if the completion falls within 65 days of the hire date; Tenured after that. Dealers\u2019 hire dates are placeholders, so dealers appear only under All reps.</li><li>Reach (Sales Org tab only): SF and SFC reps on the Master User Data roster who have one or more completions in view, divided by everyone on that roster. Roster members are matched to completions by employee ID. With a rep status filter, the roster is the reps who were in that stage during the period. Reach isn\u2019t shown when a branch is selected.</li><li>TLG: internal L&amp;D team members (the TLG list) are hidden by default everywhere on the page; use Show TLG in the header to include them.</li><li>Upcoming live classes: classes in the registration report that start on or after the report date. Each person is counted once per class. Waitlisted people count as registered; cancelled registrations are left out. The report has no seat capacity, so fill rates aren\u2019t shown. New hire = class starts within 65 days of the person\u2019s hire date.</li>";
+addEventListener('hashchange', () => { const h=location.hash.slice(1); if (TABS.some(t=>t.id===h) && h!==state.tab){ state.tab=h; state.bu='all'; state.region='all'; state.branch='all'; render(); } });
+render();
+</script>
+<script>
+__ST_HOUSE_JS__
+</script>
+</body>
+</html>

@@ -306,8 +306,18 @@ def lms_engagement_stats():
         return None
 
 
+# ── Sales Training & L&D Engagement stats ─────────────────────────────────────
+def sales_training_stats():
+    try:
+        from update_sales_training_dashboard import load_sales_training_stats
+        return load_sales_training_stats()
+    except Exception as e:
+        print(f"    Sales Training stats error: {e}")
+        return None
+
+
 # ── HTML generation ───────────────────────────────────────────────────────────
-def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
+def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None, st=None):
     today = datetime.now().strftime('%B %-d, %Y')
 
     pb_views = pb['total_views']   if pb else '—'
@@ -358,6 +368,11 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
     cc_hours       = f"{cc['hours']:,}"    if cc else '—'
     cc_date_label  = cc['lastMonthLabel']  if cc else '—'
     cc_fy_label    = f"FY{cc['fy']}"       if cc else ''
+    st_people      = f"{st['people']:,}"      if st else '—'
+    st_completions = f"{st['completions']:,}" if st else '—'
+    st_online_pct  = st['online_pct']         if st else '—'
+    st_il          = f"{st['il']:,}"          if st else '—'
+    st_date_label  = st['date_label']         if st else '—'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -655,6 +670,32 @@ def generate_html(pb, hc, ps, ob, lb=None, ls=None, le=None, cc=None):
       </div>
     </div>
 
+    <!-- Sales Training & L&D Engagement -->
+    <div class="card" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg')">
+      <div class="card-head">
+        <span class="card-icon">&#127891;</span>
+        <div>
+          <div class="card-title">Sales Training &amp; L&amp;D Engagement</div>
+          <div class="card-desc">Sales training completions, fiscal year to date</div>
+        </div>
+      </div>
+      <div>
+        <div class="stat-main">
+          <span class="stat-num" style="color:var(--accent)">{st_people}</span>
+          <span class="stat-unit">people completed training</span>
+        </div>
+        <div class="stat-sub">{st_completions} completions, {st_online_pct}% online</div>
+      </div>
+      <div style="margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+        <div class="stat-row" style="flex:1;">
+          <span class="pill pill-blue">&#9679; {st_il} instructor-led</span>
+          <div style="width:100%;height:0;"></div>
+          <span class="pill pill-muted">Data through {st_date_label}</span>
+        </div>
+        <a href="sales-training.html" class="btn-open" style="flex-shrink:0;">Go to Dashboard &#8250;</a>
+      </div>
+    </div>
+
     <!-- LinkedIn Learning Engagement (hidden by default - Konami code reveals it, see script below) -->
     <div class="card" id="card-secret-1" style="--card-bg:url('https://cdn.jsdelivr.net/gh/BradleyAPierce/Legal_Images_Copy/Sales_Education.jpg');display:none;opacity:0;transform:scale(.92);transition:opacity .5s ease,transform .5s ease;">
       <div class="card-head">
@@ -915,7 +956,14 @@ def main():
     else:
         print("    No LMS Engagement data found")
 
-    html = generate_html(pb, hc, ps, ob, lb, ls, le, cc)
+    print("  Reading Sales Training & L&D Engagement data...")
+    st = sales_training_stats()
+    if st:
+        print(f"    {st['people']:,} people, {st['completions']:,} completions (data through {st['date_label']})")
+    else:
+        print("    No Sales Training data found")
+
+    html = generate_html(pb, hc, ps, ob, lb, ls, le, cc, st)
     out  = SCRIPT_DIR / 'index.html'
     out.write_text(html, encoding='utf-8')
     print(f"\nHomepage written to: {out}")

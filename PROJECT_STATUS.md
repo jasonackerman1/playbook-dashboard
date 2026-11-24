@@ -1,6 +1,22 @@
 # Playbook Dashboard — Project Status
 
-Last updated: 2026-11-23
+Last updated: 2026-11-24
+
+---
+
+## Recent Changes (2026-11-24)
+
+**New dashboard: Sales Training & L&D Engagement (2026-11-24).** Ported from Resmie's
+`Sales_Training_LD_Dashboard.html` + guide. `update_sales_training_dashboard.py` builds
+`sales-training.html` from 4 exports in the new `sales-training-data/` folder (LMS learning export,
+Master User Data, future Registration Status, Catalog Report) plus `sales-course-list.json` (her
+342-course sales list, frozen; new courses are left out and logged). Template
+`templates/sales-training-shell.html` (her page, house look) + `templates/sales-training-house.js`
+(theme, triple-click home, Show/Hide TLG, "?" help, Export PDF + 8-sheet Excel). Own workflow
+`update-sales-training-dashboard.yml`. Visible homepage card; added to Dashboard Traffic. Verified
+identical to her page's data and to 12 browser views. 11.24 data with TLG hidden: 1,908 people,
+13,568 completions (95% online), 638 instructor-led. Full rules: `DASHBOARD_REFERENCE.md` §11.
+Open for later: whether old data files should be deleted after each drop (keep newest only).
 
 ---
 
