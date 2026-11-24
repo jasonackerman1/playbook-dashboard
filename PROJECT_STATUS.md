@@ -11,7 +11,8 @@ Capstone Presentation Certification Workshop" (ACCEL_CERT_WORKSHOP) is set up as
 but all its completions are recorded COMPLETE_VILT, so its 50 FY completions were counted as online.
 New rule: a COMPLETE_VILT / COMPLETE_ILT completion counts as instructor-led even if the course is
 set up as online (only Capstone is affected today). Course list flag set to instructor-led too.
-All Groups, TLG hidden: instructor-led 638 → 688, 21 ILT courses. The reverse case, Accelerate
+All Groups, TLG hidden: instructor-led 638 → 688, 21 ILT courses. Pushed `a74b353`; confirmed live
+(dashboard + homepage card showing 688 instructor-led). The reverse case, Accelerate
 Certification (VILT setup, 11 completions recorded online), stays instructor-led; worth mentioning
 both LMS setups to Resmie.
 

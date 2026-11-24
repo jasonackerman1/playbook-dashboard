@@ -643,7 +643,8 @@ Top 10 courses, "How these figures are calculated" notes.
   (earliest date kept).
 - **Instructor-led** = delivery ILT or VILT, **or** a completion status of COMPLETE_VILT / COMPLETE_ILT
   even when the course is set up as ONLINE (added 2026-11-24: Accelerate: Capstone Presentation
-  Certification Workshop is set up ONLINE in the LMS but completed as VILT, 50 completions). **Complete ILT (\*)** = status COMPLETE_ILT, except
+  Certification Workshop is set up ONLINE in the LMS but completed as VILT, 50 completions; live
+  since `a74b353`). **Complete ILT (\*)** = status COMPLETE_ILT, except
   Pipeline Powerlifting for Managed IT (always treated as VILT).
 - **Business unit** (first match wins): Dealers (DEALER_ domain) → IIM (job or manager title mentions
   IIM / Intelligent Information Management / BlueIrisIQ) → AC (allcovered.com email, or an EMP_TYP_ID
