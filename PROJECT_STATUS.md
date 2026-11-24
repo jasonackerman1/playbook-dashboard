@@ -6,6 +6,15 @@ Last updated: 2026-11-24
 
 ## Recent Changes (2026-11-24)
 
+**Sales Training: Capstone workshop now counts as instructor-led (later 2026-11-24).** "Accelerate:
+Capstone Presentation Certification Workshop" (ACCEL_CERT_WORKSHOP) is set up as ONLINE in the LMS
+but all its completions are recorded COMPLETE_VILT, so its 50 FY completions were counted as online.
+New rule: a COMPLETE_VILT / COMPLETE_ILT completion counts as instructor-led even if the course is
+set up as online (only Capstone is affected today). Course list flag set to instructor-led too.
+All Groups, TLG hidden: instructor-led 638 → 688, 21 ILT courses. The reverse case, Accelerate
+Certification (VILT setup, 11 completions recorded online), stays instructor-led; worth mentioning
+both LMS setups to Resmie.
+
 **New dashboard: Sales Training & L&D Engagement (2026-11-24).** Ported from Resmie's
 `Sales_Training_LD_Dashboard.html` + guide. `update_sales_training_dashboard.py` builds
 `sales-training.html` from 4 exports in the new `sales-training-data/` folder (LMS learning export,

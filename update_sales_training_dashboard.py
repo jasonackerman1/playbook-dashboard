@@ -31,7 +31,9 @@ RULES (from her guide):
   - Completion = Completion Status starts with COMPLETE, dated April 1 of the fiscal year
     through the report date; one per person-course (earliest date kept).
   - Report date = the newest completion date anywhere in the learning export.
-  - Instructor-led = delivery ILT or VILT. Complete ILT (*) = status COMPLETE_ILT, except
+  - Instructor-led = delivery ILT or VILT, OR a completion status of COMPLETE_VILT / COMPLETE_ILT even
+    when the course is set up as ONLINE (added 2026-11-24 for Accelerate: Capstone Presentation
+    Certification Workshop, set up ONLINE in the LMS but completed as VILT). Complete ILT (*) = status COMPLETE_ILT, except
     Pipeline Powerlifting for Managed IT, always treated as VILT.
   - Business unit: Dealers (DEALER_ domain) > IIM (job or manager title mentions IIM,
     Intelligent Information Management or BlueIrisIQ) > AC (allcovered.com email or an
@@ -192,7 +194,8 @@ def build_data(log=print):
         status = _txt(r['Completion Status'])
         rows.append(dict(
             e=eidx[emp], c=cidx[cid], b=_bu(r), o={'SF': 1, 'SFC': 2}.get(et, 0), r=0, br=bridx[brname(r)],
-            v=1 if _txt(r['Course Delivery Method']) in ('ILT', 'VILT') else 0, k=1, x=0, d=_day(dt), s=s,
+            v=1 if _txt(r['Course Delivery Method']) in ('ILT', 'VILT') or status in ('COMPLETE_VILT', 'COMPLETE_ILT') else 0,
+            k=1, x=0, d=_day(dt), s=s,
             i=1 if status == 'COMPLETE_ILT' and 'pipeline powerlifting' not in _txt(r['Course Title']).lower() else 0,
             dc={'DEALER_US': 1, 'DEALER_BCD': 2}.get(dom, 0),
             t=1 if _is_tlg(r['First Name'], r['Last Name']) else 0, _n=n))
